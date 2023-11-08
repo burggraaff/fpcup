@@ -9,7 +9,7 @@ import pcse
 # from progressbar import printProgressBar
 
 # Initialise model
-wofost_object = pcse.start_wofost(grid=31031, crop=1, year=2000, mode='wlp')
+wofost_object = pcse.start_wofost(grid=31031, crop=1, year=2000, mode="wlp")
 
 # Run model and get output
 wofost_object.run_till_terminate()
@@ -36,5 +36,6 @@ ax2.set_ylabel("Leaf area index (LAI) [m²/m²]", color="blue")
 ax2.tick_params(axis="y", colors="blue")
 ax2.set_ylim(ymin=0)
 
+plt.savefig("results/wofost_toy_wlp.pdf")
 plt.show()
 plt.close()
