@@ -33,9 +33,9 @@ sited = WOFOST72SiteDataProvider(WAV=10)
 agro_maize = """
 - {year}-03-01:
     CropCalendar:
-        crop_name: 'maize'
-        variety_name: 'Grain_maize_201'
-        crop_start_date: {year}-04-15
+        crop_name: 'barley'
+        variety_name: 'Spring_barley_301'
+        crop_start_date: {year}-03-03
         crop_start_type: sowing
         crop_end_date:
         crop_end_type: maturity
@@ -45,41 +45,7 @@ agro_maize = """
 - {year}-12-01: null
 """
 
-agro_potato = """
-- {year}-03-01:
-    CropCalendar:
-        crop_name: 'potato'
-        variety_name: 'Fontane'
-        crop_start_date: {year}-05-01
-        crop_start_type: sowing
-        crop_end_date: {year}-09-25
-        crop_end_type: harvest
-        max_duration: 300
-    TimedEvents: null
-    StateEvents: null
-- {year}-12-01: null
-"""
-
-agro_sugarbeet = """
-- {year}-03-01:
-    CropCalendar:
-        crop_name: 'sugarbeet'
-        variety_name: 'Sugarbeet_601'
-        crop_start_date: {year}-05-01
-        crop_start_type: sowing
-        crop_end_date: {year}-10-15
-        crop_end_type: harvest
-        max_duration: 300
-    TimedEvents: null
-    StateEvents: null
-- {year}-12-01: null
-"""
-agro_templates = {"maize": agro_maize,
-                  "potato": agro_potato,
-                  "sugarbeet": agro_sugarbeet
-                 }
-
-weatherdata = NASAPowerWeatherDataProvider(longitude=5, latitude=52)
+weatherdata = NASAPowerWeatherDataProvider(longitude=4.836232064803372, latitude=53.10069070497469)
 print(weatherdata)
 
 weatherdf = pd.DataFrame(weatherdata.export()).set_index("DAY")
@@ -88,15 +54,19 @@ weatherdf = pd.DataFrame(weatherdata.export()).set_index("DAY")
 summary_results = []
 
 # Years to simulate
-years = range(2004, 2008)
+years = range(1984, 2022)
 
 # Loop over crops, soils and years
-all_runs = product(agro_templates.items(), soil_files, years)
-nruns = len(agro_templates) * len(soil_files) * len(years)
+all_runs = product(soil_files, years)
+nruns = len(soil_files) * len(years)
+print(f"Number of runs: {nruns}")
+
+crop_type = "barley"
+agro = agro_maize
 
 # printProgressBar(0, nruns, prefix = "Progress:", suffix = "Complete", length = 50)
 for i, inputs in enumerate(all_runs):
-    (crop_type, agro), soild, year = inputs
+    soild, year = inputs
 
     # Set the agromanagement with correct year and crop
     agromanagement = yaml.safe_load(agro.format(year=year))
@@ -125,11 +95,15 @@ for i, inputs in enumerate(all_runs):
     df.to_excel(fname)
 
     # Collect summary results
-    r = wofost.get_summary_output()[0]
+    try:
+        r = wofost.get_summary_output()[0]
+    except IndexError:
+        print(f"IndexError in {year}")
+        continue
     r["run_id"] = run_id
     summary_results.append(r)
 
 # Write the summary results to an Excel file
 df_summary = pd.DataFrame(summary_results).set_index("run_id")
-fname = data_dir / "output" / "summary_results.xlsx"
+fname = output_dir / "summary_results.xlsx"
 df_summary.to_excel(fname)
