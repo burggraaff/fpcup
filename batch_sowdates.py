@@ -6,6 +6,7 @@ from pathlib import Path
 data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs"
 from itertools import product
+from datetime import datetime
 
 import yaml
 import pandas as pd
@@ -26,12 +27,13 @@ soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
 sited = WOFOST72SiteDataProvider(WAV=10)
 
+year = 2020
 agro = """
-- {year}-03-01:
+- {year}-01-01:
     CropCalendar:
         crop_name: 'barley'
         variety_name: 'Spring_barley_301'
-        crop_start_date: {year}-03-03
+        crop_start_date: {date}
         crop_start_type: sowing
         crop_end_date:
         crop_end_type: maturity
@@ -47,26 +49,28 @@ weatherdata = NASAPowerWeatherDataProvider(longitude=4.836232064803372, latitude
 # Placeholder for storing summary results
 summary_results = []
 
-# Years to simulate
-years = range(1984, 2022)
+# Sowing dates to simulate
+doys = range(1, 152)
+sowing_dates = [datetime.strptime(f"{year}-{doy}", "%Y-%j") for doy in doys]
 
 # Loop over crops, soils and years
-all_runs = product(soil_files, years)
-nruns = len(soil_files) * len(years)
+all_runs = product(soil_files, sowing_dates)
+nruns = len(soil_files) * len(sowing_dates)
 print(f"Number of runs: {nruns}")
 
 outputs = []
 
 # printProgressBar(0, nruns, prefix = "Progress:", suffix = "Complete", length = 50)
 for i, inputs in enumerate(all_runs):
-    soild, year = inputs
+    soild, sowing_date = inputs
+    sowing_date_str = sowing_date.strftime("%Y-%m-%d")
 
     # Set the agromanagement with correct year and crop
-    agromanagement = yaml.safe_load(agro.format(year=year))
+    agromanagement = yaml.safe_load(agro.format(year=year, date=sowing_date_str))
 
     # String to identify this run
     soil_type = soild["SOLNAM"]
-    run_id = "{crop}_{soil}_{year}".format(crop=crop_type, soil=soil_type, year=year)
+    run_id = f"{crop_type}_{soil_type}_{year}_sown-{sowing_date_str}"
 
     # Encapsulate parameters
     parameters = ParameterProvider(sitedata=sited, soildata=soild, cropdata=cropd)
@@ -92,7 +96,7 @@ for i, inputs in enumerate(all_runs):
     try:
         r = wofost.get_summary_output()[0]
     except IndexError:
-        print(f"IndexError in {year}")
+        print(f"IndexError in run '{run_id}'")
         continue
     r["run_id"] = run_id
     summary_results.append(r)
