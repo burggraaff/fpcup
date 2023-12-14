@@ -64,6 +64,8 @@ print(f"Number of runs: {nruns}")
 crop_type = "barley"
 agro = agro_maize
 
+outputs = []
+
 # printProgressBar(0, nruns, prefix = "Progress:", suffix = "Complete", length = 50)
 for i, inputs in enumerate(all_runs):
     soild, year = inputs
@@ -93,6 +95,7 @@ for i, inputs in enumerate(all_runs):
     df = pd.DataFrame(wofost.get_output()).set_index("day")
     fname = output_dir / (run_id + ".xlsx")
     df.to_excel(fname)
+    outputs.append(df)
 
     # Collect summary results
     try:
@@ -107,3 +110,28 @@ for i, inputs in enumerate(all_runs):
 df_summary = pd.DataFrame(summary_results).set_index("run_id")
 fname = output_dir / "summary_results.xlsx"
 df_summary.to_excel(fname)
+
+def replace_year_in_datetime(dt, newyear=2000):
+    """
+    For a datetime object yyyy-mm-dd, replace yyyy with newyear.
+    """
+    return dt.replace(year=newyear)
+
+# Plot curves for outputs
+keys = df.keys()
+fig, axs = plt.subplots(nrows=len(keys), sharex=True, figsize=(8,10))
+
+for df in outputs:
+    time_without_year = pd.to_datetime(df.index.to_series()).apply(replace_year_in_datetime)
+    for ax, key in zip(axs, keys):
+        ax.plot(time_without_year, df[key], alpha=0.25)
+axs[-1].set_xlabel("Time")
+for ax, key in zip(axs, keys):
+    ax.set_ylabel(key)
+    ax.set_ylim(ymin=0)
+    ax.grid()
+fig.align_ylabels()
+axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")
+fig.savefig(output_dir / "plot.pdf", dpi=300, bbox_inches="tight")
+plt.show()
+plt.close()
