@@ -2,7 +2,6 @@
 Playing around with the PCSE implementation of WOFOST.
 Based on the example notebook: https://github.com/ajwdewit/pcse_notebooks/blob/master/04%20Running%20PCSE%20in%20batch%20mode.ipynb
 """
-import sys
 from pathlib import Path
 data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs"
@@ -19,10 +18,7 @@ from pcse.base import ParameterProvider
 from pcse.exceptions import WeatherDataProviderError
 from pcse.util import WOFOST72SiteDataProvider
 from pcse.db import NASAPowerWeatherDataProvider
-# from progressbar import printProgressBar
 
-print("This notebook was built with:")
-print(f"python version: {sys.version}")
 print(f"PCSE version: {pcse.__version__}")
 
 cropd = YAMLCropDataProvider()
@@ -30,7 +26,7 @@ soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
 sited = WOFOST72SiteDataProvider(WAV=10)
 
-agro_maize = """
+agro = """
 - {year}-03-01:
     CropCalendar:
         crop_name: 'barley'
@@ -44,11 +40,9 @@ agro_maize = """
     StateEvents: null
 - {year}-12-01: null
 """
+crop_type = "barley"
 
 weatherdata = NASAPowerWeatherDataProvider(longitude=4.836232064803372, latitude=53.10069070497469)
-print(weatherdata)
-
-weatherdf = pd.DataFrame(weatherdata.export()).set_index("DAY")
 
 # Placeholder for storing summary results
 summary_results = []
@@ -60,9 +54,6 @@ years = range(1984, 2022)
 all_runs = product(soil_files, years)
 nruns = len(soil_files) * len(years)
 print(f"Number of runs: {nruns}")
-
-crop_type = "barley"
-agro = agro_maize
 
 outputs = []
 
@@ -85,7 +76,7 @@ for i, inputs in enumerate(all_runs):
         wofost = Wofost72_WLP_FD(parameters, weatherdata, agromanagement)
         wofost.run_till_terminate()
     except WeatherDataProviderError as e:
-        msg = "Runid '%s' failed because of missing weather data." % run_id
+        msg = f"Runid '{run_id}' failed because of missing weather data."
         print(msg)
         continue
     # finally:
