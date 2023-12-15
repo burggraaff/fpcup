@@ -29,53 +29,55 @@ soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
 sited = WOFOST72SiteDataProvider(WAV=10)
 
-year = 2020
 agro = """
-- {year}-01-01:
+- {date:%Y}-01-01:
     CropCalendar:
         crop_name: 'barley'
         variety_name: 'Spring_barley_301'
-        crop_start_date: {date}
+        crop_start_date: {date:%Y-%m-%d}
         crop_start_type: sowing
         crop_end_date:
         crop_end_type: maturity
         max_duration: 300
     TimedEvents: null
     StateEvents: null
-- {year}-12-01: null
+- {date:%Y}-12-01: null
 """
 crop_type = "barley"
 
-weatherdata = NASAPowerWeatherDataProvider(longitude=4.836232064803372, latitude=53.10069070497469)
-
-# Placeholder for storing summary results
-summary_results = []
+weatherd = NASAPowerWeatherDataProvider(longitude=4.836232064803372, latitude=53.10069070497469)
 
 # Sowing dates to simulate
+year = 2020
 doys = range(1, 222)
 sowing_dates = [datetime.strptime(f"{year}-{doy}", "%Y-%j") for doy in doys]
 
-# Loop over crops, soils and years
-all_runs = product(soil_files, sowing_dates)
-nruns = len(soil_files) * len(sowing_dates)
+# Set up iterables
+sitedata = [sited]
+soildata = soil_files
+cropdata = [cropd]
+
+parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
+weatherdata = [weatherd]
+agromanagementdata = [yaml.safe_load(agro.format(date=date)) for date in sowing_dates]
+
+# Loop over input data
+all_runs = product(parameters_combined, weatherdata, agromanagementdata)
+nruns = len(parameters_combined) * len(weatherdata) * len(agromanagementdata)
 print(f"Number of runs: {nruns}")
+# (this does not work when the inputs are all generators)
 
+# Placeholder for storing (summary) results
 outputs = []
+summary_results = []
 
-# printProgressBar(0, nruns, prefix = "Progress:", suffix = "Complete", length = 50)
-for i, inputs in enumerate(all_runs):
-    soild, sowing_date = inputs
-    sowing_date_str = sowing_date.strftime("%Y-%m-%d")
-
-    # Set the agromanagement with correct year and crop
-    agromanagement = yaml.safe_load(agro.format(year=year, date=sowing_date_str))
-
+for i, (parameters, weatherdata, agromanagement) in enumerate(all_runs):
     # String to identify this run
-    soil_type = soild["SOLNAM"]
-    run_id = f"{crop_type}_{soil_type}_{year}_sown-{sowing_date_str}"
-
-    # Encapsulate parameters
-    parameters = ParameterProvider(sitedata=sited, soildata=soild, cropdata=cropd)
+    soil_type = parameters._soildata["SOLNAM"]
+    startdate = list(agromanagement[0].keys())[0]
+    sowdate = agromanagement[0][startdate]["CropCalendar"]["crop_start_date"]
+    crop_type = agromanagement[0][startdate]["CropCalendar"]["crop_name"]
+    run_id = f"{crop_type}_{soil_type}_sown-{sowdate:%Y-%m-%d}"
 
     # Start WOFOST, run the simulation
     try:
@@ -85,14 +87,14 @@ for i, inputs in enumerate(all_runs):
         msg = f"Runid '{run_id}' failed because of missing weather data."
         print(msg)
         continue
-    # finally:
-        # printProgressBar(i+1, nruns, prefix = "Progress:", suffix = "Complete", length = 50)
 
-    # convert daily output to Pandas DataFrame and store it
+    # Convert individual output to Pandas DataFrame
     df = pd.DataFrame(wofost.get_output()).set_index("day")
+    outputs.append(df)
+
+    # Save individual output to file
     fname = output_dir / (run_id + ".csv")
     df.to_csv(fname)
-    outputs.append(df)
 
     # Collect summary results
     try:
