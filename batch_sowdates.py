@@ -5,6 +5,8 @@ Based on the example notebook: https://github.com/ajwdewit/pcse_notebooks/blob/m
 from pathlib import Path
 data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs"
+results_dir = Path.cwd() / "results"
+
 from itertools import product
 from datetime import datetime
 
@@ -50,7 +52,7 @@ weatherdata = NASAPowerWeatherDataProvider(longitude=4.836232064803372, latitude
 summary_results = []
 
 # Sowing dates to simulate
-doys = range(1, 152)
+doys = range(1, 222)
 sowing_dates = [datetime.strptime(f"{year}-{doy}", "%Y-%j") for doy in doys]
 
 # Loop over crops, soils and years
@@ -127,6 +129,6 @@ for ax, key in zip(axs, keys):
     ax.grid()
 fig.align_ylabels()
 axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")
-fig.savefig(output_dir / "plot.pdf", dpi=300, bbox_inches="tight")
+fig.savefig(results_dir / "WOFOST_multi.pdf", dpi=300, bbox_inches="tight")
 plt.show()
 plt.close()
