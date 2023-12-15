@@ -104,6 +104,7 @@ for i, (parameters, weatherdata, agromanagement) in enumerate(all_runs):
         continue
     r["run_id"] = run_id
     summary_results.append(r)
+    print(f"{run_id} - Finished")
 
 # Write the summary results to an Excel file
 df_summary = pd.DataFrame(summary_results).set_index("run_id")
