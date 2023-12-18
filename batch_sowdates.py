@@ -13,6 +13,7 @@ from datetime import datetime
 import yaml
 import pandas as pd
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 import pcse
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
@@ -71,7 +72,7 @@ print(f"Number of runs: {nruns}")
 outputs = []
 summary_results = []
 
-for i, (parameters, weatherdata, agromanagement) in enumerate(all_runs):
+for parameters, weatherdata, agromanagement in tqdm(all_runs, total=nruns, desc="Running models", unit="runs"):
     # String to identify this run
     soil_type = parameters._soildata["SOLNAM"]
     startdate = list(agromanagement[0].keys())[0]
@@ -100,11 +101,10 @@ for i, (parameters, weatherdata, agromanagement) in enumerate(all_runs):
     try:
         r = wofost.get_summary_output()[0]
     except IndexError:
-        print(f"IndexError in run '{run_id}'")
+        # print(f"IndexError in run '{run_id}'")
         continue
     r["run_id"] = run_id
     summary_results.append(r)
-    print(f"{run_id} - Finished")
 
 # Write the summary results to an Excel file
 df_summary = pd.DataFrame(summary_results).set_index("run_id")

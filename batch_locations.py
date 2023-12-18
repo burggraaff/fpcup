@@ -14,6 +14,7 @@ import numpy as np
 import yaml
 import pandas as pd
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 import pcse
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
@@ -46,11 +47,12 @@ agro = """
 """
 crop_type = "barley"
 
-# Fetch weather data
-longitudes = np.arange(3, 8, 0.5)
-latitudes = np.arange(48, 58, 0.5)
+# Fetch weather data for the Netherlands (European part)
+longitudes = np.arange(3, 9, 0.5)
+latitudes = np.arange(49, 54.1, 0.5)
+n_locations = len(longitudes)*len(latitudes)
 coords = product(latitudes, longitudes)
-weatherdata = [NASAPowerWeatherDataProvider(latitude=lat, longitude=long) for lat, long in coords]
+weatherdata = [NASAPowerWeatherDataProvider(latitude=lat, longitude=long) for lat, long in tqdm(coords, total=n_locations, desc="Fetching weather data", unit="sites")]
 
 # Set up iterables
 sitedata = [sited]
@@ -70,7 +72,7 @@ print(f"Number of runs: {nruns}")
 outputs = []
 summary_results = []
 
-for i, (parameters, weatherdata, agromanagement) in enumerate(all_runs):
+for parameters, weatherdata, agromanagement in tqdm(all_runs, total=nruns, desc="Running models", unit="runs"):
     # String to identify this run
     soil_type = parameters._soildata["SOLNAM"]
     startdate = list(agromanagement[0].keys())[0]
@@ -99,11 +101,10 @@ for i, (parameters, weatherdata, agromanagement) in enumerate(all_runs):
     try:
         r = wofost.get_summary_output()[0]
     except IndexError:
-        print(f"IndexError in run '{run_id}'")
+        # print(f"IndexError in run '{run_id}'")
         continue
     r["run_id"] = run_id
     summary_results.append(r)
-    print(f"{run_id} - Finished")
 
 # Write the summary results to an Excel file
 df_summary = pd.DataFrame(summary_results).set_index("run_id")

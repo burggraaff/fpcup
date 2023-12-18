@@ -10,6 +10,7 @@ from itertools import product
 import yaml
 import pandas as pd
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 import pcse
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
@@ -57,8 +58,7 @@ print(f"Number of runs: {nruns}")
 
 outputs = []
 
-# printProgressBar(0, nruns, prefix = "Progress:", suffix = "Complete", length = 50)
-for i, inputs in enumerate(all_runs):
+for inputs in tqdm(all_runs, total=nruns, desc="Running models", unit="runs"):
     soild, year = inputs
 
     # Set the agromanagement with correct year and crop
@@ -79,8 +79,6 @@ for i, inputs in enumerate(all_runs):
         msg = f"Runid '{run_id}' failed because of missing weather data."
         print(msg)
         continue
-    # finally:
-        # printProgressBar(i+1, nruns, prefix = "Progress:", suffix = "Complete", length = 50)
 
     # convert daily output to Pandas DataFrame and store it
     df = pd.DataFrame(wofost.get_output()).set_index("day")
