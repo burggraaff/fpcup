@@ -5,8 +5,12 @@ Based on the example notebook: https://github.com/ajwdewit/pcse_notebooks/blob/m
 from pathlib import Path
 data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs"
-from itertools import product
+results_dir = Path.cwd() / "results"
 
+from itertools import product
+from datetime import datetime
+
+import numpy as np
 import yaml
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -27,49 +31,52 @@ soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("
 sited = WOFOST72SiteDataProvider(WAV=10)
 
 agro = """
-- {year}-03-01:
+- 2020-01-01:
     CropCalendar:
         crop_name: 'barley'
         variety_name: 'Spring_barley_301'
-        crop_start_date: {year}-03-03
+        crop_start_date: 2020-03-03
         crop_start_type: sowing
         crop_end_date:
         crop_end_type: maturity
         max_duration: 300
     TimedEvents: null
     StateEvents: null
-- {year}-12-01: null
+- 2020-12-01: null
 """
 crop_type = "barley"
 
-weatherdata = NASAPowerWeatherDataProvider(longitude=4.836232064803372, latitude=53.10069070497469)
+# Fetch weather data
+longitudes = np.arange(3, 8, 0.5)
+latitudes = np.arange(48, 58, 0.5)
+coords = product(latitudes, longitudes)
+weatherdata = [NASAPowerWeatherDataProvider(latitude=lat, longitude=long) for lat, long in coords]
 
-# Placeholder for storing summary results
+# Set up iterables
+sitedata = [sited]
+soildata = soil_files
+cropdata = [cropd]
+
+parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
+agromanagementdata = [yaml.safe_load(agro)]
+
+# Loop over input data
+all_runs = product(parameters_combined, weatherdata, agromanagementdata)
+nruns = len(parameters_combined) * len(weatherdata) * len(agromanagementdata)
+print(f"Number of runs: {nruns}")
+# (this does not work when the inputs are all generators)
+
+# Placeholder for storing (summary) results
+outputs = []
 summary_results = []
 
-# Years to simulate
-years = range(1984, 2022)
-
-# Loop over crops, soils and years
-all_runs = product(soil_files, years)
-nruns = len(soil_files) * len(years)
-print(f"Number of runs: {nruns}")
-
-outputs = []
-
-# printProgressBar(0, nruns, prefix = "Progress:", suffix = "Complete", length = 50)
-for i, inputs in enumerate(all_runs):
-    soild, year = inputs
-
-    # Set the agromanagement with correct year and crop
-    agromanagement = yaml.safe_load(agro.format(year=year))
-
+for i, (parameters, weatherdata, agromanagement) in enumerate(all_runs):
     # String to identify this run
-    soil_type = soild["SOLNAM"]
-    run_id = "{crop}_{soil}_{year}".format(crop=crop_type, soil=soil_type, year=year)
-
-    # Encapsulate parameters
-    parameters = ParameterProvider(sitedata=sited, soildata=soild, cropdata=cropd)
+    soil_type = parameters._soildata["SOLNAM"]
+    startdate = list(agromanagement[0].keys())[0]
+    sowdate = agromanagement[0][startdate]["CropCalendar"]["crop_start_date"]
+    crop_type = agromanagement[0][startdate]["CropCalendar"]["crop_name"]
+    run_id = f"{crop_type}_{soil_type}_sown-{sowdate:%Y-%m-%d}_lat{weatherdata.latitude:.1f}-lon{weatherdata.longitude:.1f}"
 
     # Start WOFOST, run the simulation
     try:
@@ -79,23 +86,24 @@ for i, inputs in enumerate(all_runs):
         msg = f"Runid '{run_id}' failed because of missing weather data."
         print(msg)
         continue
-    # finally:
-        # printProgressBar(i+1, nruns, prefix = "Progress:", suffix = "Complete", length = 50)
 
-    # convert daily output to Pandas DataFrame and store it
+    # Convert individual output to Pandas DataFrame
     df = pd.DataFrame(wofost.get_output()).set_index("day")
+    outputs.append(df)
+
+    # Save individual output to file
     fname = output_dir / (run_id + ".csv")
     df.to_csv(fname)
-    outputs.append(df)
 
     # Collect summary results
     try:
         r = wofost.get_summary_output()[0]
     except IndexError:
-        print(f"IndexError in {year}")
+        print(f"IndexError in run '{run_id}'")
         continue
     r["run_id"] = run_id
     summary_results.append(r)
+    print(f"{run_id} - Finished")
 
 # Write the summary results to an Excel file
 df_summary = pd.DataFrame(summary_results).set_index("run_id")
@@ -123,6 +131,6 @@ for ax, key in zip(axs, keys):
     ax.grid()
 fig.align_ylabels()
 axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")
-fig.savefig(output_dir / "WOFOST_batch_years.pdf", dpi=300, bbox_inches="tight")
+fig.savefig(results_dir / "WOFOST_batch_locations.pdf", dpi=300, bbox_inches="tight")
 plt.show()
 plt.close()

@@ -45,7 +45,7 @@ agro = """
 """
 crop_type = "barley"
 
-weatherd = NASAPowerWeatherDataProvider(longitude=4.836232064803372, latitude=53.10069070497469)
+weatherd = NASAPowerWeatherDataProvider(longitude=5, latitude=53)
 
 # Sowing dates to simulate
 year = 2020
@@ -132,6 +132,6 @@ for ax, key in zip(axs, keys):
     ax.grid()
 fig.align_ylabels()
 axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")
-fig.savefig(results_dir / "WOFOST_multi.pdf", dpi=300, bbox_inches="tight")
+fig.savefig(results_dir / "WOFOST_batch_sowdates.pdf", dpi=300, bbox_inches="tight")
 plt.show()
 plt.close()
