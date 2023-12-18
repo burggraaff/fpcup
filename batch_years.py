@@ -5,6 +5,8 @@ Based on the example notebook: https://github.com/ajwdewit/pcse_notebooks/blob/m
 from pathlib import Path
 data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs"
+results_dir = Path.cwd() / "results"
+
 from itertools import product
 
 import yaml
@@ -121,6 +123,6 @@ for ax, key in zip(axs, keys):
     ax.grid()
 fig.align_ylabels()
 axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")
-fig.savefig(output_dir / "WOFOST_batch_years.pdf", dpi=300, bbox_inches="tight")
+fig.savefig(results_dir / "WOFOST_batch_years.pdf", dpi=300, bbox_inches="tight")
 plt.show()
 plt.close()
