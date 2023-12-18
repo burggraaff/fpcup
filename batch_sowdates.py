@@ -23,6 +23,8 @@ from pcse.exceptions import WeatherDataProviderError
 from pcse.util import WOFOST72SiteDataProvider
 from pcse.db import NASAPowerWeatherDataProvider
 
+import fpcup
+
 print(f"PCSE version: {pcse.__version__}")
 
 cropd = YAMLCropDataProvider()
@@ -111,18 +113,12 @@ df_summary = pd.DataFrame(summary_results).set_index("run_id")
 fname = output_dir / "summary_results.xlsx"
 df_summary.to_excel(fname)
 
-def replace_year_in_datetime(dt, newyear=2000):
-    """
-    For a datetime object yyyy-mm-dd, replace yyyy with newyear.
-    """
-    return dt.replace(year=newyear)
-
 # Plot curves for outputs
 keys = df.keys()
 fig, axs = plt.subplots(nrows=len(keys), sharex=True, figsize=(8,10))
 
 for df in outputs:
-    time_without_year = pd.to_datetime(df.index.to_series()).apply(replace_year_in_datetime)
+    time_without_year = pd.to_datetime(df.index.to_series()).apply(fpcup.replace_year_in_datetime)
     for ax, key in zip(axs, keys):
         ax.plot(time_without_year, df[key], alpha=0.25)
 axs[-1].set_xlabel("Time")

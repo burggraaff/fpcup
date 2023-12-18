@@ -8,7 +8,9 @@ output_dir = Path.cwd() / "outputs"
 results_dir = Path.cwd() / "results"
 
 from itertools import product
+from datetime import datetime
 
+import numpy as np
 import yaml
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -16,9 +18,7 @@ from tqdm import tqdm
 
 import pcse
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
-from pcse.models import Wofost72_WLP_FD
 from pcse.base import ParameterProvider
-from pcse.exceptions import WeatherDataProviderError
 from pcse.util import WOFOST72SiteDataProvider
 from pcse.db import NASAPowerWeatherDataProvider
 
@@ -32,72 +32,59 @@ soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("
 sited = WOFOST72SiteDataProvider(WAV=10)
 
 agro = """
-- {year}-03-01:
+- {date:%Y}-01-01:
     CropCalendar:
         crop_name: 'barley'
         variety_name: 'Spring_barley_301'
-        crop_start_date: {year}-03-03
+        crop_start_date: {date:%Y-%m-%d}
         crop_start_type: sowing
         crop_end_date:
         crop_end_type: maturity
         max_duration: 300
     TimedEvents: null
     StateEvents: null
-- {year}-12-01: null
+- {date:%Y}-12-01: null
 """
 crop_type = "barley"
 
-weatherdata = NASAPowerWeatherDataProvider(longitude=4.836232064803372, latitude=53.10069070497469)
+# Fetch weather data for the Netherlands (European part)
+longitudes = np.arange(3, 9, 0.5)
+latitudes = np.arange(49, 54.1, 0.5)
+n_locations = len(longitudes)*len(latitudes)
+coords = product(latitudes, longitudes)
+weatherdata = [NASAPowerWeatherDataProvider(latitude=lat, longitude=long) for lat, long in tqdm(coords, total=n_locations, desc="Fetching weather data", unit="sites")]
 
-# Placeholder for storing summary results
+# Set up iterables
+sitedata = [sited]
+soildata = soil_files
+cropdata = [cropd]
+
+parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
+
+# Sowing dates to simulate
+years = range(2000, 2021)
+doys = range(60, 120, 5)
+years_doys = product(years, doys)
+sowing_dates = [datetime.strptime(f"{year}-{doy}", "%Y-%j") for year, doy in years_doys]
+agromanagementdata = [yaml.safe_load(agro.format(date=date)) for date in tqdm(sowing_dates, total=len(sowing_dates), desc="Loading agromanagement data", unit="calendars")]
+
+# Loop over input data
+all_runs = product(parameters_combined, weatherdata, agromanagementdata)
+nruns = len(parameters_combined) * len(weatherdata) * len(agromanagementdata)
+print(f"Number of runs: {nruns}")
+# (this does not work when the inputs are all generators)
+
+# Placeholder for storing (summary) results
+outputs = []
 summary_results = []
 
-# Years to simulate
-years = range(1984, 2022)
-
-# Loop over crops, soils and years
-all_runs = product(soil_files, years)
-nruns = len(soil_files) * len(years)
-print(f"Number of runs: {nruns}")
-
-outputs = []
-
-for inputs in tqdm(all_runs, total=nruns, desc="Running models", unit="runs"):
-    soild, year = inputs
-
-    # Set the agromanagement with correct year and crop
-    agromanagement = yaml.safe_load(agro.format(year=year))
-
-    # String to identify this run
-    soil_type = soild["SOLNAM"]
-    run_id = "{crop}_{soil}_{year}".format(crop=crop_type, soil=soil_type, year=year)
-
-    # Encapsulate parameters
-    parameters = ParameterProvider(sitedata=sited, soildata=soild, cropdata=cropd)
-
+for parameters, weatherdata, agromanagement in tqdm(all_runs, total=nruns, desc="Running models", unit="runs"):
     # Start WOFOST, run the simulation
-    try:
-        wofost = Wofost72_WLP_FD(parameters, weatherdata, agromanagement)
-        wofost.run_till_terminate()
-    except WeatherDataProviderError as e:
-        msg = f"Runid '{run_id}' failed because of missing weather data."
-        print(msg)
-        continue
+    output, summary = fpcup.run_wofost_with_id(parameters, weatherdata, agromanagement)
 
-    # convert daily output to Pandas DataFrame and store it
-    df = pd.DataFrame(wofost.get_output()).set_index("day")
-    fname = output_dir / (run_id + ".csv")
-    df.to_csv(fname)
-    outputs.append(df)
-
-    # Collect summary results
-    try:
-        r = wofost.get_summary_output()[0]
-    except IndexError:
-        print(f"IndexError in {year}")
-        continue
-    r["run_id"] = run_id
-    summary_results.append(r)
+    # Save the results
+    outputs.append(output)
+    summary_results.append(summary)
 
 # Write the summary results to an Excel file
 df_summary = pd.DataFrame(summary_results).set_index("run_id")
@@ -105,7 +92,7 @@ fname = output_dir / "summary_results.xlsx"
 df_summary.to_excel(fname)
 
 # Plot curves for outputs
-keys = df.keys()
+keys = outputs[0].keys()
 fig, axs = plt.subplots(nrows=len(keys), sharex=True, figsize=(8,10))
 
 for df in outputs:
@@ -119,6 +106,6 @@ for ax, key in zip(axs, keys):
     ax.grid()
 fig.align_ylabels()
 axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")
-fig.savefig(results_dir / "WOFOST_batch_years.pdf", dpi=300, bbox_inches="tight")
+fig.savefig(results_dir / "WOFOST_batch.pdf", dpi=300, bbox_inches="tight")
 plt.show()
 plt.close()
