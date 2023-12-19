@@ -9,9 +9,9 @@ import time
 
 def _foo(my_number):
     square = my_number * my_number
-    return square
+    return square, square
 
 if __name__ == '__main__':
     max = 3000000
     with Pool() as p:
-        r = list(tqdm.tqdm(p.map(_foo, range(max)), total=max))
+        r1, r2 = zip(*tqdm.tqdm(p.map(_foo, range(max)), total=max))
