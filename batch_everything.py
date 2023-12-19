@@ -74,20 +74,10 @@ nruns = len(parameters_combined) * len(weatherdata) * len(agromanagementdata)
 print(f"Number of runs: {nruns}")
 # (this does not work when the inputs are all generators)
 
-# Placeholder for storing (summary) results
-outputs = []
-summary_results = []
-
-for parameters, weatherdata, agromanagement in tqdm(all_runs, total=nruns, desc="Running models", unit="runs"):
-    # Start WOFOST, run the simulation
-    output, summary = fpcup.run_wofost_with_id(parameters, weatherdata, agromanagement)
-
-    # Save the results
-    outputs.append(output)
-    summary_results.append(summary)
+# Run the simulation ensemble
+outputs, df_summary = fpcup.run_pcse_ensemble(all_runs, nr_runs=nruns)
 
 # Write the summary results to an Excel file
-df_summary = pd.DataFrame(summary_results).set_index("run_id")
 fname = output_dir / "summary_results.xlsx"
 df_summary.to_excel(fname)
 

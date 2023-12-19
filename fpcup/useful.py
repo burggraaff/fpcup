@@ -1,7 +1,10 @@
 """
 Functions that are useful
 """
+from itertools import starmap
+
 import pandas as pd
+from tqdm import tqdm
 
 from pcse.models import Wofost72_WLP_FD
 from pcse.exceptions import WeatherDataProviderError
@@ -62,6 +65,20 @@ def run_wofost_with_id(parameters, weatherdata, agromanagement):
         pass
 
     return output, summary
+
+def run_pcse_ensemble(all_runs, nr_runs=None, map_func=starmap):
+    """
+    Run an entire PCSE ensemble at once.
+    all_runs is an iterator that zips the three model inputs (parameters, weatherdata, agromanagement) together, e.g.:
+        all_runs = product(parameters_combined, weatherdata, agromanagementdata)
+    """
+    # Run the models
+    outputs, summary = zip(*tqdm(map_func(run_wofost_with_id, all_runs), total=nr_runs, desc="Running PCSE models", unit="runs"))
+
+    # Convert the summary to a single dataframe
+    summary = pd.DataFrame(summary).set_index("run_id")
+
+    return outputs, summary
 
 def replace_year_in_datetime(dt, newyear=2000):
     """
