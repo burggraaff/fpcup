@@ -4,7 +4,7 @@ https://stackoverflow.com/q/41920124/2229219
 """
 
 from multiprocessing.dummy import Pool
-import tqdm
+from tqdm import tqdm
 import time
 
 def _foo(my_number):
@@ -12,6 +12,6 @@ def _foo(my_number):
     return square, square
 
 if __name__ == '__main__':
-    max = 3000000
+    nmax = 7000000
     with Pool() as p:
-        r1, r2 = zip(*tqdm.tqdm(p.map(_foo, range(max)), total=max))
+        r1, r2 = zip(*tqdm(p.map(_foo, range(nmax)), total=nmax))
