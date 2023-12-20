@@ -1,7 +1,7 @@
 """
 Functions that are useful
 """
-from multiprocessing.dummy import Pool  # Multi-threading
+from multiprocessing import Pool  # Multi-threading
 
 import pandas as pd
 from tqdm import tqdm
@@ -67,6 +67,19 @@ def run_wofost_with_id(run_data):
 
     return output, summary
 
+def filter_ensemble_outputs(outputs, summary):
+    """
+    Filter None and other incorrect entries.
+    """
+    # Find entries that are None
+    valid_entries = [s is not None and o is not None for s, o in zip(summary, outputs)]
+
+    # Apply the filter
+    outputs_filtered = [o for o, v in zip(outputs, valid_entries) if v]
+    summary_filtered = [s for s, v in zip(summary, valid_entries) if v]
+
+    return outputs_filtered, summary_filtered
+
 def run_pcse_ensemble(all_runs, nr_runs=None):
     """
     Run an entire PCSE ensemble at once.
@@ -75,6 +88,9 @@ def run_pcse_ensemble(all_runs, nr_runs=None):
     """
     # Run the models
     outputs, summary = zip(*tqdm(map(run_wofost_with_id, all_runs), total=nr_runs, desc="Running PCSE models", unit="runs"))
+
+    # Clean up the results
+    outputs, summary = filter_ensemble_outputs(outputs, summary)
 
     # Convert the summary to a single dataframe
     summary = pd.DataFrame(summary).set_index("run_id")
@@ -92,6 +108,9 @@ def run_pcse_ensemble_parallel(all_runs, nr_runs=None):
     # Run the models
     with Pool() as p:
         outputs, summary = zip(*tqdm(p.imap(run_wofost_with_id, all_runs, chunksize=10), total=nr_runs, desc="Running PCSE models", unit="runs"))
+
+    # Clean up the results
+    outputs, summary = filter_ensemble_outputs(outputs, summary)
 
     # Convert the summary to a single dataframe
     summary = pd.DataFrame(summary).set_index("run_id")

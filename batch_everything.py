@@ -76,7 +76,6 @@ print(f"Number of runs: {nruns}")
 # (this does not work when the inputs are all generators)
 
 # Run the simulation ensemble
-# raise Exception
 outputs, df_summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=nruns)
 
 # Write the summary results to an Excel file
