@@ -13,11 +13,11 @@ from itertools import product
 
 import numpy as np
 import pandas as pd
+import pcse
 import yaml
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-import pcse
 from pcse.base import ParameterProvider
 from pcse.db import NASAPowerWeatherDataProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider

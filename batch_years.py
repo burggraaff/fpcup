@@ -3,24 +3,25 @@ Playing around with the PCSE implementation of WOFOST.
 Based on the example notebook: https://github.com/ajwdewit/pcse_notebooks/blob/master/04%20Running%20PCSE%20in%20batch%20mode.ipynb
 """
 from pathlib import Path
+
 data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs"
 results_dir = Path.cwd() / "results"
 
 from itertools import product
 
-import yaml
 import pandas as pd
+import pcse
+import yaml
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-import pcse
+from pcse.base import ParameterProvider
+from pcse.db import NASAPowerWeatherDataProvider
+from pcse.exceptions import WeatherDataProviderError
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 from pcse.models import Wofost72_WLP_FD
-from pcse.base import ParameterProvider
-from pcse.exceptions import WeatherDataProviderError
 from pcse.util import WOFOST72SiteDataProvider
-from pcse.db import NASAPowerWeatherDataProvider
 
 import fpcup
 
