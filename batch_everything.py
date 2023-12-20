@@ -3,24 +3,25 @@ Playing around with the PCSE implementation of WOFOST.
 Based on the example notebook: https://github.com/ajwdewit/pcse_notebooks/blob/master/04%20Running%20PCSE%20in%20batch%20mode.ipynb
 """
 from pathlib import Path
+
 data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs"
 results_dir = Path.cwd() / "results"
 
-from itertools import product
 from datetime import datetime
+from itertools import product
 
 import numpy as np
-import yaml
 import pandas as pd
+import yaml
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 import pcse
-from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 from pcse.base import ParameterProvider
-from pcse.util import WOFOST72SiteDataProvider
 from pcse.db import NASAPowerWeatherDataProvider
+from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
+from pcse.util import WOFOST72SiteDataProvider
 
 import fpcup
 
@@ -62,8 +63,8 @@ cropdata = [cropd]
 parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
 
 # Sowing dates to simulate
-years = range(2000, 2021)
-doys = range(60, 120, 5)
+years = range(2000, 2021, 1)
+doys = range(60, 91, 10)
 years_doys = product(years, doys)
 sowing_dates = [datetime.strptime(f"{year}-{doy}", "%Y-%j") for year, doy in years_doys]
 agromanagementdata = [yaml.safe_load(agro.format(date=date)) for date in tqdm(sowing_dates, total=len(sowing_dates), desc="Loading agromanagement data", unit="calendars")]
@@ -75,7 +76,8 @@ print(f"Number of runs: {nruns}")
 # (this does not work when the inputs are all generators)
 
 # Run the simulation ensemble
-outputs, df_summary = fpcup.run_pcse_ensemble(all_runs, nr_runs=nruns)
+# raise Exception
+outputs, df_summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=nruns)
 
 # Write the summary results to an Excel file
 fname = output_dir / "summary_results.xlsx"

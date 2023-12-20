@@ -1,13 +1,13 @@
 """
 Functions that are useful
 """
-from itertools import starmap
+from multiprocessing.dummy import Pool  # Multi-threading
 
 import pandas as pd
 from tqdm import tqdm
 
-from pcse.models import Wofost72_WLP_FD
 from pcse.exceptions import WeatherDataProviderError
+from pcse.models import Wofost72_WLP_FD
 
 def run_id_from_params(parameters, weatherdata, agromanagement):
     """
@@ -49,11 +49,12 @@ def start_and_run_wofost(parameters, weatherdata, agromanagement):
 
     return output, summary
 
-def run_wofost_with_id(parameters, weatherdata, agromanagement):
+def run_wofost_with_id(run_data):
     """
     Start a new PCSE model with the given inputs and run it until it terminates.
     The results are saved with a unique run ID.
     """
+    parameters, weatherdata, agromanagement = run_data
     run_id = run_id_from_params(parameters, weatherdata, agromanagement)
     output, summary = start_and_run_wofost(parameters, weatherdata, agromanagement)
 
@@ -66,14 +67,31 @@ def run_wofost_with_id(parameters, weatherdata, agromanagement):
 
     return output, summary
 
-def run_pcse_ensemble(all_runs, nr_runs=None, map_func=starmap):
+def run_pcse_ensemble(all_runs, nr_runs=None):
     """
     Run an entire PCSE ensemble at once.
     all_runs is an iterator that zips the three model inputs (parameters, weatherdata, agromanagement) together, e.g.:
         all_runs = product(parameters_combined, weatherdata, agromanagementdata)
     """
     # Run the models
-    outputs, summary = zip(*tqdm(map_func(run_wofost_with_id, all_runs), total=nr_runs, desc="Running PCSE models", unit="runs"))
+    outputs, summary = zip(*tqdm(map(run_wofost_with_id, all_runs), total=nr_runs, desc="Running PCSE models", unit="runs"))
+
+    # Convert the summary to a single dataframe
+    summary = pd.DataFrame(summary).set_index("run_id")
+
+    return outputs, summary
+
+def run_pcse_ensemble_parallel(all_runs, nr_runs=None):
+    """
+    Parallelised version of run_pcse_ensemble.
+
+    Run an entire PCSE ensemble at once.
+    all_runs is an iterator that zips the three model inputs (parameters, weatherdata, agromanagement) together, e.g.:
+        all_runs = product(parameters_combined, weatherdata, agromanagementdata)
+    """
+    # Run the models
+    with Pool() as p:
+        outputs, summary = zip(*tqdm(p.imap(run_wofost_with_id, all_runs, chunksize=10), total=nr_runs, desc="Running PCSE models", unit="runs"))
 
     # Convert the summary to a single dataframe
     summary = pd.DataFrame(summary).set_index("run_id")

@@ -14,4 +14,4 @@ def _foo(my_number):
 if __name__ == '__main__':
     nmax = 7000000
     with Pool() as p:
-        r1, r2 = zip(*tqdm(p.map(_foo, range(nmax)), total=nmax))
+        r1, r2 = zip(*tqdm(p.imap(_foo, range(nmax), chunksize=5), total=nmax))
