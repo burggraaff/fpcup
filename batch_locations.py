@@ -73,7 +73,7 @@ outputs, summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=nruns)
 fpcup.io.save_ensemble_summary(summary, output_dir / "summary.csv")
 
 # Write the individual outputs to CSV files
-fpcup.io.save_ensemble_outputs(outputs, output_dir)
+fpcup.io.save_ensemble_results(outputs, output_dir)
 
 # Plot curves for outputs
 fpcup.plotting.plot_wofost_ensemble(outputs, saveto=results_dir / "WOFOST_batch_locations.pdf", replace_years=False)
