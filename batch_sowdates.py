@@ -3,25 +3,21 @@ Playing around with the PCSE implementation of WOFOST.
 Based on the example notebook: https://github.com/ajwdewit/pcse_notebooks/blob/master/04%20Running%20PCSE%20in%20batch%20mode.ipynb
 """
 from pathlib import Path
+
 data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs"
 results_dir = Path.cwd() / "results"
 
-from itertools import product
 from datetime import datetime
+from itertools import product
 
 import yaml
-import pandas as pd
-from matplotlib import pyplot as plt
-from tqdm import tqdm
 
 import pcse
-from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
-from pcse.models import Wofost72_WLP_FD
 from pcse.base import ParameterProvider
-from pcse.exceptions import WeatherDataProviderError
-from pcse.util import WOFOST72SiteDataProvider
 from pcse.db import NASAPowerWeatherDataProvider
+from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
+from pcse.util import WOFOST72SiteDataProvider
 
 import fpcup
 
@@ -70,47 +66,11 @@ nruns = len(parameters_combined) * len(weatherdata) * len(agromanagementdata)
 print(f"Number of runs: {nruns}")
 # (this does not work when the inputs are all generators)
 
-# Placeholder for storing (summary) results
-outputs = []
-summary_results = []
-
-for parameters, weatherdata, agromanagement in tqdm(all_runs, total=nruns, desc="Running models", unit="runs"):
-    # String to identify this run
-    soil_type = parameters._soildata["SOLNAM"]
-    startdate = list(agromanagement[0].keys())[0]
-    sowdate = agromanagement[0][startdate]["CropCalendar"]["crop_start_date"]
-    crop_type = agromanagement[0][startdate]["CropCalendar"]["crop_name"]
-    run_id = f"{crop_type}_{soil_type}_sown-{sowdate:%Y-%m-%d}"
-
-    # Start WOFOST, run the simulation
-    try:
-        wofost = Wofost72_WLP_FD(parameters, weatherdata, agromanagement)
-        wofost.run_till_terminate()
-    except WeatherDataProviderError as e:
-        msg = f"Runid '{run_id}' failed because of missing weather data."
-        print(msg)
-        continue
-
-    # Convert individual output to Pandas DataFrame
-    df = pd.DataFrame(wofost.get_output()).set_index("day")
-    outputs.append(df)
-
-    # Save individual output to file
-    fname = output_dir / (run_id + ".csv")
-    df.to_csv(fname)
-
-    # Collect summary results
-    try:
-        r = wofost.get_summary_output()[0]
-    except IndexError:
-        # print(f"IndexError in run '{run_id}'")
-        continue
-    r["run_id"] = run_id
-    summary_results.append(r)
+# Run the simulation ensemble
+outputs, df_summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=nruns)
 
 # Write the summary results to an Excel file
-df_summary = pd.DataFrame(summary_results).set_index("run_id")
-fname = output_dir / "summary_results.xlsx"
+fname = output_dir / "summary_sowdates.xlsx"
 df_summary.to_excel(fname)
 
 # Plot curves for outputs

@@ -13,10 +13,10 @@ from itertools import product
 
 import numpy as np
 import pandas as pd
+import pcse
 import yaml
 from tqdm import tqdm
 
-import pcse
 from pcse.base import ParameterProvider
 from pcse.db import NASAPowerWeatherDataProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
@@ -75,7 +75,6 @@ print(f"Number of runs: {nruns}")
 # (this does not work when the inputs are all generators)
 
 # Run the simulation ensemble
-# raise Exception
 outputs, df_summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=nruns)
 
 # Write the summary results to an Excel file
