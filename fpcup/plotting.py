@@ -23,18 +23,16 @@ def plot_wofost_ensemble(outputs, keys=None, saveto=None, replace_years=True, sh
     # Plot curves for outputs
     fig, axs = plt.subplots(nrows=len(keys), sharex=True, figsize=(8,10))
 
-    with tqdm(total=len(outputs), desc="Plotting results", unit="runs") as pbar:
-        for df in outputs:
-            # Remove the year information if desired, e.g. to compare year-by-year results
-            if replace_years:
-                time_axis = pd.to_datetime(df.index.to_series()).apply(replace_year_in_datetime)
-            else:
-                time_axis = df.index
+    for df in tqdm(outputs, total=len(outputs), desc="Plotting results", unit="runs"):
+        # Remove the year information if desired, e.g. to compare year-by-year results
+        if replace_years:
+            time_axis = pd.to_datetime(df.index.to_series()).apply(replace_year_in_datetime)
+        else:
+            time_axis = df.index
 
-            # Plot every key in the corresponding panel
-            for ax, key in zip(axs, keys):
-                ax.plot(time_axis, df[key], alpha=0.25)
-            pbar.update()
+        # Plot every key in the corresponding panel
+        for ax, key in zip(axs, keys):
+            ax.plot(time_axis, df[key], alpha=0.25)
 
     axs[-1].set_xlabel("Time")
     for ax, key in zip(axs, keys):

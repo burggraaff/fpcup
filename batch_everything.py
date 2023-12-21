@@ -83,3 +83,5 @@ df_summary.to_excel(fname)
 
 # Plot curves for outputs
 fpcup.plotting.plot_wofost_ensemble(outputs, saveto=results_dir / "WOFOST_batch_stacked.png", replace_years=True)
+
+# Plot summary results
