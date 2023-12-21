@@ -12,7 +12,7 @@ def replace_year_in_datetime(date, newyear=2000):
     """
     return date.replace(year=newyear)
 
-def plot_wofost_ensemble(outputs, keys=None, saveto=None, replace_years=True, show=True):
+def plot_wofost_ensemble_results(outputs, keys=None, saveto=None, replace_years=True, show=True):
     """
     Plot WOFOST ensemble results.
     """
