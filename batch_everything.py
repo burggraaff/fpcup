@@ -81,6 +81,11 @@ outputs, df_summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=nruns)
 fname = output_dir / "summary_results.xlsx"
 df_summary.to_excel(fname)
 
+# Write the individual outputs to CSV files
+for run_id, o in tqdm(zip(df_summary.index, outputs), total=len(outputs), desc="Saving output files", unit="files"):
+    filename = output_dir / "batch" / f"{run_id}.csv"
+    o.to_csv(filename)
+
 # Plot curves for outputs
 fpcup.plotting.plot_wofost_ensemble(outputs, saveto=results_dir / "WOFOST_batch_stacked.png", replace_years=True)
 

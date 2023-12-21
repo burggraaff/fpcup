@@ -1,7 +1,13 @@
+# Folders for input/output
 data/
 outputs/
 results/
+
+# Input/output files in the main folder, used for testing only
+*.csv
 *.pdf
+*.png
+*.xlsx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
