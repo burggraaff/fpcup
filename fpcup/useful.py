@@ -76,12 +76,13 @@ def filter_ensemble_outputs(outputs, summary):
     """
     # Find entries that are None
     valid_entries = [s is not None and o is not None for s, o in zip(summary, outputs)]
+    n_filtered_out = len(valid_entries) - sum(valid_entries)
 
     # Apply the filter
     outputs_filtered = [o for o, v in zip(outputs, valid_entries) if v]
     summary_filtered = [s for s, v in zip(summary, valid_entries) if v]
 
-    return outputs_filtered, summary_filtered
+    return outputs_filtered, summary_filtered, n_filtered_out
 
 def run_pcse_ensemble(all_runs, nr_runs=None):
     """
@@ -93,7 +94,9 @@ def run_pcse_ensemble(all_runs, nr_runs=None):
     outputs, summary = zip(*tqdm(map(run_wofost_with_id, all_runs), total=nr_runs, desc="Running PCSE models", unit="runs"))
 
     # Clean up the results
-    outputs, summary = filter_ensemble_outputs(outputs, summary)
+    outputs, summary, n_filtered_out = filter_ensemble_outputs(outputs, summary)
+    if n_filtered_out > 0:
+        print(f"{n_filtered_out} runs failed.")
 
     # Convert the summary to a single dataframe
     summary = pd.DataFrame(summary).set_index("run_id")
@@ -113,7 +116,9 @@ def run_pcse_ensemble_parallel(all_runs, nr_runs=None):
         outputs, summary = zip(*tqdm(p.imap(run_wofost_with_id, all_runs, chunksize=10), total=nr_runs, desc="Running PCSE models", unit="runs"))
 
     # Clean up the results
-    outputs, summary = filter_ensemble_outputs(outputs, summary)
+    outputs, summary, n_filtered_out = filter_ensemble_outputs(outputs, summary)
+    if n_filtered_out > 0:
+        print(f"{n_filtered_out} runs failed.")
 
     # Convert the summary to a single dataframe
     summary = pd.DataFrame(summary).set_index("run_id")
