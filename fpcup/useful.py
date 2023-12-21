@@ -97,9 +97,3 @@ def run_pcse_ensemble_parallel(all_runs, nr_runs=None):
     summary = pd.DataFrame(summary).set_index("run_id")
 
     return outputs, summary
-
-def replace_year_in_datetime(dt, newyear=2000):
-    """
-    For a datetime object yyyy-mm-dd, replace yyyy with newyear.
-    """
-    return dt.replace(year=newyear)

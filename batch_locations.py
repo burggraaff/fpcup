@@ -114,20 +114,4 @@ fname = output_dir / "summary_results.xlsx"
 df_summary.to_excel(fname)
 
 # Plot curves for outputs
-keys = df.keys()
-fig, axs = plt.subplots(nrows=len(keys), sharex=True, figsize=(8,10))
-
-for df in outputs:
-    time_without_year = pd.to_datetime(df.index.to_series()).apply(fpcup.replace_year_in_datetime)
-    for ax, key in zip(axs, keys):
-        ax.plot(time_without_year, df[key], alpha=0.25)
-axs[-1].set_xlabel("Time")
-for ax, key in zip(axs, keys):
-    ax.set_ylabel(key)
-    ax.set_ylim(ymin=0)
-    ax.grid()
-fig.align_ylabels()
-axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")
-fig.savefig(results_dir / "WOFOST_batch_locations.pdf", dpi=300, bbox_inches="tight")
-plt.show()
-plt.close()
+fpcup.plotting.plot_wofost_ensemble(outputs, saveto=results_dir / "WOFOST_batch_locations.pdf", replace_years=False)
