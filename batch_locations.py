@@ -5,7 +5,7 @@ Based on the example notebook: https://github.com/ajwdewit/pcse_notebooks/blob/m
 from pathlib import Path
 
 data_dir = Path("../pcse_notebooks/data")
-output_dir = Path.cwd() / "outputs"
+output_dir = Path.cwd() / "outputs" / "locations"
 results_dir = Path.cwd() / "results"
 
 from itertools import product
@@ -67,11 +67,13 @@ print(f"Number of runs: {nruns}")
 # (this does not work when the inputs are all generators)
 
 # Run the simulation ensemble
-outputs, df_summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=nruns)
+outputs, summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=nruns)
 
-# Write the summary results to an Excel file
-fname = output_dir / "summary_locations.xlsx"
-df_summary.to_excel(fname)
+# Write the summary results to a CSV file
+fpcup.io.save_ensemble_summary(summary, output_dir / "summary.csv")
+
+# Write the individual outputs to CSV files
+fpcup.io.save_ensemble_outputs(outputs, output_dir)
 
 # Plot curves for outputs
 fpcup.plotting.plot_wofost_ensemble(outputs, saveto=results_dir / "WOFOST_batch_locations.pdf", replace_years=False)

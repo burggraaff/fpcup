@@ -58,8 +58,11 @@ def run_wofost_with_id(run_data):
     run_id = run_id_from_params(parameters, weatherdata, agromanagement)
     output, summary = start_and_run_wofost(parameters, weatherdata, agromanagement)
 
-    # Optional: write results to file
-
+    # Add the run_id to the output and summary objects for tracking purposes
+    try:
+        output.run_id = run_id
+    except TypeError:  # This happens if the run failed
+        pass
     try:
         summary["run_id"] = run_id
     except TypeError:  # This happens if there were no summary results

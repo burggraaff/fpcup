@@ -1,2 +1,2 @@
-from . import plotting
+from . import io, plotting
 from .useful import *
