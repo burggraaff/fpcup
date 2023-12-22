@@ -9,6 +9,18 @@ from tqdm import tqdm
 from pcse.exceptions import WeatherDataProviderError
 from pcse.models import Wofost72_WLP_FD
 
+parameter_names = {"DVS": "Crop development stage",
+                   "LAI": "Leaf area index [ha/ha]",
+                   "TAGP": "Total above-ground production [kg/ha]",
+                   "TWSO": "Total weight - storage organs [kg/ha]",
+                   "TWLV": "Total weight - leaves [kg/ha]",
+                   "TWST": "Total weight - stems [kg/ha]",
+                   "TWRT": "Total weight - roots [kg/ha]",
+                   "TRA": "Crop transpiration [cm/day]",
+                   "RD": "Crop rooting depth [cm]",
+                   "SM": "Soil moisture index",
+                   "WWLOW": "Total water [cm]"}
+
 def run_id_from_params(parameters, weatherdata, agromanagement):
     """
     Generate a run ID from PCSE model inputs.

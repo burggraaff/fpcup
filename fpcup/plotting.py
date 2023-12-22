@@ -5,6 +5,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
+from .useful import parameter_names
 
 def replace_year_in_datetime(date, newyear=2000):
     """
@@ -28,7 +29,7 @@ def plot_wofost_ensemble_results(outputs, keys=None, saveto=None, replace_years=
         if replace_years:
             time_axis = pd.to_datetime(df.index.to_series()).apply(replace_year_in_datetime)
         else:
-            time_axis = df.index
+            time_axis = pd.to_datetime(df.index.to_series())
 
         # Plot every key in the corresponding panel
         for ax, key in zip(axs, keys):
@@ -38,6 +39,7 @@ def plot_wofost_ensemble_results(outputs, keys=None, saveto=None, replace_years=
     for ax, key in zip(axs, keys):
         ax.set_ylabel(key)
         ax.set_ylim(ymin=0)
+        ax.text(0.00, 1.00, parameter_names[key], transform=ax.transAxes, horizontalalignment="left", verticalalignment="top", bbox={"boxstyle": "round", "facecolor": "white"})
         ax.grid()
     fig.align_ylabels()
     axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")

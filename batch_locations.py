@@ -77,5 +77,3 @@ fpcup.io.save_ensemble_results(outputs, output_dir)
 
 # Plot curves for outputs
 fpcup.plotting.plot_wofost_ensemble_results(outputs, saveto=results_dir / "WOFOST_batch_locations.pdf", replace_years=False)
-
-# Plot summary results
