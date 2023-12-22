@@ -10,6 +10,7 @@ from .useful import parameter_names
 def replace_year_in_datetime(date, newyear=2000):
     """
     For a datetime object yyyy-mm-dd, replace yyyy with newyear.
+    Note that you may get errors if your data contain leap days (mm-dd = 02-29) but your chosen `newyear` was not a leap year.
     """
     return date.replace(year=newyear)
 
