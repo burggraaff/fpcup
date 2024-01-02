@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
-
 from tqdm import tqdm
 
 from pcse.db import NASAPowerWeatherDataProvider

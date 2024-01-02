@@ -11,8 +11,6 @@ results_dir = Path.cwd() / "results"
 from datetime import datetime
 from itertools import product
 
-import yaml
-
 import pcse
 from pcse.base import ParameterProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
@@ -27,28 +25,10 @@ soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
 sited = WOFOST72SiteDataProvider(WAV=10)
 
-agro = """
-- {date:%Y}-01-01:
-    CropCalendar:
-        crop_name: 'barley'
-        variety_name: 'Spring_barley_301'
-        crop_start_date: {date:%Y-%m-%d}
-        crop_start_type: sowing
-        crop_end_date:
-        crop_end_type: maturity
-        max_duration: 300
-    TimedEvents: null
-    StateEvents: null
-- {date:%Y}-12-01: null
-"""
-crop_type = "barley"
-
 weatherdata = fpcup.weather.load_weather_data_NASAPower(latitude=5, longitude=53, return_single=False)
 
 # Sowing dates to simulate
-year = 2020
-doys = range(1, 222)
-sowing_dates = [datetime.strptime(f"{year}-{doy}", "%Y-%j") for doy in doys]
+sowing_dates = fpcup.agro.generate_sowingdates(year=2020, days_of_year=range(1, 222))
 
 # Set up iterables
 sitedata = [sited]
@@ -56,7 +36,7 @@ soildata = soil_files
 cropdata = [cropd]
 
 parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
-agromanagementdata = [yaml.safe_load(agro.format(date=date)) for date in sowing_dates]
+agromanagementdata = fpcup.agro.load_formatted_multi(fpcup.agro.template_springbarley_date, date=sowing_dates)
 
 # Loop over input data
 all_runs = product(parameters_combined, weatherdata, agromanagementdata)

@@ -11,8 +11,6 @@ results_dir = Path.cwd() / "results"
 from itertools import product
 
 import numpy as np
-import yaml
-from tqdm import tqdm
 
 import pcse
 from pcse.base import ParameterProvider
@@ -28,22 +26,6 @@ soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
 sited = WOFOST72SiteDataProvider(WAV=10)
 
-agro = """
-- 2020-01-01:
-    CropCalendar:
-        crop_name: 'barley'
-        variety_name: 'Spring_barley_301'
-        crop_start_date: 2020-03-03
-        crop_start_type: sowing
-        crop_end_date:
-        crop_end_type: maturity
-        max_duration: 300
-    TimedEvents: null
-    StateEvents: null
-- 2020-12-01: null
-"""
-crop_type = "barley"
-
 # Fetch weather data for the Netherlands (European part)
 longitudes = np.arange(3, 9, 0.25)
 latitudes = np.arange(49, 54.1, 0.25)
@@ -57,7 +39,7 @@ soildata = soil_files
 cropdata = [cropd]
 
 parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
-agromanagementdata = [yaml.safe_load(agro)]
+agromanagementdata = [fpcup.agro.load_formatted(fpcup.agro.template_springbarley)]
 
 # Loop over input data
 all_runs = product(parameters_combined, weatherdata, agromanagementdata)

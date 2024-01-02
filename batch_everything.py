@@ -12,11 +12,9 @@ from datetime import datetime
 from itertools import product
 
 import numpy as np
-import pandas as pd
-import pcse
-import yaml
 from tqdm import tqdm
 
+import pcse
 from pcse.base import ParameterProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 from pcse.util import WOFOST72SiteDataProvider
@@ -29,22 +27,6 @@ cropd = YAMLCropDataProvider()
 soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
 sited = WOFOST72SiteDataProvider(WAV=10)
-
-agro = """
-- {date:%Y}-01-01:
-    CropCalendar:
-        crop_name: 'barley'
-        variety_name: 'Spring_barley_301'
-        crop_start_date: {date:%Y-%m-%d}
-        crop_start_type: sowing
-        crop_end_date:
-        crop_end_type: maturity
-        max_duration: 300
-    TimedEvents: null
-    StateEvents: null
-- {date:%Y}-12-01: null
-"""
-crop_type = "barley"
 
 # Fetch weather data for the Netherlands (European part)
 longitudes = np.arange(3, 9, 0.5)
@@ -65,7 +47,7 @@ years = range(2000, 2021, 1)
 doys = range(60, 91, 10)
 years_doys = product(years, doys)
 sowing_dates = [datetime.strptime(f"{year}-{doy}", "%Y-%j") for year, doy in years_doys]
-agromanagementdata = [yaml.safe_load(agro.format(date=date)) for date in tqdm(sowing_dates, total=len(sowing_dates), desc="Loading agromanagement data", unit="calendars")]
+agromanagementdata = fpcup.agro.load_formatted_multi(fpcup.agro.template_springbarley_date, date=sowing_dates)
 
 # Loop over input data
 all_runs = product(parameters_combined, weatherdata, agromanagementdata)
