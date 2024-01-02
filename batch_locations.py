@@ -16,7 +16,6 @@ from tqdm import tqdm
 
 import pcse
 from pcse.base import ParameterProvider
-from pcse.db import NASAPowerWeatherDataProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 from pcse.util import WOFOST72SiteDataProvider
 
@@ -46,11 +45,11 @@ agro = """
 crop_type = "barley"
 
 # Fetch weather data for the Netherlands (European part)
-longitudes = np.arange(3, 9, 0.5)
-latitudes = np.arange(49, 54.1, 0.5)
+longitudes = np.arange(3, 9, 0.25)
+latitudes = np.arange(49, 54.1, 0.25)
 n_locations = len(longitudes)*len(latitudes)
 coords = product(latitudes, longitudes)
-weatherdata = [NASAPowerWeatherDataProvider(latitude=lat, longitude=long) for lat, long in tqdm(coords, total=n_locations, desc="Fetching weather data", unit="sites")]
+weatherdata = fpcup.weather.load_weather_data_NASAPower(latitude=latitudes, longitude=longitudes)
 
 # Set up iterables
 sitedata = [sited]

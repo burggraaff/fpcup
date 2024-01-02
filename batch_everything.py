@@ -18,7 +18,6 @@ import yaml
 from tqdm import tqdm
 
 from pcse.base import ParameterProvider
-from pcse.db import NASAPowerWeatherDataProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 from pcse.util import WOFOST72SiteDataProvider
 
@@ -52,7 +51,7 @@ longitudes = np.arange(3, 9, 0.5)
 latitudes = np.arange(49, 54.1, 0.5)
 n_locations = len(longitudes)*len(latitudes)
 coords = product(latitudes, longitudes)
-weatherdata = [NASAPowerWeatherDataProvider(latitude=lat, longitude=long) for lat, long in tqdm(coords, total=n_locations, desc="Fetching weather data", unit="sites")]
+weatherdata = fpcup.weather.load_weather_data_NASAPower(latitude=latitudes, longitude=longitudes)
 
 # Set up iterables
 sitedata = [sited]

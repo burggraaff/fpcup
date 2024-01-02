@@ -15,7 +15,6 @@ import yaml
 
 import pcse
 from pcse.base import ParameterProvider
-from pcse.db import NASAPowerWeatherDataProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 from pcse.util import WOFOST72SiteDataProvider
 
@@ -44,7 +43,7 @@ agro = """
 """
 crop_type = "barley"
 
-weatherd = NASAPowerWeatherDataProvider(longitude=5, latitude=53)
+weatherdata = fpcup.weather.load_weather_data_NASAPower(latitude=5, longitude=53, return_single=False)
 
 # Sowing dates to simulate
 year = 2020
@@ -57,7 +56,6 @@ soildata = soil_files
 cropdata = [cropd]
 
 parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
-weatherdata = [weatherd]
 agromanagementdata = [yaml.safe_load(agro.format(date=date)) for date in sowing_dates]
 
 # Loop over input data
