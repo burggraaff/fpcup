@@ -12,16 +12,15 @@ from itertools import product
 
 from pcse.base import ParameterProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
-from pcse.util import WOFOST72SiteDataProvider
 
 import fpcup
 
 cropd = YAMLCropDataProvider()
 soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
-sited = WOFOST72SiteDataProvider(WAV=10)
+sited = fpcup.site.WOFOST72SiteDataProvider(WAV=10)
 
-weatherdata = fpcup.weather.load_weather_data_NASAPower(latitude=5, longitude=53, return_single=False)
+weatherdata = fpcup.weather.load_weather_data_NASAPower(coordinates=(5, 53), return_single=False)
 
 # Sowing dates to simulate
 sowing_dates = fpcup.agro.generate_sowingdates(year=2020, days_of_year=range(1, 222))

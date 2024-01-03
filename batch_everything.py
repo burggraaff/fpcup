@@ -15,21 +15,17 @@ import numpy as np
 
 from pcse.base import ParameterProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
-from pcse.util import WOFOST72SiteDataProvider
 
 import fpcup
 
 cropd = YAMLCropDataProvider()
 soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
-sited = WOFOST72SiteDataProvider(WAV=10)
+sited = fpcup.site.WOFOST72SiteDataProvider(WAV=10)
 
 # Fetch weather data for the Netherlands (European part)
-longitudes = np.arange(3, 9, 0.5)
-latitudes = np.arange(49, 54.1, 0.5)
-n_locations = len(longitudes)*len(latitudes)
-coords = product(latitudes, longitudes)
-weatherdata = fpcup.weather.load_weather_data_NASAPower(latitude=latitudes, longitude=longitudes)
+coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.25), longitude=(3, 9, 0.25))
+weatherdata = fpcup.weather.load_weather_data_NASAPower(coords)
 
 # Set up iterables
 sitedata = [sited]

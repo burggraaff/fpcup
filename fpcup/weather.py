@@ -22,32 +22,29 @@ def _load_weather_data_NASAPower_cache(latitude: float, longitude: float, **kwar
     weather_data = NASAPowerWeatherDataProvider(latitude=latitude, longitude=longitude, **kwargs)
     return weather_data
 
-def load_weather_data_NASAPower(latitude: float | Iterable[float], longitude: float | Iterable[float], return_single=True, **kwargs) -> NASAPowerWeatherDataProvider | list[NASAPowerWeatherDataProvider]:
+def load_weather_data_NASAPower(coordinates: tuple[float] | Iterable[tuple[float]], return_single=True, progressbar=True, leave_progressbar=False, **kwargs) -> NASAPowerWeatherDataProvider | list[NASAPowerWeatherDataProvider]:
     """
     Load weather data from the NASA Power database using PCSE's NASAPowerWeatherDataProvider method.
 
+    Coordinates must be (latitude, longitude) in that order.
     If a single (latitude, longitude) pair is provided and return_single=True, returns a single NASAPowerWeatherDataProvider object.
     If a single (latitude, longitude) pair is provided and return_single=False, returns a list containing a single NASAPowerWeatherDataProvider object.
 
     If multiple latitudes and/or longitudes are provided, return a list of NASAPowerWeatherDataProvider objects.
     """
-    # Check if the inputs are iterables - if not, make them into single-element iterables
-    if not isinstance(latitude, Iterable):
-        latitude = [latitude]
-    if not isinstance(longitude, Iterable):
-        longitude = [longitude]
+    # Check if multiple coordinate pairs were provided - if not, make them into a single-element iterable
+    if isinstance(coordinates, tuple) and not isinstance(coordinates[0], tuple):
+        coordinates = [coordinates]
+        progressbar = False
 
-    # Try to determine the number of inputs for the progressbar - does not work if they are generators
+    # Try to determine the number of inputs for the progressbar - does not work if coordinates is a generator
     try:
-        n = len(latitude) * len(longitude)
+        n = len(coordinates)
     except TypeError:
         n = None
 
-    # Generate coordinate pairs
-    coordinates = product(latitude, longitude)
-
     # Do the actual loading
-    weather_data = [_load_weather_data_NASAPower_cache(latitude=lat, longitude=long, **kwargs) for lat, long in tqdm(coordinates, total=n, desc="Fetching weather data", unit="sites")]
+    weather_data = [_load_weather_data_NASAPower_cache(latitude=lat, longitude=long, **kwargs) for lat, long in tqdm(coordinates, total=n, desc="Fetching weather data", unit="sites", disable=not progressbar, leave=leave_progressbar)]
 
     # If there was only a single output, provide a single output
     if return_single and len(weather_data) == 1:
