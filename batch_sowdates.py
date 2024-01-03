@@ -18,7 +18,6 @@ import fpcup
 cropd = YAMLCropDataProvider()
 soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
-sited = fpcup.site.WOFOST72SiteDataProvider(WAV=10)
 
 # Fetch site & weather data
 coords = (5, 53)
@@ -29,7 +28,6 @@ weatherdata = fpcup.weather.load_weather_data_NASAPower(coordinates=coords, retu
 sowing_dates = fpcup.agro.generate_sowingdates(year=2020, days_of_year=range(1, 222))
 
 # Set up iterables
-sitedata = [sited]
 soildata = soil_files
 cropdata = [cropd]
 

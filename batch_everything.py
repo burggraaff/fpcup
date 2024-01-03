@@ -8,7 +8,6 @@ data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs" / "batch"
 results_dir = Path.cwd() / "results"
 
-from datetime import datetime
 from itertools import product
 
 from pcse.base import ParameterProvider
@@ -19,7 +18,6 @@ import fpcup
 cropd = YAMLCropDataProvider()
 soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
-sited = fpcup.site.WOFOST72SiteDataProvider(WAV=10)
 
 # Fetch site & weather data
 coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.25), longitude=(3, 9, 0.25))
