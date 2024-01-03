@@ -8,17 +8,13 @@ data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs" / "sowdates"
 results_dir = Path.cwd() / "results"
 
-from datetime import datetime
 from itertools import product
 
-import pcse
 from pcse.base import ParameterProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 from pcse.util import WOFOST72SiteDataProvider
 
 import fpcup
-
-print(f"PCSE version: {pcse.__version__}")
 
 cropd = YAMLCropDataProvider()
 soil_dir = data_dir / "soil"

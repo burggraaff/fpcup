@@ -12,16 +12,12 @@ from datetime import datetime
 from itertools import product
 
 import numpy as np
-from tqdm import tqdm
 
-import pcse
 from pcse.base import ParameterProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 from pcse.util import WOFOST72SiteDataProvider
 
 import fpcup
-
-print(f"PCSE version: {pcse.__version__}")
 
 cropd = YAMLCropDataProvider()
 soil_dir = data_dir / "soil"
