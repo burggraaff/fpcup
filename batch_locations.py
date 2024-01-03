@@ -11,26 +11,27 @@ results_dir = Path.cwd() / "results"
 from itertools import product
 
 from pcse.base import ParameterProvider
-from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 
 import fpcup
 
-cropd = YAMLCropDataProvider()
-soil_dir = data_dir / "soil"
-soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
-
 # Fetch site & weather data
-# coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.2), longitude=(3, 9, 0.2))
-coords = fpcup.site.grid_coordinate_linspace(latitude=(49, 54), longitude=(3, 9), n=100)
+coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.2), longitude=(3, 9, 0.2))
+# coords = fpcup.site.grid_coordinate_linspace(latitude=(49, 54), longitude=(3, 9), n=100)
 sitedata = fpcup.site.example(coords)
 weatherdata = fpcup.weather.load_weather_data_NASAPower(coords)
 
-# Set up iterables
-soildata = soil_files
-cropdata = [cropd]
+# Soil data
+soil_dir = data_dir / "soil"
+soildata = fpcup.soil.load_folder(soil_dir)
 
-parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
+# Crop data
+cropdata = [fpcup.crop.default]
+
+# Agromanagement calendars
 agromanagementdata = [fpcup.agro.load_formatted(fpcup.agro.template_springbarley)]
+
+# Set up iterables
+parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
 
 # Loop over input data
 all_runs = product(parameters_combined, weatherdata, agromanagementdata)
