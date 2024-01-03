@@ -9,9 +9,16 @@ import yaml
 from tqdm import tqdm
 
 from ._agro_templates import template_crop_date, template_springbarley_date, template_springbarley
-from .tools import _make_iterable, dict_product
+from .tools import make_iterable, dict_product
 
-def load_formatted(template: str, **kwargs) -> list[dict]:
+class AgromanagementData(list):
+    """
+    This class is nothing more than a reskinned list.
+    It allows us to type check specifically for agromanagement data rather than for a generic list.
+    """
+    pass
+
+def load_formatted(template: str, **kwargs) -> AgromanagementData:
     """
     Load an agromanagement template (YAML), formatted with the provided kwargs.
     Note that any kwargs not found in the template are simply ignored.
@@ -35,9 +42,10 @@ def load_formatted(template: str, **kwargs) -> list[dict]:
     """
     template_formatted = template.format(**kwargs)
     agromanagement = yaml.safe_load(template_formatted)
+    agromanagement = AgromanagementData(agromanagement)
     return agromanagement
 
-def load_formatted_multi(template: str, **kwargs) -> list[list[dict]]:
+def load_formatted_multi(template: str, **kwargs) -> list[AgromanagementData]:
     """
     Load an agromanagement template (YAML), formatted with the provided kwargs.
     This will iterate over every iterable in kwargs; for example, you can provide multiple dates or multiple crops.
@@ -61,7 +69,7 @@ def generate_sowingdates(year: int | Iterable[int], days_of_year: int | Iterable
     Both inputs can be a single number or an iterable of numbers.
     """
     # Ensure both variables are iterables, then generate all possible pairs
-    years = _make_iterable(year)
-    doys = _make_iterable(days_of_year)
+    years = make_iterable(year)
+    doys = make_iterable(days_of_year)
     years_and_doys = product(years, doys)
     return [dt.datetime.strptime(f"{year}-{doy}", "%Y-%j") for year, doy in years_and_doys]

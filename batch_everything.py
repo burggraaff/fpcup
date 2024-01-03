@@ -30,17 +30,11 @@ cropdata = [fpcup.crop.default]
 sowing_dates = fpcup.agro.generate_sowingdates(year=range(2000, 2021, 1), days_of_year=range(60, 91, 10))
 agromanagementdata = fpcup.agro.load_formatted_multi(fpcup.agro.template_springbarley_date, date=sowing_dates)
 
-# Set up iterables
-parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
-
 # Loop over input data
-all_runs = product(parameters_combined, weatherdata, agromanagementdata)
-nruns = len(parameters_combined) * len(weatherdata) * len(agromanagementdata)
-print(f"Number of runs: {nruns}")
-# (this does not work when the inputs are all generators)
+all_runs, n_runs = fpcup.model.bundle_parameters(sitedata, soildata, cropdata, weatherdata, agromanagementdata)
 
 # Run the simulation ensemble
-outputs, summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=nruns)
+outputs, summary = fpcup.run_pcse_ensemble_parallel(all_runs, nr_runs=n_runs)
 
 # Write the summary results to a CSV file
 fpcup.io.save_ensemble_summary(summary, output_dir / "summary.csv")

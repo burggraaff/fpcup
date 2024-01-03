@@ -5,7 +5,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from .useful import parameter_names
+from .model import parameter_names
 
 def replace_year_in_datetime(date, newyear=2000):
     """

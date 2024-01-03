@@ -1,13 +1,21 @@
 """
 Functions that are useful
 """
+from itertools import product
 from multiprocessing import Pool  # Multi-threading
+from typing import Iterable
 
 import pandas as pd
 from tqdm import tqdm
 
+from pcse.base import MultiCropDataProvider, ParameterProvider, WeatherDataProvider
 from pcse.exceptions import WeatherDataProviderError
+from pcse.fileinput import CABOFileReader
 from pcse.models import Wofost72_WLP_FD
+from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
+
+from .agro import AgromanagementData
+from .tools import make_iterable
 
 parameter_names = {"DVS": "Crop development stage",
                    "LAI": "Leaf area index [ha/ha]",
@@ -20,6 +28,50 @@ parameter_names = {"DVS": "Crop development stage",
                    "RD": "Crop rooting depth [cm]",
                    "SM": "Soil moisture index",
                    "WWLOW": "Total water [cm]"}
+
+def bundle_agro_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProvider],
+                      soildata: CABOFileReader | Iterable[CABOFileReader],
+                      cropdata: MultiCropDataProvider | Iterable[MultiCropDataProvider]) -> Iterable[ParameterProvider]:
+    """
+    Bundle the site, soil, and crop parameters into PCSE ParameterProvider objects.
+    """
+    # Make sure the data are iterable
+    sitedata_iter = make_iterable(sitedata, exclude=[PCSESiteDataProvider])
+    soildata_iter = make_iterable(soildata, exclude=[CABOFileReader])
+    cropdata_iter = make_iterable(cropdata, exclude=[MultiCropDataProvider])
+
+    # Combine everything
+    combined_inputs = product(sitedata_iter, soildata_iter, cropdata_iter)
+    parameters_combined = (ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in combined_inputs)
+
+    return parameters_combined
+
+def bundle_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProvider],
+                      soildata: CABOFileReader | Iterable[CABOFileReader],
+                      cropdata: MultiCropDataProvider | Iterable[MultiCropDataProvider],
+                      weatherdata: WeatherDataProvider | Iterable[WeatherDataProvider],
+                      agromanagementdata: AgromanagementData | Iterable[AgromanagementData]) -> tuple[Iterable[[ParameterProvider, WeatherDataProvider, AgromanagementData]], int | None]:
+    """
+    Bundle the site, soil, and crop parameters into PCSE ParameterProvider objects.
+    """
+    # Make sure the data are iterable
+    sitedata_iter = make_iterable(sitedata, exclude=[PCSESiteDataProvider])
+    soildata_iter = make_iterable(soildata, exclude=[CABOFileReader])
+    cropdata_iter = make_iterable(cropdata, exclude=[MultiCropDataProvider])
+    weatherdata_iter = make_iterable(weatherdata, exclude=[WeatherDataProvider])
+    agromanagementdata_iter = make_iterable(agromanagementdata, exclude=[AgromanagementData])
+
+    # Determine the total number of parameter combinations, if possible
+    try:
+        n = len(sitedata_iter) * len(soildata_iter) * len(cropdata_iter) * len(weatherdata_iter) * len(agromanagementdata_iter)
+    except TypeError:
+        n = None
+
+    # Combine everything
+    agro_parameters = bundle_agro_parameters(sitedata_iter, soildata_iter, cropdata_iter)
+    combined_parameters = product(agro_parameters, weatherdata_iter, agromanagementdata_iter)
+
+    return combined_parameters, n
 
 def run_id_from_params(parameters, weatherdata, agromanagement):
     """
