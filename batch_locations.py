@@ -18,14 +18,14 @@ import fpcup
 cropd = YAMLCropDataProvider()
 soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
-sited = fpcup.site.WOFOST72SiteDataProvider(WAV=10)
 
-# Fetch weather data for the Netherlands (European part)
-coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.2), longitude=(3, 9, 0.2))
+# Fetch site & weather data
+# coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.2), longitude=(3, 9, 0.2))
+coords = fpcup.site.grid_coordinate_linspace(latitude=(49, 54), longitude=(3, 9), n=100)
+sitedata = fpcup.site.example(coords)
 weatherdata = fpcup.weather.load_weather_data_NASAPower(coords)
 
 # Set up iterables
-sitedata = [sited]
 soildata = soil_files
 cropdata = [cropd]
 

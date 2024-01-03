@@ -11,8 +11,6 @@ results_dir = Path.cwd() / "results"
 from datetime import datetime
 from itertools import product
 
-import numpy as np
-
 from pcse.base import ParameterProvider
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 
@@ -23,23 +21,21 @@ soil_dir = data_dir / "soil"
 soil_files = [CABOFileReader(soil_filename) for soil_filename in soil_dir.glob("ec*")]
 sited = fpcup.site.WOFOST72SiteDataProvider(WAV=10)
 
-# Fetch weather data for the Netherlands (European part)
+# Fetch site & weather data
 coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.25), longitude=(3, 9, 0.25))
+sitedata = fpcup.site.example(coords)
 weatherdata = fpcup.weather.load_weather_data_NASAPower(coords)
 
 # Set up iterables
-sitedata = [sited]
 soildata = soil_files
 cropdata = [cropd]
 
 parameters_combined = [ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in product(sitedata, soildata, cropdata)]
 
 # Sowing dates to simulate
-years = range(2000, 2021, 1)
-doys = range(60, 91, 10)
-years_doys = product(years, doys)
-sowing_dates = [datetime.strptime(f"{year}-{doy}", "%Y-%j") for year, doy in years_doys]
+sowing_dates = fpcup.agro.generate_sowingdates(year=range(2000, 2021, 1), days_of_year=range(60, 91, 10))
 agromanagementdata = fpcup.agro.load_formatted_multi(fpcup.agro.template_springbarley_date, date=sowing_dates)
+raise Exception
 
 # Loop over input data
 all_runs = product(parameters_combined, weatherdata, agromanagementdata)

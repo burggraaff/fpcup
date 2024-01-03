@@ -8,6 +8,8 @@ import numpy as np
 
 from pcse.util import WOFOST72SiteDataProvider, WOFOST80SiteDataProvider
 
+example = lambda coords: [WOFOST72SiteDataProvider(WAV=10)]
+
 def grid_coordinate_range(latitude: tuple[Number], longitude: tuple[Number]) -> list[tuple[float]]:
     """
     Generate all pairs of latitude/longitude coordinates in given latitude/longitude ranges.
