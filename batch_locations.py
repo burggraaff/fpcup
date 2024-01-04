@@ -11,8 +11,8 @@ results_dir = Path.cwd() / "results"
 import fpcup
 
 # Fetch site & weather data
-coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.2), longitude=(3, 9, 0.2))
-# coords = fpcup.site.grid_coordinate_linspace(latitude=(49, 54), longitude=(3, 9), n=100)
+# coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.2), longitude=(3, 9, 0.2))
+coords = fpcup.site.grid_coordinate_linspace(latitude=(49, 54), longitude=(3, 9), n=100)
 sitedata = fpcup.site.example(coords)
 weatherdata = fpcup.weather.load_weather_data_NASAPower(coords)
 
@@ -21,10 +21,10 @@ soil_dir = data_dir / "soil"
 soildata = fpcup.soil.load_folder(soil_dir)
 
 # Crop data
-cropdata = [fpcup.crop.default]
+cropdata = fpcup.crop.default
 
 # Agromanagement calendars
-agromanagementdata = [fpcup.agro.load_formatted(fpcup.agro.template_springbarley)]
+agromanagementdata = fpcup.agro.load_formatted(fpcup.agro.template_springbarley)
 
 # Loop over input data
 all_runs, n_runs = fpcup.model.bundle_parameters(sitedata, soildata, cropdata, weatherdata, agromanagementdata)

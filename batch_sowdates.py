@@ -11,16 +11,16 @@ results_dir = Path.cwd() / "results"
 import fpcup
 
 # Fetch site & weather data
-coords = (5, 53)
+coords = (53, 5)
 sitedata = fpcup.site.example(coords)
-weatherdata = fpcup.weather.load_weather_data_NASAPower(coordinates=coords, return_single=False)
+weatherdata = fpcup.weather.load_weather_data_NASAPower(coordinates=coords)
 
 # Soil data
 soil_dir = data_dir / "soil"
 soildata = fpcup.soil.load_folder(soil_dir)
 
 # Crop data
-cropdata = [fpcup.crop.default]
+cropdata = fpcup.crop.default
 
 # Agromanagement calendars
 sowing_dates = fpcup.agro.generate_sowingdates(year=2020, days_of_year=range(1, 222))

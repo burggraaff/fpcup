@@ -8,10 +8,6 @@ data_dir = Path("../pcse_notebooks/data")
 output_dir = Path.cwd() / "outputs" / "batch"
 results_dir = Path.cwd() / "results"
 
-from itertools import product
-
-from pcse.base import ParameterProvider
-
 import fpcup
 
 # Fetch site & weather data
@@ -24,7 +20,7 @@ soil_dir = data_dir / "soil"
 soildata = fpcup.soil.load_folder(soil_dir)
 
 # Crop data
-cropdata = [fpcup.crop.default]
+cropdata = fpcup.crop.default
 
 # Agromanagement calendars
 sowing_dates = fpcup.agro.generate_sowingdates(year=range(2000, 2021, 1), days_of_year=range(60, 91, 10))
