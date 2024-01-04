@@ -21,7 +21,6 @@ results_dir = Path.cwd() / "results"
 if args.verbose:
     print(f"Reading data from {output_dir.absolute()}")
     print(f"Figures will be saved in {results_dir.absolute()}")
-    print(f"Figure filenames will end in `_{tag}`")
 
 # Load the results
 outputs, summary = fpcup.io.load_ensemble_results_folder(output_dir)
@@ -30,7 +29,8 @@ outputs, summary = fpcup.io.load_ensemble_results_folder(output_dir)
 usevector = (len(outputs) < args.vector_max)
 format_lines = "pdf" if usevector else "png"
 if args.verbose:
-    print(f"Number of files ({len(outputs)}) is {'smaller' if usevector else 'greater'} than maximum ({args.vector_max}) - saving line plots as .{format_lines} files")
+    print(f"Number of files ({len(outputs)}) is {'smaller' if usevector else 'greater'} than maximum ({args.vector_max}) - saving line plots as {'vector' if usevector else 'bitmap'} files")
+    print(f"Figure filenames will end in `_{tag}.{format_lines}`")
 
 # Plot the individual runs
 filename_results = results_dir / f"WOFOST_batch_{tag}.{format_lines}"
