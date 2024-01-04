@@ -11,7 +11,7 @@ from tqdm import tqdm
 from pcse.base import MultiCropDataProvider, ParameterProvider, WeatherDataProvider
 from pcse.exceptions import WeatherDataProviderError
 from pcse.fileinput import CABOFileReader
-from pcse.models import Wofost72_WLP_FD
+from pcse.models import Engine, Wofost72_WLP_FD
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
 from .agro import AgromanagementData
@@ -28,6 +28,19 @@ parameter_names = {"DVS": "Crop development stage",
                    "RD": "Crop rooting depth [cm]",
                    "SM": "Soil moisture index",
                    "WWLOW": "Total water [cm]"}
+
+class Result(pd.DataFrame):
+    """
+    Stores the results from a PCSE run.
+    Essentially a DataFrame that is initialised from a PCSE model object and contains some useful additional variables.
+    """
+    def __init__(self, model: Engine):
+        # Initialise the main DataFrame from the model output
+        output = model.get_output()
+        super().__init__(output)
+
+        # Sort the results by time
+        self.set_index("day", inplace=True)
 
 def bundle_agro_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProvider],
                       soildata: CABOFileReader | Iterable[CABOFileReader],
@@ -89,6 +102,7 @@ def run_id_from_params(parameters, weatherdata, agromanagement):
 
     return run_id
 
+# TO DO: Merge with run_wofost_with_id
 def start_and_run_wofost(parameters, weatherdata, agromanagement):
     """
     Start a new PCSE model with the given inputs and run it until it terminates.
