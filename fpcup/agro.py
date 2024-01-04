@@ -45,7 +45,7 @@ def load_formatted(template: str, **kwargs) -> AgromanagementData:
     agromanagement = AgromanagementData(agromanagement)
     return agromanagement
 
-def load_formatted_multi(template: str, **kwargs) -> list[AgromanagementData]:
+def load_formatted_multi(template: str, progressbar=True, leave_progressbar=False, **kwargs) -> list[AgromanagementData]:
     """
     Load an agromanagement template (YAML), formatted with the provided kwargs.
     This will iterate over every iterable in kwargs; for example, you can provide multiple dates or multiple crops.
@@ -59,7 +59,7 @@ def load_formatted_multi(template: str, **kwargs) -> list[AgromanagementData]:
     except TypeError:
         n = None
 
-    agromanagement = [load_formatted(template, **k) for k in tqdm(kwargs_iterable, total=n, desc="Loading agromanagement", unit="calendars")]
+    agromanagement = [load_formatted(template, **k) for k in tqdm(kwargs_iterable, total=n, desc="Loading agromanagement", unit="calendars", disable=not progressbar, leave=leave_progressbar)]
 
     return agromanagement
 

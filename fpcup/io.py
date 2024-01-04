@@ -8,7 +8,7 @@ import pandas as pd
 
 from tqdm import tqdm
 
-def save_ensemble_results(results: Iterable[pd.DataFrame], savefolder: (Path, str)):
+def save_ensemble_results(results: Iterable[pd.DataFrame], savefolder: Path | str, progressbar=True, leave_progressbar=True) -> None:
     """
     Save all DataFrames in `outputs` to files in a given `savefolder`.
     Individual outputs are saved with their run_id as the filename.
@@ -23,17 +23,17 @@ def save_ensemble_results(results: Iterable[pd.DataFrame], savefolder: (Path, st
         n = None
 
     # Loop over the outputs and save them to file
-    for run in tqdm(results, total=n, desc="Saving output files", unit="files"):
+    for run in tqdm(results, total=n, desc="Saving output files", unit="files", disable=not progressbar, leave=leave_progressbar):
         filename = savefolder / f"{run.run_id}.csv"
         run.to_csv(filename)
 
-def save_ensemble_summary(summary: pd.DataFrame, saveto: (Path, str)):
+def save_ensemble_summary(summary: pd.DataFrame, saveto: Path | str) -> None:
     """
     Save a DataFrame containing summary results from a PCSE ensemble run to a CSV file.
     """
     summary.to_csv(saveto)
 
-def load_ensemble_results_single(filename: (Path, str), index="day") -> pd.DataFrame:
+def load_ensemble_results_single(filename: Path | str, index="day") -> pd.DataFrame:
     """
     Load a single ensemble results file.
     The resulting DataFrame will be assigned a run_id from its filename.
@@ -48,14 +48,14 @@ def load_ensemble_results_single(filename: (Path, str), index="day") -> pd.DataF
 
     return results
 
-def load_ensemble_summary(filename: (Path, str), index="run_id") -> pd.DataFrame:
+def load_ensemble_summary(filename: Path | str, index="run_id") -> pd.DataFrame:
     """
     Load a DataFrame containing summary results from a PCSE ensemble saved to a CSV file.
     """
     summary = pd.read_csv(filename).set_index(index)
     return summary
 
-def load_ensemble_results_folder(folder: (Path, str), index_results="day", index_summary="run_id", sample=False) -> tuple[list[pd.DataFrame], pd.DataFrame]:
+def load_ensemble_results_folder(folder: Path | str, index_results="day", index_summary="run_id", sample=False, progressbar=True, leave_progressbar=True) -> tuple[list[pd.DataFrame], pd.DataFrame]:
     """
     Load all the output files in a given folder.
     The individual DataFrames will be assigned a run_id from their filenames.
@@ -80,6 +80,6 @@ def load_ensemble_results_folder(folder: (Path, str), index_results="day", index
 
     # Load the files
     summary = load_ensemble_summary(filename_summary, index=index_summary)
-    results = [load_ensemble_results_single(filename, index=index_results) for filename in tqdm(filenames_results, total=n_results, desc="Loading results", unit="files")]
+    results = [load_ensemble_results_single(filename, index=index_results) for filename in tqdm(filenames_results, total=n_results, desc="Loading results", unit="files", disable=not progressbar, leave=leave_progressbar)]
 
     return results, summary

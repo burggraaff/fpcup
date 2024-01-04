@@ -148,14 +148,14 @@ def filter_ensemble_outputs(outputs, summary):
 
     return outputs_filtered, summary_filtered, n_filtered_out
 
-def run_pcse_ensemble(all_runs, nr_runs=None):
+def run_pcse_ensemble(all_runs, nr_runs=None, progressbar=True, leave_progressbar=True):
     """
     Run an entire PCSE ensemble at once.
     all_runs is an iterator that zips the three model inputs (parameters, weatherdata, agromanagement) together, e.g.:
         all_runs = product(parameters_combined, weatherdata, agromanagementdata)
     """
     # Run the models
-    outputs, summary = zip(*tqdm(map(run_wofost_with_id, all_runs), total=nr_runs, desc="Running PCSE models", unit="runs"))
+    outputs, summary = zip(*tqdm(map(run_wofost_with_id, all_runs), total=nr_runs, desc="Running PCSE models", unit="runs", disable=not progressbar, leave=leave_progressbar))
 
     # Clean up the results
     outputs, summary, n_filtered_out = filter_ensemble_outputs(outputs, summary)
@@ -167,7 +167,7 @@ def run_pcse_ensemble(all_runs, nr_runs=None):
 
     return outputs, summary
 
-def run_pcse_ensemble_parallel(all_runs, nr_runs=None):
+def run_pcse_ensemble_parallel(all_runs, nr_runs=None, progressbar=True, leave_progressbar=True):
     """
     Parallelised version of run_pcse_ensemble.
 
@@ -177,7 +177,7 @@ def run_pcse_ensemble_parallel(all_runs, nr_runs=None):
     """
     # Run the models
     with Pool() as p:
-        outputs, summary = zip(*tqdm(p.imap(run_wofost_with_id, all_runs, chunksize=10), total=nr_runs, desc="Running PCSE models", unit="runs"))
+        outputs, summary = zip(*tqdm(p.imap(run_wofost_with_id, all_runs, chunksize=10), total=nr_runs, desc="Running PCSE models", unit="runs", disable=not progressbar, leave=leave_progressbar))
 
     # Clean up the results
     outputs, summary, n_filtered_out = filter_ensemble_outputs(outputs, summary)

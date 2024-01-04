@@ -7,7 +7,7 @@ import fpcup
 
 # Parse command line arguments
 import argparse
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser("Load and plot the results from a previous PCSE ensemble run.")
 parser.add_argument("output_dir", help="folder to load PCSE outputs from")
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 parser.add_argument("-y", "--replace_years", help="replace all years in the output with 2000", action="store_true")
