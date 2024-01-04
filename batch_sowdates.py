@@ -11,6 +11,10 @@ import argparse
 parser = argparse.ArgumentParser(description="Run a PCSE ensemble for one location with multiple sowing dates.")
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=Path, default=fpcup.settings.DEFAULT_OUTPUT / "sowdates")
+parser.add_argument("-y", "--year", help="year to simulate", type=int, default=2020, choices=range(1984,2022), metavar="[1984-2022]")
+parser.add_argument("-f", "--first", help="first sowing date (day-of-year)", type=int, default=1)
+parser.add_argument("-l", "--last", help="last sowing date (day-of-year)", type=int, default=222)
+parser.add_argument("-s", "--step", help="sowing date step size", type=int, default=1)
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
@@ -37,7 +41,7 @@ if args.verbose:
     print("Loaded crop data")
 
 # Agromanagement calendars
-sowing_dates = fpcup.agro.generate_sowingdates(year=2020, days_of_year=range(1, 222))
+sowing_dates = fpcup.agro.generate_sowingdates(year=args.year, days_of_year=range(args.first, args.last, args.step))
 agromanagementdata = fpcup.agro.load_formatted_multi(fpcup.agro.template_springbarley_date, date=sowing_dates, leave_progressbar=args.verbose)
 if args.verbose:
     print("Loaded agro management data")
