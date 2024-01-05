@@ -29,7 +29,7 @@ if args.verbose:
 
 # Soil data
 soil_dir = args.data_dir / "soil"
-soildata = fpcup.soil.load_folder(soil_dir)
+soildata = fpcup.soil.load_folder(soil_dir)[0]
 if args.verbose:
     print("Loaded soil data")
 
