@@ -7,8 +7,14 @@ from numbers import Number
 import numpy as np
 
 from pcse.util import WOFOST72SiteDataProvider, WOFOST80SiteDataProvider
+from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
-example = lambda coords: [WOFOST72SiteDataProvider(WAV=10)]
+def example(*args, **kwargs) -> PCSESiteDataProvider:
+    """
+    Just use the default value for now.
+    """
+    sitedata = WOFOST72SiteDataProvider(WAV=10)
+    return sitedata
 
 def grid_coordinate_range(latitude: tuple[Number], longitude: tuple[Number]) -> list[tuple[float]]:
     """
