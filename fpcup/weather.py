@@ -9,9 +9,20 @@ from typing import Iterable
 import pandas as pd
 from tqdm import tqdm
 
+from pcse.base import WeatherDataProvider
 from pcse.db import NASAPowerWeatherDataProvider
+from pcse.fileinput import CABOWeatherDataProvider, CSVWeatherDataProvider, ExcelWeatherDataProvider
 
-@cache
+from .settings import DEFAULT_DATA
+
+def load_example_Excel(filename=DEFAULT_DATA/"meteo"/"nl1.xlsx") -> ExcelWeatherDataProvider:
+    """
+    Load the example Excel weather file provided in the PCSE notebook repository.
+    For testing purposes.
+    """
+    return ExcelWeatherDataProvider(filename)
+
+# @cache
 def _load_weather_data_NASAPower_cache(latitude: float, longitude: float, **kwargs) -> NASAPowerWeatherDataProvider:
     """
     Load weather data from the NASA Power database using PCSE's NASAPowerWeatherDataProvider method.

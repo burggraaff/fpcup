@@ -9,25 +9,26 @@ import fpcup
 import argparse
 parser = argparse.ArgumentParser(description="Speed test PCSE by running an ensemble of replicates.")
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=Path, default=fpcup.settings.DEFAULT_DATA)
-parser.add_argument("-t", "--type", help="which variable to replicate", choices=["site", "soil", "crop", "weather", "agro", "coords"])
+parser.add_argument("-t", "--type", help="which variable to replicate", choices=["site", "soil", "crop", "weather", "agro", "nasa", "excel"])
 parser.add_argument("-n", "--number", help="number of replicates; result may be lower due to rounding", type=int, default=400)
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
 # Fetch site data
-# coords = fpcup.site.grid_coordinate_range(latitude=(49, 54.1, 0.2), longitude=(3, 9, 0.2))
-# coords = fpcup.site.grid_coordinate_linspace(latitude=(49, 54), longitude=(3, 9), n=args.number)
 coords = (53, 6)
 sitedata = fpcup.site.example(coords)
 if args.verbose:
     print("Loaded site data")
 
-if args.type == "coords":
-    coords = [coords] * args.number
-    print("-- Did you disable caching in fpcup.weather? --")
-
 # Fetch weather data
-weatherdata = fpcup.weather.load_weather_data_NASAPower(coords, leave_progressbar=args.verbose)
+if args.type == "excel":
+    weatherdata = [fpcup.weather.load_example_Excel() for i in range(args.number)]
+elif args.type == "nasa":
+    print("-- Did you disable caching in fpcup.weather? --")
+    coords = [coords] * args.number
+    weatherdata = fpcup.weather.load_weather_data_NASAPower(coords, leave_progressbar=args.verbose)
+else:
+    weatherdata = fpcup.weather.load_weather_data_NASAPower(coords, leave_progressbar=args.verbose)
 if args.verbose:
     print("Loaded weather data")
 
@@ -59,6 +60,7 @@ elif args.type == "weather":
 elif args.type == "agro":
     agromanagementdata = [agromanagementdata] * args.number
 all_runs, n_runs = fpcup.model.bundle_parameters(sitedata, soildata, cropdata, weatherdata, agromanagementdata)
+all_runs = list(all_runs)
 if args.verbose:
     print(f"Prepared data for {n_runs} runs")
 
