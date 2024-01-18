@@ -17,6 +17,8 @@ args = parser.parse_args()
 # Fetch site data
 coords = (53, 6)
 sitedata = fpcup.site.example(coords)
+if args.type == "site":
+    sitedata = [fpcup.site.example(coords) for i in range(args.number)]
 if args.verbose:
     print("Loaded site data")
 
@@ -35,30 +37,28 @@ if args.verbose:
 # Soil data
 soil_dir = args.data_dir / "soil"
 soildata = fpcup.soil.load_folder(soil_dir)[0]
+if args.type == "soil":
+    soildata = [fpcup.soil.load_folder(soil_dir)[0] for i in range(args.number)]
 if args.verbose:
     print("Loaded soil data")
 
 # Crop data
-cropdata = fpcup.crop.default
+cropdata = fpcup.crop.YAMLCropDataProvider()
+if args.type == "crop":
+    cropdata = [fpcup.crop.YAMLCropDataProvider() for i in range(args.number)]
 if args.verbose:
     print("Loaded crop data")
 
 # Agromanagement calendars
 agromanagementdata = fpcup.agro.load_formatted(fpcup.agro.template_springbarley)
+if args.type == "agro":
+    agromanagementdata = [fpcup.agro.load_formatted(fpcup.agro.template_springbarley) for i in range(args.number)]
 if args.verbose:
     print("Loaded agro management data")
 
 # Loop over input data
-if args.type == "site":
-    sitedata = [sitedata] * args.number
-elif args.type == "soil":
-    soildata = [soildata] * args.number
-elif args.type == "crop":
-    cropdata = [cropdata] * args.number
-elif args.type == "weather":
+if args.type == "weather":
     weatherdata = [weatherdata] * args.number
-elif args.type == "agro":
-    agromanagementdata = [agromanagementdata] * args.number
 all_runs, n_runs = fpcup.model.bundle_parameters(sitedata, soildata, cropdata, weatherdata, agromanagementdata)
 all_runs = list(all_runs)
 if args.verbose:
