@@ -24,6 +24,7 @@ if args.verbose:
 
 # Fetch weather data
 if args.type == "excel":
+    print("-- If you get errors: did you change the date to 2005? --")
     weatherdata = [fpcup.weather.load_example_Excel() for i in range(args.number)]
 elif args.type == "nasa":
     print("-- Did you disable caching in fpcup.weather? --")
