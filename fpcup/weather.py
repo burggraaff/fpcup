@@ -55,7 +55,8 @@ def load_weather_data_NASAPower(coordinates: tuple[float] | Iterable[tuple[float
         n = None
 
     # Do the actual loading
-    weather_data = [_load_weather_data_NASAPower_cache(latitude=lat, longitude=long, **kwargs) for lat, long in tqdm(coordinates, total=n, desc="Fetching weather data", unit="sites", disable=not progressbar, leave=leave_progressbar)]
+    coordinates_tqdm = tqdm(coordinates, total=n, desc="Fetching weather data", unit="sites", disable=not progressbar, leave=leave_progressbar)
+    weather_data = [_load_weather_data_NASAPower_cache(latitude=lat, longitude=long, **kwargs) for lat, long in coordinates_tqdm]
 
     # If there was only a single output, provide a single output
     if return_single and len(weather_data) == 1:
