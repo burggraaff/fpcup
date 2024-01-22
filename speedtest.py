@@ -9,7 +9,7 @@ import fpcup
 import argparse
 parser = argparse.ArgumentParser(description="Speed test PCSE by running an ensemble of replicates.")
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=Path, default=fpcup.settings.DEFAULT_DATA)
-parser.add_argument("-t", "--type", help="which variable to replicate", choices=["site", "soil", "crop", "weather", "agro", "nasa", "excel", "csv"])
+parser.add_argument("-t", "--type", help="which variable to replicate", choices=["site", "soil", "crop", "weather", "agro", "nasa", "excel", "csv", "csvcrop"])
 parser.add_argument("-n", "--number", help="number of replicates; result may be lower due to rounding", type=int, default=400)
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
@@ -29,6 +29,9 @@ if args.type == "excel":
 elif args.type == "csv":
     print("-- If you get errors: did you change the date to 2005? --")
     weatherdata = [fpcup.weather.load_example_csv() for i in range(args.number)]
+elif args.type == "csvcrop":
+    print("-- If you get errors: did you change the date to 2005? --")
+    weatherdata = [fpcup.weather.load_example_csv(fpcup.weather.DEFAULT_DATA/"meteo"/"nl1_cropped.csv") for i in range(args.number)]
 elif args.type == "nasa":
     print("-- Did you disable caching in fpcup.weather? --")
     coords = [coords] * args.number
