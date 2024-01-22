@@ -4,6 +4,10 @@ Soil-related stuff: load data etc
 from pathlib import Path
 
 from pcse.fileinput import CABOFileReader
+from pcse.util import DummySoilDataProvider
+
+# N.B. type hinting does not account for this yet
+dummy = DummySoilDataProvider()
 
 def load_folder(folder: Path | str, pattern: str="ec*") -> list[CABOFileReader]:
     """
