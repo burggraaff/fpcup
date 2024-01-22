@@ -22,6 +22,13 @@ def load_example_Excel(filename=DEFAULT_DATA/"meteo"/"nl1.xlsx") -> ExcelWeather
     """
     return ExcelWeatherDataProvider(filename)
 
+def load_example_csv(filename=DEFAULT_DATA/"meteo"/"nl1.csv") -> CSVWeatherDataProvider:
+    """
+    Load the example CSV weather file provided in the PCSE repository documentation.
+    For testing purposes.
+    """
+    return CSVWeatherDataProvider(filename)
+
 # @cache
 def _load_weather_data_NASAPower_cache(latitude: float, longitude: float, **kwargs) -> NASAPowerWeatherDataProvider:
     """
