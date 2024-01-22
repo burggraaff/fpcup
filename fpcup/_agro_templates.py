@@ -38,4 +38,4 @@ template_crop_date = parse_template(_template_crop_date)
 template_springbarley_date = parse_template(_template_crop_date, croptype="barley", variety="Spring_barley_301")
 
 # Simplest example, spring barley with a set sowing date
-template_springbarley = template_springbarley_date.format(date=dt.datetime(2020, 3, 3))
+template_springbarley = template_springbarley_date.format(date=dt.datetime(2005, 3, 3))
