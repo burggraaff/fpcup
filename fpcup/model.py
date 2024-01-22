@@ -17,6 +17,8 @@ from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 from .agro import AgromanagementData
 from .tools import make_iterable
 
+RunData = tuple[ParameterProvider, WeatherDataProvider, AgromanagementData]
+
 parameter_names = {"DVS": "Crop development stage",
                    "LAI": "Leaf area index [ha/ha]",
                    "TAGP": "Total above-ground production [kg/ha]",
@@ -96,7 +98,7 @@ def bundle_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProv
                       soildata: CABOFileReader | Iterable[CABOFileReader],
                       cropdata: MultiCropDataProvider | Iterable[MultiCropDataProvider],
                       weatherdata: WeatherDataProvider | Iterable[WeatherDataProvider],
-                      agromanagementdata: AgromanagementData | Iterable[AgromanagementData]) -> tuple[Iterable[[ParameterProvider, WeatherDataProvider, AgromanagementData]], int | None]:
+                      agromanagementdata: AgromanagementData | Iterable[AgromanagementData]) -> tuple[Iterable[RunData], int | None]:
     """
     Bundle the site, soil, and crop parameters into PCSE ParameterProvider objects.
     """
@@ -119,7 +121,7 @@ def bundle_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProv
 
     return combined_parameters, n
 
-def run_id_from_params(parameters: ParameterProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData):
+def run_id_from_params(parameters: ParameterProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData) -> str:
     """
     Generate a run ID from PCSE model inputs.
     """
@@ -135,7 +137,7 @@ def run_id_from_params(parameters: ParameterProvider, weatherdata: WeatherDataPr
 
     return run_id
 
-def run_pcse_single(run_data: tuple[ParameterProvider, WeatherDataProvider, AgromanagementData], *, model: Engine=Wofost72_WLP_FD, run_id_function: Callable=run_id_from_params) -> Result:
+def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD, run_id_function: Callable=run_id_from_params) -> Result | None:
     """
     Start a new PCSE model with the given inputs and run it until it terminates.
     """
@@ -154,7 +156,7 @@ def run_pcse_single(run_data: tuple[ParameterProvider, WeatherDataProvider, Agro
 
     return output
 
-def filter_ensemble_outputs(outputs, summary):
+def filter_ensemble_outputs(outputs: Iterable[Result | None], summary: Iterable[dict | None]) -> tuple[list[Result], list[dict], int]:
     """
     Filter None and other incorrect entries.
     """
@@ -168,9 +170,9 @@ def filter_ensemble_outputs(outputs, summary):
 
     return outputs_filtered, summary_filtered, n_filtered_out
 
-def run_pcse_ensemble(all_runs: Iterable[tuple[ParameterProvider, WeatherDataProvider, AgromanagementData]], nr_runs:int | None=None, progressbar=True, leave_progressbar=True) -> tuple[Result, Summary]:
+def run_pcse_ensemble(all_runs: Iterable[RunData], nr_runs:int | None=None, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
     """
-    Run an entire PCSE ensemble at once.
+    Run an entire PCSE ensemble.
     all_runs is an iterator that zips the three model inputs (parameters, weatherdata, agromanagement) together, e.g.:
         all_runs = product(parameters_combined, weatherdata, agromanagementdata)
     """
@@ -178,19 +180,19 @@ def run_pcse_ensemble(all_runs: Iterable[tuple[ParameterProvider, WeatherDataPro
     outputs = [run_pcse_single(run_data) for run_data in tqdm(all_runs, total=nr_runs, desc="Running PCSE models", unit="runs", disable=not progressbar, leave=leave_progressbar)]
 
     # Get the summaries
-    summary = [o.summary for o in outputs]
+    summaries_individual = [o.summary for o in outputs]
 
     # Clean up the results
-    outputs, summary, n_filtered_out = filter_ensemble_outputs(outputs, summary)
+    outputs, summaries_individual, n_filtered_out = filter_ensemble_outputs(outputs, summaries_individual)
     if n_filtered_out > 0:
         print(f"{n_filtered_out} runs failed.")
 
     # Convert the summary to a Summary object (modified DataFrame)
-    summary = Summary(summary)
+    summary = Summary(summaries_individual)
 
     return outputs, summary
 
-def run_pcse_ensemble_parallel(all_runs: Iterable[tuple[ParameterProvider, WeatherDataProvider, AgromanagementData]], nr_runs:int | None=None, progressbar=True, leave_progressbar=True) -> tuple[Result, Summary]:
+def run_pcse_ensemble_parallel(all_runs: Iterable[RunData], nr_runs:int | None=None, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
     """
     Note: Very unstable!
     Parallelised version of run_pcse_ensemble.
@@ -205,14 +207,14 @@ def run_pcse_ensemble_parallel(all_runs: Iterable[tuple[ParameterProvider, Weath
         outputs = p.map(run_pcse_single, all_runs, chunksize=3)
 
     # Get the summaries
-    summary = [o.summary for o in outputs]
+    summaries_individual = [o.summary for o in outputs]
 
     # Clean up the results
-    outputs, summary, n_filtered_out = filter_ensemble_outputs(outputs, summary)
+    outputs, summaries_individual, n_filtered_out = filter_ensemble_outputs(outputs, summaries_individual)
     if n_filtered_out > 0:
         print(f"{n_filtered_out} runs failed.")
 
     # Convert the summary to a Summary object (modified DataFrame)
-    summary = Summary(summary)
+    summary = Summary(summaries_individual)
 
     return outputs, summary
