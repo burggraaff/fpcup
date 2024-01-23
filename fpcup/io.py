@@ -1,12 +1,18 @@
 """
 Functions for file input and output.
 """
+from functools import cache
 from pathlib import Path
 from typing import Iterable
+
+import geopandas as gpd
+gpd.options.io_engine = "pyogrio"
 
 import pandas as pd
 
 from tqdm import tqdm
+
+load_gpkg_with_cache = cache(gpd.read_file)
 
 def save_ensemble_results(results: Iterable[pd.DataFrame], savefolder: Path | str, progressbar=True, leave_progressbar=True) -> None:
     """
