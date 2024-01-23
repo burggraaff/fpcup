@@ -73,9 +73,23 @@ brp_fpcup["gewas"].replace(fpcup.crop.brp_dictionary, inplace=True)
 if args.verbose:
     print(f"Reduced file to crops listed in the FPCUP/BRP dictionary - {len(brp_fpcup)} entries")
 
+# Add a column with the main categories
+brp_fpcup["crop_species"] = brp_fpcup["gewas"].apply(fpcup.crop.main_croptype)
+
 # Show the distribution of crop types
 if args.plots:
     plot_crop_distribution(brp_fpcup["gewas"], figsize=(7, 2), title=filestem)
 
 # Process polygons
 p = brp_fpcup["geometry"].iloc[0]
+c = brp_fpcup["geometry"]
+
+# Show the distrbution across the country
+if args.plots:
+    plt.figure(figsize=(10, 10))
+    ax = brp_fpcup.plot(column="crop_species")
+    ax.set_axis_off()
+
+    plt.savefig("NL.png", bbox_inches="tight", dpi=300)
+    plt.show()
+    plt.close()
