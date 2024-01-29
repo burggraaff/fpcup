@@ -31,10 +31,13 @@ if args.verbose:
 brp.drop(columns=["jaar", "status"], inplace=True)
 brp["category"].replace(fpcup.site.brp_categories_NL2EN, inplace=True)
 
+# Add area column (in m²)
+brp["area"] = brp.area
+
 # Show the distribution of plot types
 if args.plots:
-    fpcup.plotting.brp_histogram(brp["category"], xlabel="Category", title=filestem, top5=False, saveto=args.results_dir/"brp-hist_categories.pdf")
-    fpcup.plotting.brp_map(brp, column="category", title="Category", saveto=args.results_dir/"brp-map_categories.pdf")
+    fpcup.plotting.brp_histogram(brp, column="category", xlabel="Category", title=filestem, top5=False, saveto=args.results_dir/"brp-hist_categories.pdf")
+    fpcup.plotting.brp_map(brp, column="category", title="Category", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/"brp-map_categories.pdf")
 
 # Select cropland
 brp_agro = brp.loc[brp["category"] == "Arable land"].drop(columns=["category"])
@@ -43,7 +46,7 @@ if args.verbose:
 
 # Show the distribution of crop types
 if args.plots:
-    fpcup.plotting.brp_histogram(brp_agro["gewas"], figsize=(10, 2), title=filestem, log=True, usexticks=False, saveto=args.results_dir/"brp-hist_crops.pdf")
+    fpcup.plotting.brp_histogram(brp_agro, column="gewas", figsize=(10, 5), title=filestem, log=True, usexticks=False, saveto=args.results_dir/"brp-hist_crops.pdf")
 
 # Select fpcup crops
 brp_fpcup = brp_agro.loc[brp_agro["gewas"].isin(fpcup.crop.brp_crops_NL2EN)]
@@ -56,8 +59,8 @@ brp_fpcup["crop_species"] = brp_fpcup["gewas"].apply(fpcup.crop.main_croptype)
 
 # Show the distribution of crop types and species
 if args.plots:
-    fpcup.plotting.brp_histogram(brp_fpcup["gewas"], figsize=(7, 2), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered.pdf")
-    fpcup.plotting.brp_histogram(brp_fpcup["crop_species"], figsize=(5, 2), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered-combined.pdf")
+    fpcup.plotting.brp_histogram(brp_fpcup, column="gewas", figsize=(7, 4), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered.pdf")
+    fpcup.plotting.brp_histogram(brp_fpcup, column="crop_species", figsize=(3, 4), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered-combined.pdf")
 
 # Process polygons
 p = brp_fpcup["geometry"].iloc[0]

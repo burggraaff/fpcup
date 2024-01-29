@@ -3,47 +3,71 @@ Functions for plotting data and results
 """
 import geopandas as gpd
 import pandas as pd
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, patches as mpatches
 from tqdm import tqdm
 
 from .model import parameter_names
+from ._brp_dictionary import brp_categories_colours
 
-def brp_histogram(data: gpd.GeoDataFrame, figsize=(3, 2), usexticks=True, xlabel="Crop", ylabel="Number of plots", title=None, top5=True, saveto=None, **kwargs):
+m2ha = 0.0001
+
+def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks=True, xlabel="Crop", title=None, top5=True, saveto=None, **kwargs):
     """
     Make a bar plot showing the distribution of plots/crops in BRP data.
     """
-    counts = data.value_counts()
+    counts = data[column].value_counts()
+    areas = data.groupby([column])["area"].sum().reindex_like(counts) * m2ha  # Area per group, unit [ha]
 
-    plt.figure(figsize=figsize)
-    counts.plot.bar(color='w', edgecolor='k', hatch="//", **kwargs)
+    fig, axs = plt.subplots(nrows=2, sharex=True, figsize=figsize, gridspec_kw={"hspace": 0.03})
+    counts.plot.bar(ax=axs[0], color='w', edgecolor='k', hatch="//", **kwargs)
+    areas.plot.bar(ax=axs[1], color='w', edgecolor='k', hatch="//", **kwargs)
 
+    axs[0].tick_params(axis="x", bottom=False, labelbottom=False)
     if usexticks:
-        plt.xticks(rotation=45, ha="right")
+        # There is no cleaner way to do this because tick_params does not support horizontalalignment
+        axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=45, horizontalalignment="right")
     else:
-        plt.tick_params(axis="x", bottom=False, labelbottom=False)
+        axs[1].tick_params(axis="x", bottom=False, labelbottom=False)
 
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
+    # Prevent scientific notation
+    if not "log" in kwargs:
+        for ax in axs:
+            ax.ticklabel_format(axis="y", style="plain")
+
+    axs[1].set_xlabel(xlabel)
+    axs[0].set_ylabel("Number of plots")
+    axs[1].set_ylabel("Total area [ha]")
+    axs[0].set_title(title)
+    fig.align_ylabels()
 
     if top5:
-        top5_text = f"Top 5:\n{counts.head().to_string(header=False)}"
-        plt.text(0.99, 0.98, top5_text, transform=plt.gca().transAxes, horizontalalignment="right", verticalalignment="top")
+        float2str = lambda x: f"{x:.0f}"
+        top5_text = [f"Top 5:\n{df.head().to_string(header=False, float_format=float2str)}" for df in (counts, areas)]
+        for ax, text in zip(axs, top5_text):
+            ax.text(0.99, 0.98, text, transform=ax.transAxes, horizontalalignment="right", verticalalignment="top")
 
     if saveto:
         plt.savefig(saveto, dpi=600, bbox_inches="tight")
     plt.show()
     plt.close()
 
-def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, saveto=None, rasterized=True, **kwargs):
+def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, rasterized=True, colour_dict=None, saveto=None, **kwargs):
     """
     Create a map of BRP polygons in the given column.
     """
     plt.figure(figsize=figsize)
-    ax = data.plot(column=column, rasterized=rasterized, **kwargs)
-    ax.set_axis_off()
 
-    plt.title(title)
+    if colour_dict:
+        colours = data[column].map(colour_dict)
+        ax = data.plot(color=colours, rasterized=rasterized, **kwargs)
+
+        colour_patches = [mpatches.Patch(color=colour, label=label) for label, colour in colour_dict.items()]
+        plt.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", title=column)
+    else:
+        ax = data.plot(column=column, rasterized=rasterized, **kwargs)
+        plt.title(title)
+
+    ax.set_axis_off()
 
     if saveto:
         plt.savefig(saveto, bbox_inches="tight", dpi=1200)

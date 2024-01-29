@@ -7,6 +7,12 @@ brp_categories_NL2EN = {'Grasland': "Grassland",
                         'Braakland': "Fallow land",
                         'Overige': "Other",}
 
+brp_categories_colours = {"Grassland": "#1b9e77",
+                          "Arable land": "#d95f02",
+                          "Nature reserve": "#66a61e",
+                          "Fallow land": "#e7298a",
+                          "Other": "#7570b3"}
+
 barley = {'Gerst, winter-': "Barley (winter)",
           'Gerst, zomer-': "Barley (spring)",}
 
