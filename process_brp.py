@@ -37,7 +37,7 @@ brp["area"] = brp.area
 # Show the distribution of plot types
 if args.plots:
     fpcup.plotting.brp_histogram(brp, column="category", xlabel="Category", title=filestem, top5=False, saveto=args.results_dir/"brp-hist_categories.pdf")
-    fpcup.plotting.brp_map(brp, column="category", title="Category", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/"brp-map_categories.pdf")
+    fpcup.plotting.brp_map(brp, column="category", title=f"Land usage\n{filestem}", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/"brp-map_categories.pdf")
 
 # Select cropland
 brp_agro = brp.loc[brp["category"] == "Arable land"].drop(columns=["category"])
@@ -68,4 +68,4 @@ c = brp_fpcup["geometry"]
 
 # Show the distribution across the country
 if args.plots:
-    fpcup.plotting.brp_map(brp_fpcup, column="crop_species", title="Crop types (filtered)", saveto=args.results_dir/"brp-map_crops-filtered.pdf")
+    fpcup.plotting.brp_map(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/"brp-map_crops-filtered.pdf")

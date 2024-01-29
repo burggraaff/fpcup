@@ -10,8 +10,8 @@ brp_categories_NL2EN = {'Grasland': "Grassland",
 brp_categories_colours = {"Grassland": "#1b9e77",
                           "Arable land": "#d95f02",
                           "Nature reserve": "#66a61e",
-                          "Fallow land": "#e7298a",
-                          "Other": "#7570b3"}
+                          "Fallow land": "#aa3377",
+                          "Other": "#bbbbbb"}
 
 barley = {'Gerst, winter-': "Barley (winter)",
           'Gerst, zomer-': "Barley (spring)",}
@@ -38,3 +38,12 @@ wheat = {'Tarwe, winter-': "Wheat (winter)",
          'Tarwe, zomer-': "Wheat (spring)",}
 
 brp_crops_NL2EN = {**barley, **maize, **oat, **rye, **sorghum, **soy, **spelt, **wheat}
+
+brp_crops_colours = {"Barley": "#1b9e77",
+                     "Maize": "#e6ab02",
+                     "Wheat": "#d95f02",
+                     "Oat": "#7570b3",
+                     "Rye": "#66a61e",
+                     "Sorghum": "#e7298a",
+                     "Soy": "#a6761d",
+                     "Spelt": "#666666"}

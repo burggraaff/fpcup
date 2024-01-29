@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt, patches as mpatches
 from tqdm import tqdm
 
 from .model import parameter_names
-from ._brp_dictionary import brp_categories_colours
+from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 
 m2ha = 0.0001
 
@@ -55,22 +55,28 @@ def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, r
     """
     Create a map of BRP polygons in the given column.
     """
-    plt.figure(figsize=figsize)
+    # Create figure
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
 
+    # If colours are specified, plot those instead of the raw data, and add a legend
     if colour_dict:
         colours = data[column].map(colour_dict)
-        ax = data.plot(color=colours, rasterized=rasterized, **kwargs)
+        data.plot(ax=ax, color=colours, rasterized=rasterized, **kwargs)
 
+        # Generate dummy patches with the same colour mapping and add those to the legend
         colour_patches = [mpatches.Patch(color=colour, label=label) for label, colour in colour_dict.items()]
-        plt.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", title=column)
-    else:
-        ax = data.plot(column=column, rasterized=rasterized, **kwargs)
-        plt.title(title)
+        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", title=column.capitalize())
 
+    # If colours are not specified, simply plot the data and let geopandas handle the colours
+    else:
+        data.plot(ax=ax, column=column, rasterized=rasterized, **kwargs)
+
+    ax.set_title(title)
     ax.set_axis_off()
+    ax.axis("equal")
 
     if saveto:
-        plt.savefig(saveto, bbox_inches="tight", dpi=1200)
+        plt.savefig(saveto, bbox_inches="tight", dpi=600)
     plt.show()
     plt.close()
 
