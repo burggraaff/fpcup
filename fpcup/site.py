@@ -9,6 +9,8 @@ import numpy as np
 from pcse.util import WOFOST72SiteDataProvider, WOFOST80SiteDataProvider
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
+from ._brp_dictionary import brp_categories_NL2EN
+
 def example(*args, **kwargs) -> PCSESiteDataProvider:
     """
     Just use the default value for now.

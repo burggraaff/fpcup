@@ -1,6 +1,12 @@
 """
-Names of various vrops in Dutch (following the BRP) and English.
+Names of various land types and crops in Dutch (following the BRP) and English.
 """
+brp_categories_NL2EN = {'Grasland': "Grassland",
+                        'Bouwland': "Arable land",
+                        'Natuurterrein': "Nature reserve",
+                        'Braakland': "Fallow land",
+                        'Overige': "Other",}
+
 barley = {'Gerst, winter-': "Barley (winter)",
           'Gerst, zomer-': "Barley (spring)",}
 
@@ -25,4 +31,4 @@ spelt = {'Spelt': "Spelt"}
 wheat = {'Tarwe, winter-': "Wheat (winter)",
          'Tarwe, zomer-': "Wheat (spring)",}
 
-brp_dictionary = {**barley, **maize, **oat, **rye, **sorghum, **soy, **spelt, **wheat}
+brp_crops_NL2EN = {**barley, **maize, **oat, **rye, **sorghum, **soy, **spelt, **wheat}

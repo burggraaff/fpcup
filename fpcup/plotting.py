@@ -1,11 +1,54 @@
 """
 Functions for plotting data and results
 """
+import geopandas as gpd
 import pandas as pd
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from .model import parameter_names
+
+def brp_histogram(data: gpd.GeoDataFrame, figsize=(3, 2), usexticks=True, xlabel="Crop", ylabel="Number of plots", title=None, top5=True, saveto=None, **kwargs):
+    """
+    Make a bar plot showing the distribution of plots/crops in BRP data.
+    """
+    counts = data.value_counts()
+
+    plt.figure(figsize=figsize)
+    counts.plot.bar(color='w', edgecolor='k', hatch="//", **kwargs)
+
+    if usexticks:
+        plt.xticks(rotation=45, ha="right")
+    else:
+        plt.tick_params(axis="x", bottom=False, labelbottom=False)
+
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+
+    if top5:
+        top5_text = f"Top 5:\n{counts.head().to_string(header=False)}"
+        plt.text(0.99, 0.98, top5_text, transform=plt.gca().transAxes, horizontalalignment="right", verticalalignment="top")
+
+    if saveto:
+        plt.savefig(saveto, dpi=600, bbox_inches="tight")
+    plt.show()
+    plt.close()
+
+def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, saveto=None, rasterized=True, **kwargs):
+    """
+    Create a map of BRP polygons in the given column.
+    """
+    plt.figure(figsize=figsize)
+    ax = data.plot(column=column, rasterized=rasterized, **kwargs)
+    ax.set_axis_off()
+
+    plt.title(title)
+
+    if saveto:
+        plt.savefig(saveto, bbox_inches="tight", dpi=1200)
+    plt.show()
+    plt.close()
 
 def replace_year_in_datetime(date, newyear=2000):
     """

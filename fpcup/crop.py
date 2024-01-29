@@ -3,7 +3,7 @@ Crop-related stuff: load data etc
 """
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 
-from ._crop_dictionary import brp_dictionary
+from ._brp_dictionary import brp_crops_NL2EN
 
 default = YAMLCropDataProvider()
 
