@@ -11,6 +11,12 @@ from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 
 m2ha = 0.0001
 
+def column_to_title(column: str):
+    """
+    Clean up a column name (e.g. "crop_species") so it can be used as a title (e.g. "Crop species").
+    """
+    return column.capitalize().replace("_", " ")
+
 def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks=True, xlabel="Crop", title=None, top5=True, saveto=None, **kwargs):
     """
     Make a bar plot showing the distribution of plots/crops in BRP data.
@@ -65,7 +71,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, r
 
         # Generate dummy patches with the same colour mapping and add those to the legend
         colour_patches = [mpatches.Patch(color=colour, label=label) for label, colour in colour_dict.items()]
-        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", title=column.capitalize())
+        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", title=column_to_title(column))
 
     # If colours are not specified, simply plot the data and let geopandas handle the colours
     else:
