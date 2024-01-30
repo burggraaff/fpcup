@@ -21,13 +21,13 @@ except IOError:
 else:
     nl_boundary = gpd.GeoSeries(nl.unary_union.boundary)
 
-def column_to_title(column: str):
+def column_to_title(column: str) -> str:
     """
     Clean up a column name (e.g. "crop_species") so it can be used as a title (e.g. "Crop species").
     """
     return column.capitalize().replace("_", " ")
 
-def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks=True, xlabel="Crop", title=None, top5=True, saveto=None, **kwargs):
+def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks=True, xlabel="Crop", title=None, top5=True, saveto=None, **kwargs) -> None:
     """
     Make a bar plot showing the distribution of plots/crops in BRP data.
     """
@@ -67,7 +67,7 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
     plt.show()
     plt.close()
 
-def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, rasterized=True, colour_dict=None, saveto=None, **kwargs):
+def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, rasterized=True, colour_dict=None, saveto=None, **kwargs) -> None:
     """
     Create a map of BRP polygons in the given column.
     """
@@ -94,6 +94,32 @@ def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, r
     ax.set_title(title)
     ax.set_axis_off()
     ax.axis("equal")
+
+    if saveto:
+        plt.savefig(saveto, bbox_inches="tight", dpi=600)
+    plt.show()
+    plt.close()
+
+def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", crops=brp_crops_colours.keys(), figsize=(10, 7), shape=(2, 4), title=None, rasterized=True, saveto=None, **kwargs) -> None:
+    """
+    Create a map of BRP polygons, with one panel per crop species.
+    """
+    # Create figure
+    fig, axs = plt.subplots(*shape, figsize=figsize)
+
+    for crop, ax in zip(crops, axs.ravel()):
+        colour = brp_crops_colours[crop]
+        data_here = data.loc[data[column] == crop]
+        data_here.plot(ax=ax, color="black", rasterized=rasterized, **kwargs)
+
+        if nl_boundary is not None:
+            nl_boundary.plot(ax=ax, color="black", lw=0.2)
+
+        ax.set_title(crop, color=colour)
+        ax.set_axis_off()
+        ax.axis("equal")
+
+    fig.suptitle(title)
 
     if saveto:
         plt.savefig(saveto, bbox_inches="tight", dpi=600)

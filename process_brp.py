@@ -69,3 +69,5 @@ c = brp_fpcup["geometry"]
 # Show the distribution across the country
 if args.plots:
     fpcup.plotting.brp_map(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/"brp-map_crops-filtered.pdf")
+
+    fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", saveto=args.results_dir/"brp-map_crops-individual.pdf")
