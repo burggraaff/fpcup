@@ -9,7 +9,7 @@ brp_categories_NL2EN = {'Grasland': "Grassland",
 
 brp_categories_colours = {"Grassland": "#1b9e77",
                           "Arable land": "#d95f02",
-                          "Nature reserve": "#66a61e",
+                          "Nature reserve": "#ddaa33",
                           "Fallow land": "#aa3377",
                           "Other": "#bbbbbb"}
 
