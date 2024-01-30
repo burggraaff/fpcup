@@ -81,7 +81,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, r
 
         # Generate dummy patches with the same colour mapping and add those to the legend
         colour_patches = [mpatches.Patch(color=colour, label=label) for label, colour in colour_dict.items()]
-        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", title=column_to_title(column))
+        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", framealpha=1, title=column_to_title(column))
 
     # If colours are not specified, simply plot the data and let geopandas handle the colours
     else:
