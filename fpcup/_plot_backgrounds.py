@@ -5,20 +5,13 @@ import geopandas as gpd
 
 from .settings import DEFAULT_DATA
 
+CRS_AMERSFOORT = "EPSG:28992"
+
 # Load the outline of the Netherlands
 try:
-    nl = gpd.read_file(DEFAULT_DATA/"BestuurlijkeGebieden_2024.gpkg")
+    nl = gpd.read_file(DEFAULT_DATA/"NL_borders.geojson")
 except IOError:
     nl = None
     nl_boundary = None
 else:
-    nl_boundary = gpd.GeoSeries(nl.unary_union.boundary, crs=nl.crs)
-
-# Load the coastline
-try:
-    sea = gpd.read_file(DEFAULT_DATA/"searegions.gml").to_crs(nl.crs)
-except (IOError, AttributeError):
-    sea = None
-    coastline = None
-else:
-    coastline = gpd.GeoSeries(sea.unary_union, crs=sea.crs)
+    nl_boundary = nl.boundary

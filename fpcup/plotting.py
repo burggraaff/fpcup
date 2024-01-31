@@ -7,9 +7,8 @@ from matplotlib import pyplot as plt, patches as mpatches
 from tqdm import tqdm
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
-from ._plot_backgrounds import nl_boundary, coastline
+from ._plot_backgrounds import nl_boundary
 from .model import parameter_names
-from .settings import DEFAULT_DATA
 
 m2ha = 0.0001
 
@@ -82,8 +81,6 @@ def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, r
     # Add a country outline
     if nl_boundary is not None:
         nl_boundary.plot(ax=ax, color="black", lw=1)
-    if coastline is not None:
-        coastline.plot(ax=ax, color="blue", lw=1)
 
     ax.set_title(title)
     ax.set_axis_off()
