@@ -8,8 +8,6 @@ Example usage:
 import geopandas as gpd
 gpd.pd.options.mode.chained_assignment = None  # Prevents unneeded warnings
 
-from matplotlib import pyplot as plt
-
 import fpcup
 
 # Parse command line arguments
@@ -31,8 +29,8 @@ if args.verbose:
 brp.drop(columns=["jaar", "status"], inplace=True)
 brp["category"].replace(fpcup.site.brp_categories_NL2EN, inplace=True)
 
-# Add area column (in m²)
-brp["area"] = brp.area
+# Add area column (in ha)
+brp["area"] = brp.area * fpcup.constants.m2ha
 
 # Show the distribution of plot types
 if args.plots:
@@ -62,12 +60,16 @@ if args.plots:
     fpcup.plotting.brp_histogram(brp_fpcup, column="gewas", figsize=(7, 4), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered.pdf")
     fpcup.plotting.brp_histogram(brp_fpcup, column="crop_species", figsize=(3, 4), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered-combined.pdf")
 
-# Process polygons
-p = brp_fpcup["geometry"].iloc[0]
-c = brp_fpcup["geometry"]
-
 # Show the distribution across the country
 if args.plots:
     fpcup.plotting.brp_map(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/"brp-map_crops-filtered.pdf")
 
     fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", saveto=args.results_dir/"brp-map_crops-individual.pdf")
+
+# Add centroid coordinates in WGS84 for WOFOST
+coordinates = brp_fpcup.centroid.to_crs("WGS84")
+brp_fpcup["latitude"] = coordinates.y
+brp_fpcup["longitude"] = coordinates.x
+
+# Save the processed dataframe to file
+brp_fpcup.to_file(f"{filestem}-processed.gpkg", driver="GPKG")

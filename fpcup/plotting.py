@@ -10,8 +10,6 @@ from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._plot_backgrounds import nl_boundary
 from .model import parameter_names
 
-m2ha = 0.0001
-
 def column_to_title(column: str) -> str:
     """
     Clean up a column name (e.g. "crop_species") so it can be used as a title (e.g. "Crop species").
@@ -23,7 +21,7 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
     Make a bar plot showing the distribution of plots/crops in BRP data.
     """
     counts = data[column].value_counts()
-    areas = data.groupby([column])["area"].sum().reindex_like(counts) * m2ha  # Area per group, unit [ha]
+    areas = data.groupby([column])["area"].sum().reindex_like(counts)  # Area per group, unit [ha]
 
     fig, axs = plt.subplots(nrows=2, sharex=True, figsize=figsize, gridspec_kw={"hspace": 0.03})
     counts.plot.bar(ax=axs[0], color='w', edgecolor='k', hatch="//", **kwargs)
