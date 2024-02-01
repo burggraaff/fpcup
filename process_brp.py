@@ -57,7 +57,7 @@ if args.verbose:
 brp_fpcup["crop_species"] = brp_fpcup["crop"].apply(fpcup.crop.main_croptype)
 
 # Add province information (this takes a while)
-fpcup._plot_backgrounds.add_provinces(brp_fpcup)
+fpcup.province.add_provinces(brp_fpcup)
 
 # Show the distribution of crop types and species
 if args.plots:
