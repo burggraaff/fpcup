@@ -5,6 +5,8 @@ results/
 
 # Input/output files in the main folder, used for testing only
 *.csv
+*.geojson
+*.gpkg
 *.pdf
 *.png
 *.xlsx

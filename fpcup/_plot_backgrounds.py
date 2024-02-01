@@ -16,3 +16,13 @@ except DataSourceError:
     nl_boundary = None
 else:
     nl_boundary = nl.boundary
+
+# Load the provinces
+try:
+    provinces = gpd.read_file(DEFAULT_DATA/"NL_provinces.geojson")
+except DataSourceError:
+    provinces = None
+
+# Access individual provinces using a dictionary, e.g. province_boundary["Zuid-Holland"]
+province_area = {name: poly for name, poly in zip(provinces["naamOfficieel"], provinces["geometry"])}
+province_boundary = {name: gpd.GeoSeries(outline) for name, outline in zip(provinces["naamOfficieel"], provinces.boundary)}

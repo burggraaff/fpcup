@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt, patches as mpatches
 from tqdm import tqdm
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
-from ._plot_backgrounds import nl_boundary
+from ._plot_backgrounds import nl_boundary, province_area, province_boundary
 from .model import parameter_names
 
 def column_to_title(column: str) -> str:
