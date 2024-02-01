@@ -27,7 +27,7 @@ if args.verbose:
 
 # Remove unnecessary columns and translate to English
 brp.drop(columns=["jaar", "status"], inplace=True)
-brp.rename({"gewas": "crop", "gewascode": "crop_code"})
+brp.rename({"gewas": "crop", "gewascode": "crop_code"}, axis=1, inplace=True)
 brp["category"].replace(fpcup.site.brp_categories_NL2EN, inplace=True)
 
 # Add area column (in ha)
