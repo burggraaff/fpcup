@@ -27,6 +27,7 @@ if args.verbose:
 
 # Remove unnecessary columns and translate to English
 brp.drop(columns=["jaar", "status"], inplace=True)
+brp.rename({"gewas": "crop", "gewascode": "crop_code"})
 brp["category"].replace(fpcup.site.brp_categories_NL2EN, inplace=True)
 
 # Add area column (in ha)
@@ -44,25 +45,30 @@ if args.verbose:
 
 # Show the distribution of crop types
 if args.plots:
-    fpcup.plotting.brp_histogram(brp_agro, column="gewas", figsize=(10, 5), title=filestem, log=True, usexticks=False, saveto=args.results_dir/"brp-hist_crops.pdf")
+    fpcup.plotting.brp_histogram(brp_agro, column="crop", figsize=(10, 5), title=filestem, log=True, usexticks=False, saveto=args.results_dir/"brp-hist_crops.pdf")
 
 # Select fpcup crops
-brp_fpcup = brp_agro.loc[brp_agro["gewas"].isin(fpcup.crop.brp_crops_NL2EN)]
-brp_fpcup["gewas"].replace(fpcup.crop.brp_crops_NL2EN, inplace=True)
+brp_fpcup = brp_agro.loc[brp_agro["crop"].isin(fpcup.crop.brp_crops_NL2EN)]
+brp_fpcup["crop"].replace(fpcup.crop.brp_crops_NL2EN, inplace=True)
 if args.verbose:
     print(f"Reduced file to crops listed in the FPCUP/BRP dictionary -- {len(brp_fpcup)} entries")
 
 # Add a column with the main categories
-brp_fpcup["crop_species"] = brp_fpcup["gewas"].apply(fpcup.crop.main_croptype)
+brp_fpcup["crop_species"] = brp_fpcup["crop"].apply(fpcup.crop.main_croptype)
+
+# Add province information (this takes a while)
+fpcup._plot_backgrounds.add_provinces(brp_fpcup)
 
 # Show the distribution of crop types and species
 if args.plots:
-    fpcup.plotting.brp_histogram(brp_fpcup, column="gewas", figsize=(7, 4), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered.pdf")
+    fpcup.plotting.brp_histogram(brp_fpcup, column="crop", figsize=(7, 4), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered.pdf")
     fpcup.plotting.brp_histogram(brp_fpcup, column="crop_species", figsize=(3, 4), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered-combined.pdf")
 
 # Show the distribution across the country
 if args.plots:
     fpcup.plotting.brp_map(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/"brp-map_crops-filtered.pdf")
+
+    fpcup.plotting.brp_map(brp_fpcup, column="crop_species", province="Zuid-Holland", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/"brp-map_crops-filtered-zh.pdf")
 
     fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", saveto=args.results_dir/"brp-map_crops-individual.pdf")
 

@@ -56,10 +56,17 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
     plt.show()
     plt.close()
 
-def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, rasterized=True, colour_dict=None, saveto=None, **kwargs) -> None:
+def brp_map(data: gpd.GeoDataFrame, column: str, province: str | None=None, figsize=(10, 10), title=None, rasterized=True, colour_dict=None, saveto=None, **kwargs) -> None:
     """
     Create a map of BRP polygons in the given column.
+    If `province` is provided, only data within that province will be plotted, with the corresponding outline.
     """
+    # Select province data if desired
+    if province:
+        assert "province" in data.columns, f"Cannot plot data by province - data do not have a 'province' column\n(columns: {data.columns}"
+        province = province.title()
+        data = data.loc[data["province"] == province]
+
     # Create figure
     fig, ax = plt.subplots(1, 1, figsize=figsize)
 
@@ -69,16 +76,20 @@ def brp_map(data: gpd.GeoDataFrame, column: str, figsize=(10, 10), title=None, r
         data.plot(ax=ax, color=colours, rasterized=rasterized, **kwargs)
 
         # Generate dummy patches with the same colour mapping and add those to the legend
-        colour_patches = [mpatches.Patch(color=colour, label=label) for label, colour in colour_dict.items()]
+        colour_patches = [mpatches.Patch(color=colour, label=label) for label, colour in colour_dict.items() if label in data[column].unique()]
         ax.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", framealpha=1, title=column_to_title(column))
 
     # If colours are not specified, simply plot the data and let geopandas handle the colours
     else:
         data.plot(ax=ax, column=column, rasterized=rasterized, **kwargs)
 
-    # Add a country outline
-    if nl_boundary is not None:
-        nl_boundary.plot(ax=ax, color="black", lw=1)
+    # Add a country/province outline
+    if province:
+        boundary = province_boundary[province]
+    else:
+        boundary = nl_boundary
+    if boundary is not None:
+        boundary.plot(ax=ax, color="black", lw=1)
 
     ax.set_title(title)
     ax.set_axis_off()
