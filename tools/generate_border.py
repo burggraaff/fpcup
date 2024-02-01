@@ -43,11 +43,12 @@ inlandwaters_medium = inlandwaters.loc[inlandwaters["surface_area"] >= 0.5].unar
 
 rivers = water.loc[water["typeWater"] == "waterloop"]
 rivers.sort_values("surface_area", inplace=True, ascending=False)
-rivers_big = rivers.loc[rivers["surface_area"] >= 0.5].unary_union  # >0.5 km²
+rivers_medium = rivers.loc[rivers["surface_area"] >= 0.5].unary_union  # >0.5 km²
+rivers_big = rivers.iloc[:4].unary_union  # arbitrary selection: Haringvliet and surrounding waters
 
 # Merge the waters into one object for easy subtraction
-waters_big = sea.union(inlandwaters_big)
-waters_detail = sea.union(inlandwaters_medium).union(rivers_big)
+waters_big = sea.union(inlandwaters_big).union(rivers_big)
+waters_detail = sea.union(inlandwaters_medium).union(rivers_medium)
 
 # Subtract water areas
 land = country.difference(waters_big)
