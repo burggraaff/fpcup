@@ -2,31 +2,40 @@
 Names of various land types and crops in Dutch (following the BRP) and English.
 """
 brp_categories_NL2EN = {'Grasland': "Grassland",
-                        'Bouwland': "Arable land",
+                        'Bouwland': "Cropland",
                         'Natuurterrein': "Nature reserve",
                         'Braakland': "Fallow land",
+                        'Landschapselement': "Landscape element",
                         'Overige': "Other",}
 
 brp_categories_colours = {"Grassland": "#1b9e77",
-                          "Arable land": "#d95f02",
+                          "Cropland": "#d95f02",
                           "Nature reserve": "#ddaa33",
                           "Fallow land": "#aa3377",
+                          "Landscape element": "#228833",
                           "Other": "#bbbbbb"}
 
 barley = {'Gerst, winter-': "Barley (winter)",
           'Gerst, zomer-': "Barley (spring)",}
 
 maize = {'Maïs, snij-': "Maize (green)",
+         'Mais, snij-': "Maize (green)",
          'Maïs, korrel-': "Maize (grain)",
+         'Mais, korrel-': "Maize (grain)",
          'Maïs, corncob mix': "Maize (mix)",
+         'Mais, corncob mix': "Maize (mix)",
          'Maiskolvesilage': "Maize (silage)",
          'Maïs, suiker-': "Maize (sweet)",
-         'Maïs, energie-': "Maize (energy)"}
+         'Mais, suiker-': "Maize (sweet)",
+         'Maïs, energie-': "Maize (energy)",
+         'Mais, energie-': "Maize (energy)",}
 
 oat = {'Haver': "Oat",
-       'Naakte haver': "Oat (hulless)"}
+       'Naakte haver': "Oat (hulless)",
+       'Japanse haver': "Oat (black)",}
 
-rye = {'Rogge (geen snijrogge)': "Rye (green)",}
+rye = {'Rogge (geen snijrogge)': "Rye",
+       'Snijrogge': "Rye (green)",}
 
 sorghum = {'Soedangras/Sorghum': "Sorghum",}
 
