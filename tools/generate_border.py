@@ -18,6 +18,7 @@ for gfs in gfs_files:
 
 # Load the raw data
 territories = gpd.read_file(data_dir/"top10nl_registratiefgebied.gml", columns=["gml_id", "lokaalID", "typeRegistratiefGebied", "naamOfficieel", "geometry"])
+territories.set_crs(CRS_AMERSFOORT, inplace=True)
 print("Loaded land data")
 
 water = gpd.read_file(data_dir/"top10nl_waterdeel.gml", columns=["gml_id", "lokaalID", "typeWater", "naamOfficieel", "geometry"])
@@ -31,8 +32,11 @@ water["surface_area"] = water.area / 1e6  # km²
 # Select useful elements
 provinces = territories.loc[territories["typeRegistratiefGebied"] == "provincie"]
 country = territories.loc[territories["typeRegistratiefGebied"] == "land"].iloc[0].geometry
-
 sea = water.loc[water["typeWater"].isin(["zee", "droogvallend", "droogvallend (LAT)"])].unary_union
+
+# Save the coarse province geometries so they can be used in matching
+provinces.to_file("NL_provinces_coarse.geojson", driver="GeoJSON")
+print("Saved provinces (coarse)")
 
 # Sort inland waters by size and select the biggest ones
 inlandwaters = water.loc[water["typeWater"] == "meer, plas"]
@@ -59,6 +63,5 @@ land_series = gpd.GeoSeries(land, crs=CRS_AMERSFOORT)
 land_series.to_file("NL_borders.geojson", driver="GeoJSON")
 print("Saved land area")
 
-provinces.set_crs(CRS_AMERSFOORT, inplace=True)
 provinces.to_file("NL_provinces.geojson", driver="GeoJSON")
 print("Saved provinces")

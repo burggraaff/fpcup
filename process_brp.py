@@ -22,6 +22,7 @@ args = parser.parse_args()
 # Load the file
 brp = gpd.read_file(args.filename)
 filestem = args.filename.stem
+year = filestem.split("_")[-1]
 if args.verbose:
     print(f"Loaded file {args.filename.absolute()} -- {len(brp)} entries")
 
@@ -35,17 +36,17 @@ brp["area"] = brp.area * fpcup.constants.m2ha
 
 # Show the distribution of plot types
 if args.plots:
-    fpcup.plotting.brp_histogram(brp, column="category", xlabel="Category", title=filestem, top5=False, saveto=args.results_dir/"brp-hist_categories.pdf")
-    fpcup.plotting.brp_map(brp, column="category", title=f"Land usage\n{filestem}", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/"brp-map_categories.pdf")
+    fpcup.plotting.brp_histogram(brp, column="category", xlabel="Category", title=filestem, top5=False, saveto=args.results_dir/f"brp{year}-hist_categories.pdf")
+    fpcup.plotting.brp_map(brp, column="category", title=f"Land usage\n{filestem}", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/f"brp{year}-map_categories.pdf")
 
 # Select cropland
-brp_agro = brp.loc[brp["category"] == "Arable land"].drop(columns=["category"])
+brp_agro = brp.loc[brp["category"] == "Cropland"].drop(columns=["category"])
 if args.verbose:
-    print(f"Reduced file to agricultural land only -- {len(brp_agro)} entries")
+    print(f"Reduced file to cropland only -- {len(brp_agro)} entries")
 
 # Show the distribution of crop types
 if args.plots:
-    fpcup.plotting.brp_histogram(brp_agro, column="crop", figsize=(10, 5), title=filestem, log=True, usexticks=False, saveto=args.results_dir/"brp-hist_crops.pdf")
+    fpcup.plotting.brp_histogram(brp_agro, column="crop", figsize=(10, 5), title=filestem, log=True, usexticks=False, saveto=args.results_dir/f"brp{year}-hist_crops.pdf")
 
 # Select fpcup crops
 brp_fpcup = brp_agro.loc[brp_agro["crop"].isin(fpcup.crop.brp_crops_NL2EN)]
@@ -55,27 +56,35 @@ if args.verbose:
 
 # Add a column with the main categories
 brp_fpcup["crop_species"] = brp_fpcup["crop"].apply(fpcup.crop.main_croptype)
+if args.verbose:
+    print("Added crop_species column")
 
-# Add province information (this takes a while)
+# Add province information
 fpcup.province.add_provinces(brp_fpcup)
+if args.verbose:
+    print("Added province column")
 
 # Show the distribution of crop types and species
 if args.plots:
-    fpcup.plotting.brp_histogram(brp_fpcup, column="crop", figsize=(7, 4), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered.pdf")
-    fpcup.plotting.brp_histogram(brp_fpcup, column="crop_species", figsize=(3, 4), title=filestem, saveto=args.results_dir/"brp-hist_crops-filtered-combined.pdf")
+    fpcup.plotting.brp_histogram(brp_fpcup, column="crop", figsize=(7, 4), title=filestem, saveto=args.results_dir/f"brp{year}-hist_crops-filtered.pdf")
+    fpcup.plotting.brp_histogram(brp_fpcup, column="crop_species", figsize=(3, 4), title=filestem, saveto=args.results_dir/f"brp{year}-hist_crops-filtered-combined.pdf")
 
 # Show the distribution across the country
 if args.plots:
-    fpcup.plotting.brp_map(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/"brp-map_crops-filtered.pdf")
+    fpcup.plotting.brp_map(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/f"brp{year}-map_crops-filtered.pdf")
 
-    fpcup.plotting.brp_map(brp_fpcup, column="crop_species", province="Zuid-Holland", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/"brp-map_crops-filtered-zh.pdf")
+    fpcup.plotting.brp_map(brp_fpcup, column="crop_species", province="Zuid-Holland", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/f"brp{year}-map_crops-filtered-zh.pdf")
 
-    fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", saveto=args.results_dir/"brp-map_crops-individual.pdf")
+    fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", saveto=args.results_dir/f"brp{year}-map_crops-individual.pdf")
 
 # Add centroid coordinates in WGS84 for WOFOST
 coordinates = brp_fpcup.centroid.to_crs("WGS84")
 brp_fpcup["latitude"] = coordinates.y
 brp_fpcup["longitude"] = coordinates.x
+if args.verbose:
+    print("Added WGS84 coordinates")
 
 # Save the processed dataframe to file
 brp_fpcup.to_file(f"{filestem}-processed.gpkg", driver="GPKG")
+if args.verbose:
+    print("Saved processed file")
