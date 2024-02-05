@@ -23,7 +23,7 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
     counts = data[column].value_counts()
     areas = data.groupby([column])["area"].sum().reindex_like(counts)  # Area per group, unit [ha]
 
-    fig, axs = plt.subplots(nrows=2, sharex=True, figsize=figsize, gridspec_kw={"hspace": 0.03})
+    fig, axs = plt.subplots(nrows=2, sharex=True, figsize=figsize, gridspec_kw={"hspace": 0.1})
     counts.plot.bar(ax=axs[0], color='w', edgecolor='k', hatch="//", **kwargs)
     areas.plot.bar(ax=axs[1], color='w', edgecolor='k', hatch="//", **kwargs)
 
@@ -34,10 +34,13 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
     else:
         axs[1].tick_params(axis="x", bottom=False, labelbottom=False)
 
-    # Prevent scientific notation
     if not "log" in kwargs:
         for ax in axs:
+            # Prevent scientific notation
             ax.ticklabel_format(axis="y", style="plain")
+
+            # Set ymin explicitly
+            ax.set_ylim(ymin=0)
 
     axs[1].set_xlabel(xlabel)
     axs[0].set_ylabel("Number of plots")
