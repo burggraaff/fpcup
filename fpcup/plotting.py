@@ -175,7 +175,7 @@ def plot_wofost_ensemble_results(outputs, keys=None, saveto=None, replace_years=
     for ax, key in zip(axs, keys):
         ax.set_ylabel(key)
         ax.set_ylim(ymin=0)
-        ax.text(0.00, 1.00, parameter_names[key], transform=ax.transAxes, horizontalalignment="left", verticalalignment="top", bbox={"boxstyle": "round", "facecolor": "white"})
+        ax.text(1.00, 1.00, parameter_names[key], transform=ax.transAxes, horizontalalignment="right", verticalalignment="top", bbox={"boxstyle": "round", "facecolor": "white"})
         ax.grid()
     fig.align_ylabels()
     axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")

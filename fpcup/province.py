@@ -18,6 +18,7 @@ nl_boundary = nl.boundary
 # Load the provinces
 provinces = gpd.read_file(DEFAULT_DATA/"NL_provinces.geojson")
 provinces_coarse = gpd.read_file(DEFAULT_DATA/"NL_provinces_coarse.geojson")
+province_names = list(provinces["naamOfficieel"]) + ["Friesland"]
 
 # Access individual provinces using a dictionary, e.g. province_boundary["Zuid-Holland"]
 province_area = {name: poly for name, poly in zip(provinces["naamOfficieel"], provinces["geometry"])}
