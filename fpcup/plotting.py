@@ -3,12 +3,23 @@ Functions for plotting data and results
 """
 import geopandas as gpd
 import pandas as pd
-from matplotlib import pyplot as plt, patches as mpatches
+from matplotlib import pyplot as plt, patches as mpatches, ticker as mticker
 from tqdm import tqdm
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from .model import parameter_names
 from .province import nl_boundary, province_area, province_boundary
+
+# @mticker.FuncFormatter
+# def _capitalise_ticks(x, pos):
+#     """
+#     Helper function to capitalise str ticks in plots.
+#     """
+#     try:
+#         return x.capitalize()
+#     except AttributeError:
+#         return "abc"
+# _capitalise_ticks = mticker.StrMethodFormatter("abc{x:}")
 
 def column_to_title(column: str) -> str:
     """
@@ -30,7 +41,9 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
     axs[0].tick_params(axis="x", bottom=False, labelbottom=False)
     if usexticks:
         # There is no cleaner way to do this because tick_params does not support horizontalalignment
-        axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=45, horizontalalignment="right")
+        # Capitalisation: _capitalise_ticks method did not seem to work, its arguments are ints instead of str
+        xticklabels = [label.get_text().capitalize() for label in axs[1].get_xticklabels()]
+        axs[1].set_xticklabels(xticklabels, rotation=45, horizontalalignment="right")
     else:
         axs[1].tick_params(axis="x", bottom=False, labelbottom=False)
 
@@ -79,7 +92,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, province: str | None=None, figs
         data.plot(ax=ax, color=colours, rasterized=rasterized, **kwargs)
 
         # Generate dummy patches with the same colour mapping and add those to the legend
-        colour_patches = [mpatches.Patch(color=colour, label=label) for label, colour in colour_dict.items() if label in data[column].unique()]
+        colour_patches = [mpatches.Patch(color=colour, label=label.capitalize()) for label, colour in colour_dict.items() if label in data[column].unique()]
         ax.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", framealpha=1, title=column_to_title(column))
 
     # If colours are not specified, simply plot the data and let geopandas handle the colours
@@ -118,7 +131,7 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", crops
         if nl_boundary is not None:
             nl_boundary.plot(ax=ax, color="black", lw=0.2)
 
-        ax.set_title(crop, color=colour)
+        ax.set_title(crop.capitalize(), color=colour)
         ax.set_axis_off()
         ax.axis("equal")
 

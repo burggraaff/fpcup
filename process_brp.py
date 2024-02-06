@@ -40,7 +40,7 @@ if args.plots:
     fpcup.plotting.brp_map(brp, column="category", title=f"Land usage\n{filestem}", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/f"brp{year}-map_categories.pdf")
 
 # Select cropland
-brp_agro = brp.loc[brp["category"] == "Cropland"].drop(columns=["category"])
+brp_agro = brp.loc[brp["category"] == "cropland"].drop(columns=["category"])
 if args.verbose:
     print(f"Reduced file to cropland only -- {len(brp_agro)} entries")
 
