@@ -13,7 +13,7 @@ from pcse.db import NASAPowerWeatherDataProvider
 from pcse.fileinput import CABOWeatherDataProvider, CSVWeatherDataProvider, ExcelWeatherDataProvider
 
 from .settings import DEFAULT_DATA
-from ._typing import Coordinates, Iterable, RealNumber
+from ._typing import Coordinates, Iterable
 
 def load_example_Excel(filename=DEFAULT_DATA/"meteo"/"nl1.xlsx") -> ExcelWeatherDataProvider:
     """
@@ -28,17 +28,6 @@ def load_example_csv(filename=DEFAULT_DATA/"meteo"/"nl1.csv") -> CSVWeatherDataP
     For testing purposes.
     """
     return CSVWeatherDataProvider(filename)
-
-@cache
-def _load_weather_data_NASAPower_cache(latitude: RealNumber, longitude: RealNumber, **kwargs) -> NASAPowerWeatherDataProvider:
-    """
-    Load weather data from the NASA Power database using PCSE's NASAPowerWeatherDataProvider method.
-    Cached to speed up duplicate calls (particularly useful when running/debugging in interactive mode).
-
-    Returns a single NASAPowerWeatherDataProvider object.
-    """
-    weather_data = NASAPowerWeatherDataProvider(latitude=latitude, longitude=longitude, **kwargs)
-    return weather_data
 
 def load_weather_data_NASAPower(coordinates: Coordinates | Iterable[Coordinates], return_single=True, progressbar=True, leave_progressbar=False, **kwargs) -> NASAPowerWeatherDataProvider | list[NASAPowerWeatherDataProvider]:
     """
@@ -63,7 +52,7 @@ def load_weather_data_NASAPower(coordinates: Coordinates | Iterable[Coordinates]
 
     # Do the actual loading
     coordinates_tqdm = tqdm(coordinates, total=n, desc="Fetching weather data", unit="sites", disable=not progressbar, leave=leave_progressbar)
-    weather_data = [_load_weather_data_NASAPower_cache(latitude=lat, longitude=long, **kwargs) for lat, long in coordinates_tqdm]
+    weather_data = [NASAPowerWeatherDataProvider(latitude=lat, longitude=long, **kwargs) for lat, long in coordinates_tqdm]
 
     # If there was only a single output, provide a single output
     if return_single and len(weather_data) == 1:
