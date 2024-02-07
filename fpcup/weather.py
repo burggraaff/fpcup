@@ -29,7 +29,7 @@ def load_example_csv(filename=DEFAULT_DATA/"meteo"/"nl1.csv") -> CSVWeatherDataP
     """
     return CSVWeatherDataProvider(filename)
 
-# @cache
+@cache
 def _load_weather_data_NASAPower_cache(latitude: RealNumber, longitude: RealNumber, **kwargs) -> NASAPowerWeatherDataProvider:
     """
     Load weather data from the NASA Power database using PCSE's NASAPowerWeatherDataProvider method.
