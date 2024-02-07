@@ -36,6 +36,10 @@ class Summary(pd.DataFrame):
     """
     Stores a summary of the results from a PCSE ensemble run.
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.index.set_names("run_id", inplace=True)
+
     @classmethod
     def from_model_output(cls, model: Engine, run_id: str="", **kwargs):
         """
@@ -57,8 +61,25 @@ class Summary(pd.DataFrame):
         """
         Combine many Summary objects into one through concatenation.
         """
-        return cls(pd.concat(summaries_individual))
+        return cls(pd.concat(summaries_individual)).sort_index()
 
+    @classmethod
+    def from_folder(cls, folder: PathOrStr, extension: Optional[str]="*.wsum", progressbar=True, leave_progressbar=True):
+        """
+        Load an ensemble of Summary objects from a folder and combine them.
+        """
+        # Find all summary files in the folder, except a previously existing ensemble one (if it exists)
+        folder = Path(folder)
+        filenames = list(folder.glob(extension))
+        assert len(filenames) > 0, f"No files with extension '{extension}' were found in folder {folder.absolute()}"
+        filename_ensemble = filenames[0].with_stem("ensemble")
+        if filename_ensemble in filenames:
+            filenames.remove(filename_ensemble)
+
+        # Load the files (with a tqdm progressbar if desired)
+        filenames = tqdm(filenames, desc="Loading summaries", unit="file", disable=not progressbar, leave=leave_progressbar)
+        summaries_individual = [cls.from_file(filename) for filename in filenames]
+        return cls.from_ensemble(summaries_individual)
 
 class Result(pd.DataFrame):
     """
@@ -68,23 +89,16 @@ class Result(pd.DataFrame):
     _internal_names = pd.DataFrame._internal_names + ["run_id", "summary"]
     _internal_names_set = set(_internal_names)
 
-    def __init__(self, model: Engine, run_id: str=""):
+    def __init__(self, data: Iterable, *, run_id: str="", summary: Optional[Summary]=None, **kwargs):
         # Initialise the main DataFrame from the model output
-        output = model.get_output()
-        super().__init__(output)
+        super().__init__(data, **kwargs)
 
         # Sort the results by time
         self.set_index("day", inplace=True)
 
-        # Add the run ID
-        # Note: it is not possible to generate these within __init__ because the crop calendar data in model.agromanager are destroyed while the model is run
+        # Add the run ID and summary
         self.run_id = run_id
-
-        # Save the summary output
-        try:
-            self.summary = Summary.from_model_output(model, run_id=self.run_id)
-        except IndexError:
-            self.summary = None
+        self.summary = summary
 
     def __repr__(self) -> str:
         return ("-----\n"
@@ -92,6 +106,46 @@ class Result(pd.DataFrame):
                 f"Summary: {self.summary}\n\n"
                 f"Data:\n{super().__repr__()}"
                 "\n-----")
+
+    @classmethod
+    def from_model(cls, model: Engine, *, run_id: str="", **kwargs):
+        """
+        Initialise the main DataFrame from a model output.
+        """
+        output = model.get_output()
+
+        # Save the summary output
+        try:
+            summary = Summary.from_model_output(model, run_id=run_id)
+        except IndexError:
+            summary = None
+
+        return cls(output, run_id=run_id, summary=summary, **kwargs)
+
+    @classmethod
+    def from_file(cls, filename: PathOrStr, *, run_id: Optional[str]=None, include_summary=True, **kwargs):
+        """
+        Load an output file.
+        If a run_id is not provided, use the filename stem.
+        """
+        filename = Path(filename)
+        if run_id is None:
+            run_id = filename.stem
+
+        # Load the main data file
+        data = pd.read_csv(filename)
+
+        # Try to load the associated summary file
+        if include_summary:
+            summary_filename = filename.with_suffix(".wsum")
+            try:
+                summary = Summary.from_file(summary_filename)
+            except FileNotFoundError:
+                summary = None
+        else:
+            summary = None
+
+        return cls(data, run_id=run_id, summary=summary, **kwargs)
 
     def to_file(self, output_directory: PathOrStr, *, filename: Optional[PathOrStr]=None, **kwargs) -> None:
         """
@@ -190,7 +244,7 @@ def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD, run_id_
         output = None
     else:
         # Convert individual output to a Result object (modified Pandas DataFrame)
-        output = Result(wofost, run_id=run_id)
+        output = Result.from_model(wofost, run_id=run_id)
 
     return output
 

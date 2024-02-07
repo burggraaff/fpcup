@@ -23,7 +23,7 @@ if args.verbose:
     print(f"Figures will be saved in {results_dir.absolute()}")
 
 # Load the results
-outputs, summary = fpcup.io.load_ensemble_results_folder(output_dir)
+outputs, summary = fpcup.io.load_ensemble_results_folder(output_dir, leave_progressbar=args.verbose)
 
 # Determine file save format
 usevector = (len(outputs) < args.vector_max)

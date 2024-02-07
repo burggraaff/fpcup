@@ -83,17 +83,11 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     except AttributeError:
         failed_runs.append(i)
 
-# summaries_individual = [o.summary for o in outputs]
-# # outputs, summaries_individual, n_filtered_out = fpcup.model.filter_ensemble_outputs(outputs, summaries_individual)
-# summary = fpcup.model.Summary.from_ensemble(summaries_individual)
+print(f"Number of failed runs: {len(failed_runs)}/{len(brp)}")
 
-# # Write the summary results to a CSV file
-# summary_filename = args.output_dir / "summary.wsum"
-# summary.to_csv(summary_filename)
-# if args.verbose:
-#     print(f"Saved ensemble summary to {summary_filename.absolute()}")
-
-# # Write the individual outputs to CSV files
-# fpcup.io.save_ensemble_results(outputs, args.output_dir)
-# if args.verbose:
-#     print(f"\nSaved individual ensemble results to {args.output_dir.absolute()}")
+# Combine the summary files into a single file
+summary = fpcup.model.Summary.from_folder(args.output_dir, leave_progressbar=args.verbose)
+summary_filename = args.output_dir / "ensemble.wsum"
+summary.to_csv(summary_filename)
+if args.verbose:
+    print(f"Saved ensemble summary to {summary_filename.absolute()}")

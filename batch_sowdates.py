@@ -57,7 +57,7 @@ if args.verbose:
     print("Finished runs")
 
 # Write the summary results to a CSV file
-summary_filename = args.output_dir / "summary.csv"
+summary_filename = args.output_dir / "ensemble.wsum"
 summary.to_csv(summary_filename)
 if args.verbose:
     print(f"Saved ensemble summary to {summary_filename.absolute()}")
