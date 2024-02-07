@@ -3,7 +3,6 @@ Functions that are useful
 """
 from itertools import product
 from multiprocessing import Pool  # Multi-threading
-from typing import Callable, Iterable
 
 import pandas as pd
 from tqdm import tqdm
@@ -14,6 +13,7 @@ from pcse.fileinput import CABOFileReader
 from pcse.models import Engine, Wofost72_WLP_FD
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
+from ._typing import Callable, Iterable, Optional
 from .agro import AgromanagementData
 from .tools import make_iterable
 
@@ -170,7 +170,7 @@ def filter_ensemble_outputs(outputs: Iterable[Result | None], summary: Iterable[
 
     return outputs_filtered, summary_filtered, n_filtered_out
 
-def run_pcse_ensemble(all_runs: Iterable[RunData], nr_runs:int | None=None, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
+def run_pcse_ensemble(all_runs: Iterable[RunData], nr_runs: Optional[int]=None, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
     """
     Run an entire PCSE ensemble.
     all_runs is an iterator that zips the three model inputs (parameters, weatherdata, agromanagement) together, e.g.:
@@ -192,7 +192,7 @@ def run_pcse_ensemble(all_runs: Iterable[RunData], nr_runs:int | None=None, prog
 
     return outputs, summary
 
-def run_pcse_ensemble_parallel(all_runs: Iterable[RunData], nr_runs:int | None=None, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
+def run_pcse_ensemble_parallel(all_runs: Iterable[RunData], nr_runs: Optional[int]=None, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
     """
     Note: Very unstable!
     Parallelised version of run_pcse_ensemble.

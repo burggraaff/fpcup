@@ -1,12 +1,15 @@
 """
 Functions for plotting data and results
 """
+import datetime as dt
+
 import geopandas as gpd
 import pandas as pd
 from matplotlib import pyplot as plt, patches as mpatches, ticker as mticker
 from tqdm import tqdm
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
+from ._typing import Iterable, Optional, PathOrStr, StringDict
 from .model import parameter_names
 from .province import nl_boundary, province_area, province_boundary
 
@@ -27,7 +30,7 @@ def column_to_title(column: str) -> str:
     """
     return column.capitalize().replace("_", " ")
 
-def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks=True, xlabel="Crop", title=None, top5=True, saveto=None, **kwargs) -> None:
+def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks=True, xlabel: Optional[str]="Crop", title: Optional[str]=None, top5=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Make a bar plot showing the distribution of plots/crops in BRP data.
     """
@@ -72,7 +75,7 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
     plt.show()
     plt.close()
 
-def brp_map(data: gpd.GeoDataFrame, column: str, province: str | None=None, figsize=(10, 10), title=None, rasterized=True, colour_dict=None, saveto=None, **kwargs) -> None:
+def brp_map(data: gpd.GeoDataFrame, column: str, province: Optional[str]=None, figsize=(10, 10), title: Optional[str]=None, rasterized=True, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons in the given column.
     If `province` is provided, only data within that province will be plotted, with the corresponding outline.
@@ -116,7 +119,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, province: str | None=None, figs
     plt.show()
     plt.close()
 
-def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", crops=brp_crops_colours.keys(), figsize=(10, 7), shape=(2, 4), title=None, rasterized=True, saveto=None, **kwargs) -> None:
+def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", crops: Iterable[str]=brp_crops_colours.keys(), figsize=(10, 7), shape=(2, 4), title: Optional[str]=None, rasterized=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons, with one panel per crop species.
     """
@@ -142,14 +145,14 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", crops
     plt.show()
     plt.close()
 
-def replace_year_in_datetime(date, newyear=2000):
+def replace_year_in_datetime(date: dt.date, newyear: int=2000) -> dt.date:
     """
     For a datetime object yyyy-mm-dd, replace yyyy with newyear.
     Note that you may get errors if your data contain leap days (mm-dd = 02-29) but your chosen `newyear` was not a leap year.
     """
     return date.replace(year=newyear)
 
-def plot_wofost_ensemble_results(outputs, keys=None, saveto=None, replace_years=True, show=True):
+def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True, show=True) -> None:
     """
     Plot WOFOST ensemble results.
     """

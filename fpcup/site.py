@@ -2,7 +2,6 @@
 Site-related stuff: load data etc
 """
 from itertools import product
-from numbers import Number
 
 import numpy as np
 
@@ -10,6 +9,7 @@ from pcse.util import WOFOST72SiteDataProvider, WOFOST80SiteDataProvider
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
 from ._brp_dictionary import brp_categories_NL2EN
+from ._typing import RealNumber
 
 def example(*args, **kwargs) -> PCSESiteDataProvider:
     """
@@ -18,10 +18,10 @@ def example(*args, **kwargs) -> PCSESiteDataProvider:
     sitedata = WOFOST72SiteDataProvider(WAV=10)
     return sitedata
 
-def grid_coordinate_range(latitude: tuple[Number], longitude: tuple[Number]) -> list[tuple[float]]:
+def grid_coordinate_range(latitude: tuple[RealNumber], longitude: tuple[RealNumber]) -> list[tuple[float]]:
     """
     Generate all pairs of latitude/longitude coordinates in given latitude/longitude ranges.
-    Inputs should be tuples that can be passed to np.arange.
+    Inputs should be tuples that can be passed to np.arange as parameters.
     The output is given as a list so it can be iterated over multiple times.
 
     Example:
@@ -33,7 +33,7 @@ def grid_coordinate_range(latitude: tuple[Number], longitude: tuple[Number]) -> 
     coordinates = list(coordinates)
     return coordinates
 
-def grid_coordinate_linspace(latitude: tuple[Number], longitude: tuple[Number], n: int) -> list[tuple[float]]:
+def grid_coordinate_linspace(latitude: tuple[RealNumber], longitude: tuple[RealNumber], n: int) -> list[tuple[float]]:
     """
     Generate n pairs of latitude/longitude coordinates in a given area bound by latitude/longitude ranges.
     Inputs should be tuples of (min, max) latitude/longitude.

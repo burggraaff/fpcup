@@ -2,7 +2,8 @@
 Tools without a common theme.
 """
 from itertools import product
-from typing import Iterable
+
+from ._typing import Iterable
 
 def make_iterable(x: object, exclude: Iterable[type]=[str]) -> Iterable:
     """

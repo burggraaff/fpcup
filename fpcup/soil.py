@@ -6,10 +6,12 @@ from pathlib import Path
 from pcse.fileinput import CABOFileReader
 from pcse.util import DummySoilDataProvider
 
+from ._typing import PathOrStr
+
 # N.B. type hinting does not account for this yet
 dummy = DummySoilDataProvider()
 
-def load_folder(folder: Path | str, pattern: str="ec*") -> list[CABOFileReader]:
+def load_folder(folder: PathOrStr, pattern: str="ec*") -> list[CABOFileReader]:
     """
     Load all soil files from a given folder, matching a given pattern.
     """

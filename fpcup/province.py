@@ -1,13 +1,13 @@
 """
 (Try to) load map backgrounds from file so they can be plotted.
 """
-from typing import Iterable
 
 import geopandas as gpd
 import numpy as np
 from pandas import Series
 from tqdm import tqdm
 
+from ._typing import Iterable
 from .constants import CRS_AMERSFOORT
 from .settings import DEFAULT_DATA
 
@@ -29,7 +29,7 @@ province_coarse = {name: poly for name, poly in zip(provinces_coarse["naamOffici
 province_area["Friesland"] = province_area["Fryslân"]
 province_boundary["Friesland"] = province_boundary["Fryslân"]
 
-def is_in_province(data: gpd.GeoDataFrame, province: str, province_data=province_coarse, use_centroid=True) -> Iterable[bool]:
+def is_in_province(data: gpd.GeoDataFrame, province: str, province_data: dict=province_coarse, use_centroid=True) -> Iterable[bool]:
     """
     For a series of geometries (e.g. BRP plots), determine if they are in the given province.
     Enable `use_centroid` to see if the centre of each plot falls within the province rather than the entire plot - this is useful for plots that are split between provinces.
@@ -51,7 +51,7 @@ def is_in_province(data: gpd.GeoDataFrame, province: str, province_data=province
 
     return selection_coarse
 
-def add_provinces(data: gpd.GeoDataFrame, new_column="province", province_data=province_coarse, **kwargs) -> None:
+def add_provinces(data: gpd.GeoDataFrame, new_column: str="province", province_data: dict=province_coarse, **kwargs) -> None:
     """
     Add a column with province names.
     Note: can get very slow for long dataframes.

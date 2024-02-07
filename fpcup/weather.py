@@ -4,7 +4,6 @@ Weather-related stuff: load data etc
 from functools import cache
 from itertools import product
 from pathlib import Path
-from typing import Iterable
 
 import pandas as pd
 from tqdm import tqdm
@@ -14,6 +13,7 @@ from pcse.db import NASAPowerWeatherDataProvider
 from pcse.fileinput import CABOWeatherDataProvider, CSVWeatherDataProvider, ExcelWeatherDataProvider
 
 from .settings import DEFAULT_DATA
+from ._typing import Coordinates, Iterable, RealNumber
 
 def load_example_Excel(filename=DEFAULT_DATA/"meteo"/"nl1.xlsx") -> ExcelWeatherDataProvider:
     """
@@ -30,7 +30,7 @@ def load_example_csv(filename=DEFAULT_DATA/"meteo"/"nl1.csv") -> CSVWeatherDataP
     return CSVWeatherDataProvider(filename)
 
 # @cache
-def _load_weather_data_NASAPower_cache(latitude: float, longitude: float, **kwargs) -> NASAPowerWeatherDataProvider:
+def _load_weather_data_NASAPower_cache(latitude: RealNumber, longitude: RealNumber, **kwargs) -> NASAPowerWeatherDataProvider:
     """
     Load weather data from the NASA Power database using PCSE's NASAPowerWeatherDataProvider method.
     Cached to speed up duplicate calls (particularly useful when running/debugging in interactive mode).
@@ -40,7 +40,7 @@ def _load_weather_data_NASAPower_cache(latitude: float, longitude: float, **kwar
     weather_data = NASAPowerWeatherDataProvider(latitude=latitude, longitude=longitude, **kwargs)
     return weather_data
 
-def load_weather_data_NASAPower(coordinates: tuple[float] | Iterable[tuple[float]], return_single=True, progressbar=True, leave_progressbar=False, **kwargs) -> NASAPowerWeatherDataProvider | list[NASAPowerWeatherDataProvider]:
+def load_weather_data_NASAPower(coordinates: Coordinates | Iterable[Coordinates], return_single=True, progressbar=True, leave_progressbar=False, **kwargs) -> NASAPowerWeatherDataProvider | list[NASAPowerWeatherDataProvider]:
     """
     Load weather data from the NASA Power database using PCSE's NASAPowerWeatherDataProvider method.
 
