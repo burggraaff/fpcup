@@ -58,7 +58,7 @@ if args.verbose:
 
 # Write the summary results to a CSV file
 summary_filename = args.output_dir / "summary.csv"
-fpcup.io.save_ensemble_summary(summary, summary_filename)
+summary.to_csv(summary_filename)
 if args.verbose:
     print(f"Saved ensemble summary to {summary_filename.absolute()}")
 

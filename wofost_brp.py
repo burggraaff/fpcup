@@ -59,7 +59,7 @@ cropdata = fpcup.crop.default
 sowdate = dt.date(year, 2, 1)
 agromanagementdata = fpcup.agro.load_formatted(fpcup.agro.template_springbarley_date, date=sowdate)
 
-outputs = []
+failed_runs = []
 # Run the simulations (minimum working example)
 for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="plot"):
     coords = (row["longitude"], row["latitude"])
@@ -77,19 +77,23 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     # Run model
     output = fpcup.model.run_pcse_single(run, run_id_function=lambda *args: str(i))
 
-    outputs.append(output)
+    # Save the results to file if possible - if not, save the run_id as a failed run
+    try:
+        output.to_file(args.output_dir)
+    except AttributeError:
+        failed_runs.append(i)
 
-summaries_individual = [o.summary for o in outputs]
-outputs, summaries_individual, n_filtered_out = fpcup.model.filter_ensemble_outputs(outputs, summaries_individual)
-summary = fpcup.model.Summary(summaries_individual)
+# summaries_individual = [o.summary for o in outputs]
+# # outputs, summaries_individual, n_filtered_out = fpcup.model.filter_ensemble_outputs(outputs, summaries_individual)
+# summary = fpcup.model.Summary.from_ensemble(summaries_individual)
 
-# Write the summary results to a CSV file
-summary_filename = args.output_dir / "summary.csv"
-fpcup.io.save_ensemble_summary(summary, summary_filename)
-if args.verbose:
-    print(f"Saved ensemble summary to {summary_filename.absolute()}")
+# # Write the summary results to a CSV file
+# summary_filename = args.output_dir / "summary.wsum"
+# summary.to_csv(summary_filename)
+# if args.verbose:
+#     print(f"Saved ensemble summary to {summary_filename.absolute()}")
 
-# Write the individual outputs to CSV files
-fpcup.io.save_ensemble_results(outputs, args.output_dir)
-if args.verbose:
-    print(f"\nSaved individual ensemble results to {args.output_dir.absolute()}")
+# # Write the individual outputs to CSV files
+# fpcup.io.save_ensemble_results(outputs, args.output_dir)
+# if args.verbose:
+#     print(f"\nSaved individual ensemble results to {args.output_dir.absolute()}")

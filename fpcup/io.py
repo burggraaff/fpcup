@@ -1,5 +1,7 @@
 """
 Functions for file input and output.
+
+TO DO: Add the option to skip a run if run_id.wout / run_id.wsum exist (-f to force).
 """
 from functools import cache
 from os import makedirs
@@ -14,13 +16,11 @@ import pandas as pd
 from tqdm import tqdm
 
 from ._typing import Iterable, PathOrStr
+from .model import Result
 
-def save_ensemble_results(results: Iterable[pd.DataFrame], savefolder: PathOrStr, progressbar=True, leave_progressbar=True) -> None:
+def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, progressbar=True, leave_progressbar=True) -> None:
     """
-    Save all DataFrames in `outputs` to files in a given `savefolder`.
-    Individual outputs are saved with their run_id as the filename.
-
-    To do: Create custom DataFrame class that always has a run id (and other properties).
+    Save all Result DataFrames in `results` to files in a given `savefolder`.
     """
     # Get the total number of outputs if possible, for the progress bar
     # tqdm would normally do this internally, but we do it manually in case we want to use n somewhere else
@@ -31,14 +31,7 @@ def save_ensemble_results(results: Iterable[pd.DataFrame], savefolder: PathOrStr
 
     # Loop over the outputs and save them to file
     for run in tqdm(results, total=n, desc="Saving output files", unit="files", disable=not progressbar, leave=leave_progressbar):
-        filename = savefolder / f"{run.run_id}.csv"
-        run.to_csv(filename)
-
-def save_ensemble_summary(summary: pd.DataFrame, saveto: PathOrStr) -> None:
-    """
-    Save a DataFrame containing summary results from a PCSE ensemble run to a CSV file.
-    """
-    summary.to_csv(saveto)
+        run.to_file(savefolder)
 
 def load_ensemble_results_single(filename: PathOrStr, index: str="day") -> pd.DataFrame:
     """

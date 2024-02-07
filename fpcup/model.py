@@ -3,6 +3,7 @@ Functions that are useful
 """
 from itertools import product
 from multiprocessing import Pool  # Multi-threading
+from pathlib import Path
 
 import pandas as pd
 from tqdm import tqdm
@@ -13,7 +14,7 @@ from pcse.fileinput import CABOFileReader
 from pcse.models import Engine, Wofost72_WLP_FD
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
-from ._typing import Callable, Iterable, Optional
+from ._typing import Callable, Iterable, Optional, PathOrStr
 from .agro import AgromanagementData
 from .tools import make_iterable
 
@@ -30,6 +31,34 @@ parameter_names = {"DVS": "Crop development stage",
                    "RD": "Crop rooting depth [cm]",
                    "SM": "Soil moisture index",
                    "WWLOW": "Total water [cm]"}
+
+class Summary(pd.DataFrame):
+    """
+    Stores a summary of the results from a PCSE ensemble run.
+    """
+    @classmethod
+    def from_model_output(cls, model: Engine, run_id: str="", **kwargs):
+        """
+        Generate a summary from a model output, inserting the run_id as an index.
+        """
+        summary = model.get_summary_output()
+        index = [run_id]
+        return cls(summary, index=index, **kwargs)
+
+    @classmethod
+    def from_file(cls, filename: PathOrStr):
+        """
+        Load a summary from a CSV (.wsum) file, indexed by the 0th column (run_id).
+        """
+        return cls(pd.read_csv(filename, index_col=0))
+
+    @classmethod
+    def from_ensemble(cls, summaries_individual: Iterable):
+        """
+        Combine many Summary objects into one through concatenation.
+        """
+        return cls(pd.concat(summaries_individual))
+
 
 class Result(pd.DataFrame):
     """
@@ -53,11 +82,9 @@ class Result(pd.DataFrame):
 
         # Save the summary output
         try:
-            self.summary = model.get_summary_output()[0]
+            self.summary = Summary.from_model_output(model, run_id=self.run_id)
         except IndexError:
             self.summary = None
-        else:
-            self.summary["run_id"] = self.run_id
 
     def __repr__(self) -> str:
         return ("-----\n"
@@ -66,16 +93,27 @@ class Result(pd.DataFrame):
                 f"Data:\n{super().__repr__()}"
                 "\n-----")
 
-class Summary(pd.DataFrame):
-    """
-    Stores a summary of the results from a PCSE ensemble run.
-    """
-    def __init__(self, data: Iterable):
-        # Initialise the main DataFrame
-        super().__init__(data)
+    def to_file(self, output_directory: PathOrStr, *, filename: Optional[PathOrStr]=None, **kwargs) -> None:
+        """
+        Save the results and summary to output files:
+            output_directory / filename.wout - full results, csv
+            output_directory / filename.wsum - summary results, csv
 
-        # Sort the results by run ID
-        self.set_index("run_id", inplace=True)
+        If no filename is provided, default to using the run ID.
+        """
+        output_directory = Path(output_directory)
+
+        # Generate the output filenames from the user input (`filename`) or from the run id (default)
+        if filename is not None:
+            filename_base = output_directory / filename
+        else:
+            filename_base = output_directory / self.run_id
+        filename_results = filename_base.with_suffix(".wout")
+        filename_summary = filename_base.with_suffix(".wsum")
+
+        # Save the outputs
+        self.to_csv(filename_results, **kwargs)
+        self.summary.to_csv(filename_summary, **kwargs)
 
 def bundle_agro_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProvider],
                       soildata: CABOFileReader | Iterable[CABOFileReader],
@@ -188,7 +226,7 @@ def run_pcse_ensemble(all_runs: Iterable[RunData], nr_runs: Optional[int]=None, 
         print(f"{n_filtered_out} runs failed.")
 
     # Convert the summary to a Summary object (modified DataFrame)
-    summary = Summary(summaries_individual)
+    summary = Summary.from_ensemble(summaries_individual)
 
     return outputs, summary
 
@@ -215,6 +253,6 @@ def run_pcse_ensemble_parallel(all_runs: Iterable[RunData], nr_runs: Optional[in
         print(f"{n_filtered_out} runs failed.")
 
     # Convert the summary to a Summary object (modified DataFrame)
-    summary = Summary(summaries_individual)
+    summary = Summary.from_ensemble(summaries_individual)
 
     return outputs, summary
