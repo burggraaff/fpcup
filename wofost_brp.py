@@ -35,13 +35,6 @@ brp = fpcup.io.read_gpd(args.brp_filename)
 if args.verbose:
     print(f"Loaded BRP data from {args.brp_filename.absolute()} -- {len(brp)} sites")
 
-# If we are only doing one crop, select only the relevant lines from the BRP file
-if args.crop != "All":
-    brp = brp.loc[brp["crop_species"] == args.crop]
-
-    if args.verbose:
-        print(f"Selected only plots growing {args.crop} -- {len(brp)} sites")
-
 # If we are only doing one province, select only the relevant lines from the BRP file
 if args.province != "All":
     if args.province == "Friesland":
@@ -51,13 +44,26 @@ if args.province != "All":
     if args.verbose:
         print(f"Selected only plots in {args.province} -- {len(brp)} sites")
 
+# Set up crop data: sow dates, selecting relevant plots, setting up agromanagement calendars
+sowdate = dt.date(year, 2, 1)
+if args.crop.title() != "All":
+    # Select only the relevant lines from the BRP file
+    brp = brp.loc[brp["crop_species"] == args.crop]
+
+    if args.verbose:
+        print(f"Selected only plots growing {args.crop} -- {len(brp)} sites")
+
+    agromanagementdata = fpcup.agro.AgromanagementDataSingleCrop.from_template(fpcup.agro.template_springbarley_date, date=sowdate)
+
+    if args.verbose:
+        print(agromanagementdata)
+else:
+    raise NotImplementedError("Cannot do multiple crops simultaneously yet.")
+
 # Pre-load data (to be improved)
 soil_dir = args.data_dir / "soil"
 soildata = fpcup.soil.load_folder(soil_dir)[0]
 cropdata = fpcup.crop.default
-
-sowdate = dt.date(year, 2, 1)
-agromanagementdata = fpcup.agro.AgromanagementDataSingleCrop.from_template(fpcup.agro.template_springbarley_date, date=sowdate)
 
 failed_runs = []
 # Run the simulations (minimum working example)
