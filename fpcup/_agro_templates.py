@@ -8,6 +8,8 @@ The end user does not see these Templates, only the resulting YAML-format string
 import datetime as dt
 from string import Template
 
+date_example = dt.date(2005, 3, 3)
+
 def parse_template(template: Template, **kwargs) -> str:
     """
     Parse a Template object, applying all kwargs and removing $ signs afterwards.
@@ -38,4 +40,4 @@ template_crop_date = parse_template(_template_crop_date)
 template_springbarley_date = parse_template(_template_crop_date, croptype="barley", variety="Spring_barley_301")
 
 # Simplest example, spring barley with a set sowing date
-template_springbarley = template_springbarley_date.format(date=dt.datetime(2005, 3, 3))
+template_springbarley = template_springbarley_date.format(date=date_example)
