@@ -3,7 +3,7 @@ Combines abstract base classes from various places and generates some useful ali
 """
 from numbers import Number, Real as RealNumber
 from os import PathLike
-from typing import Callable, Iterable, Optional
+from typing import Callable, Iterable, Optional, Type
 
 Coordinates = tuple[RealNumber, RealNumber]
 PathOrStr = PathLike | str

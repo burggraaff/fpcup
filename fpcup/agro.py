@@ -8,17 +8,51 @@ import yaml
 from tqdm import tqdm
 
 from ._agro_templates import template_crop_date, template_springbarley_date, template_springbarley
-from ._typing import Iterable
+from ._typing import Iterable, Type
 from .tools import make_iterable, dict_product
 
 class AgromanagementData(list):
     """
-    This class is nothing more than a reskinned list.
+    This class is essentially a reskinned list with some convenience methods attached.
     It allows us to type check specifically for agromanagement data rather than for a generic list.
     """
-    pass
+    @classmethod
+    def from_template(cls, template, **kwargs):
+        return cls(load_formatted(template, **kwargs))
 
-def load_formatted(template: str, **kwargs) -> AgromanagementData:
+class AgromanagementDataSingleCrop(AgromanagementData):
+    """
+    AgromanagementData for agromanagement calendars that only consider a single crop.
+    Still essentially a list, but with some parameters more easily available.
+    """
+    def __init__(self, data):
+        super().__init__(data)
+
+        # Extract general calendar data
+        self.calendar_start = list(data[0].keys())[0]
+        self.calendar_end = list(data[1].keys())[0]
+        self.calendar = data[0][self.calendar_start]["CropCalendar"]
+
+        # Extract data from the calendar; done explicitly so ensure completeness
+        self.crop_name = self.calendar["crop_name"]
+        self.crop_variety = self.calendar["variety_name"]
+        self.crop_start_date = self.calendar["crop_start_date"]
+        self.crop_start_type = self.calendar["crop_start_type"]
+        self.crop_end_date = self.calendar["crop_end_date"]
+        self.crop_end_type = self.calendar["crop_end_type"]
+
+    def __repr__(self) -> str:
+        if self.crop_end_date is None:
+            end = self.crop_end_type
+        else:
+            end = f"{self.crop_end_date} ({self.crop_end_type})"
+
+        return ("Agromanagement data for a single crop.\n"
+                f"Crop: {self.crop_name} (variety: {self.crop_variety})\n"
+                f"Start: {self.crop_start_date} ({self.crop_start_type})\n"
+                f"End: {end}")
+
+def load_formatted(template: str, **kwargs) -> list:
     """
     Load an agromanagement template (YAML), formatted with the provided kwargs.
     Note that any kwargs not found in the template are simply ignored.
@@ -42,7 +76,6 @@ def load_formatted(template: str, **kwargs) -> AgromanagementData:
     """
     template_formatted = template.format(**kwargs)
     agromanagement = yaml.safe_load(template_formatted)
-    agromanagement = AgromanagementData(agromanagement)
     return agromanagement
 
 def load_formatted_multi(template: str, progressbar=True, leave_progressbar=False, **kwargs) -> list[AgromanagementData]:
@@ -51,7 +84,7 @@ def load_formatted_multi(template: str, progressbar=True, leave_progressbar=Fals
     This will iterate over every iterable in kwargs; for example, you can provide multiple dates or multiple crops.
     Note that any kwargs not found in the template are simply ignored.
     """
-    # Create a Cartesina product of all kwargs, so they can be iterated over
+    # Create a Cartesian product of all kwargs, so they can be iterated over
     kwargs_iterable = dict_product(kwargs)
 
     try:

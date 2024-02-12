@@ -57,7 +57,7 @@ soildata = fpcup.soil.load_folder(soil_dir)[0]
 cropdata = fpcup.crop.default
 
 sowdate = dt.date(year, 2, 1)
-agromanagementdata = fpcup.agro.load_formatted(fpcup.agro.template_springbarley_date, date=sowdate)
+agromanagementdata = fpcup.agro.AgromanagementDataSingleCrop.from_template(fpcup.agro.template_springbarley_date, date=sowdate)
 
 failed_runs = []
 # Run the simulations (minimum working example)
@@ -75,11 +75,12 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     run = (params_agro, weatherdata, agromanagementdata)
 
     # Run model
-    output = fpcup.model.run_pcse_single(run, run_id=f"brp{year}-plot{i}")
+    output = fpcup.model.run_pcse_single(run, run_id=f"brp{year}-plot{i}-{agromanagementdata.crop_name}")
 
-    # Save the results to file if possible - if not, save the run_id as a failed run
+    # Save the results to file
     try:
         output.to_file(args.output_dir)
+    # If the run failed, saving to file will also fail, so we instead note that this run failed
     except AttributeError:
         failed_runs.append(i)
 
