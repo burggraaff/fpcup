@@ -229,18 +229,23 @@ def run_id_from_params(parameters: ParameterProvider, weatherdata: WeatherDataPr
 
     return run_id
 
-def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD, run_id_function: Callable=run_id_from_params) -> Result | None:
+def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD, run_id: str | Callable=run_id_from_params) -> Result | None:
     """
     Start a new PCSE model with the given inputs and run it until it terminates.
+    If run_id is a str, it is used as-is. If it is a Callable, it is applied to the model parameters.
     """
     parameters, weatherdata, agromanagement = run_data
-    run_id = run_id_function(parameters, weatherdata, agromanagement)
+
+    # Generate a run_id if a Callable was provided; otherwise, use it as-is
+    if isinstance(run_id, Callable):
+        run_id = run_id(parameters, weatherdata, agromanagement)
+
+    # Run the model from start to finish
     try:
         wofost = model(parameters, weatherdata, agromanagement)
         wofost.run_till_terminate()
     except WeatherDataProviderError as e:
-        # msg = f"Runid '{run_id}' failed because of missing weather data."
-        # print(msg)
+        # This is sometimes caused by missing weather data; currently ignored silently but with a None output
         output = None
     else:
         # Convert individual output to a Result object (modified Pandas DataFrame)

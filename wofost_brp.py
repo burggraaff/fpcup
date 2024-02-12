@@ -11,7 +11,7 @@ import argparse
 parser = argparse.ArgumentParser(description="Run PCSE for plots within the BRP.")
 parser.add_argument("brp_filename", help="file to load the BRP from", type=fpcup.io.Path)
 parser.add_argument("-c", "--crop", help="crop to run simulations on (or all)", default="All", choices=("barley", "maize", "wheat"), type=str.lower)
-parser.add_argument("-p", "--province", help="crop to run simulations on (or all)", default="All", choices=fpcup.province.province_names+["All"], type=str.title)
+parser.add_argument("-p", "--province", help="province to select plots from (or all)", default="All", choices=fpcup.province.province_names+["All"], type=str.title)
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=fpcup.io.Path, default=None)
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
@@ -75,7 +75,7 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     run = (params_agro, weatherdata, agromanagementdata)
 
     # Run model
-    output = fpcup.model.run_pcse_single(run, run_id_function=lambda *args: str(i))
+    output = fpcup.model.run_pcse_single(run, run_id=f"brp{year}-plot{i}")
 
     # Save the results to file if possible - if not, save the run_id as a failed run
     try:
