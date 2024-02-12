@@ -84,7 +84,12 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     except AttributeError:
         failed_runs.append(i)
 
-print(f"Number of failed runs: {len(failed_runs)}/{len(brp)}")
+# Feedback on failed runs: if any failed, let the user know. If none failed, only let the user know in verbose mode.
+if len(failed_runs) > 0:
+    print(f"Number of failed runs: {len(failed_runs)}/{len(brp)}")
+else:
+    if args.verbose:
+        print("No runs failed.")
 
 # Combine the summary files into a single file
 summary = fpcup.model.Summary.from_folder(args.output_dir, leave_progressbar=args.verbose)
