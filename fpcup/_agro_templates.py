@@ -57,7 +57,7 @@ _template_crop_date = """
 template_date_springbarley = _template_crop_date.format(croptype="barley", variety="Spring_barley_301")
 template_date_greenmaize = _template_crop_date.format(croptype="maize", variety="Grain_maize_201")
 template_date_sorghum = _template_crop_date.format(croptype="sorghum", variety="Sorghum_VanHeemst_1988")
-template_date_soy = _template_crop_date.format(croptype="soy beans", variety="Soybean_901")
+template_date_soy = _template_crop_date.format(croptype="soybean", variety="Soybean_901")
 template_date_winterwheat = _template_crop_date.format(croptype="wheat", variety="Winter_wheat_102")
 
 template_date = {"barley": template_date_springbarley,
@@ -71,7 +71,7 @@ template_date = {"barley": template_date_springbarley,
                  "maize (sweet)": template_date_greenmaize,
                  "maize (energy)": template_date_greenmaize,
                  "sorghum": template_date_sorghum,
-                 "soy beans": template_date_soy,
+                 "soy": template_date_soy,
                  "wheat": template_date_winterwheat,
                  "wheat (spring)": template_date_winterwheat,
                  "wheat (winter)": template_date_winterwheat,}

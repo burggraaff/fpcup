@@ -32,7 +32,7 @@ maize = {'Maïs, snij-': "maize (green)",
 
 sorghum = {'Soedangras/Sorghum': "sorghum",}
 
-soy = {'Sojabonen': "soy beans",}
+soy = {'Sojabonen': "soy",}
 
 wheat = {'Tarwe, winter-': "wheat (winter)",
          'Tarwe, zomer-': "wheat (spring)",}
