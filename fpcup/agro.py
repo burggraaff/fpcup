@@ -7,7 +7,7 @@ from itertools import product
 import yaml
 from tqdm import tqdm
 
-from ._agro_templates import template_crop_date, template_springbarley_date, template_springbarley
+from ._agro_templates import template_crop_date, template_example_springbarley, template_date_springbarley
 from ._typing import Iterable, Type
 from .tools import make_iterable, dict_product
 

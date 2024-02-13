@@ -39,7 +39,7 @@ if args.verbose:
 
 # Agromanagement calendars
 sowing_dates = fpcup.agro.generate_sowingdates(year=range(2000, 2021, 1), days_of_year=range(60, 91, 10))
-agromanagementdata = fpcup.agro.load_formatted_multi(fpcup.agro.template_springbarley_date, date=sowing_dates, leave_progressbar=args.verbose)
+agromanagementdata = fpcup.agro.load_formatted_multi(fpcup.agro.template_date_springbarley, date=sowing_dates, leave_progressbar=args.verbose)
 if args.verbose:
     print("Loaded agro management data")
 

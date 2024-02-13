@@ -37,7 +37,7 @@ _template_crop_date = Template("""
 template_crop_date = parse_template(_template_crop_date)
 
 # Spring barley with custom sowing dates
-template_springbarley_date = parse_template(_template_crop_date, croptype="barley", variety="Spring_barley_301")
+template_date_springbarley = parse_template(_template_crop_date, croptype="barley", variety="Spring_barley_301")
 
-# Simplest example, spring barley with a set sowing date
-template_springbarley = template_springbarley_date.format(date=date_example)
+# Simplest example: spring barley with a set sowing date
+template_example_springbarley = template_date_springbarley.format(date=date_example)

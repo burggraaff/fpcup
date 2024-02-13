@@ -39,7 +39,7 @@ if args.verbose:
     print("Loaded crop data")
 
 # Agromanagement calendars
-agromanagementdata = fpcup.agro.load_formatted(fpcup.agro.template_springbarley)
+agromanagementdata = fpcup.agro.load_formatted(fpcup.agro.template_example_springbarley)
 if args.verbose:
     print("Loaded agro management data")
 

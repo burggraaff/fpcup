@@ -53,7 +53,7 @@ if args.crop.title() != "All":
     if args.verbose:
         print(f"Selected only plots growing {args.crop} -- {len(brp)} sites")
 
-    agromanagementdata = fpcup.agro.AgromanagementDataSingleCrop.from_template(fpcup.agro.template_springbarley_date, date=sowdate)
+    agromanagementdata = fpcup.agro.AgromanagementDataSingleCrop.from_template(fpcup.agro.template_date_springbarley, date=sowdate)
 
     if args.verbose:
         print(agromanagementdata)
