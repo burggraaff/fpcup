@@ -119,9 +119,10 @@ def brp_map(data: gpd.GeoDataFrame, column: str, province: Optional[str]=None, f
     plt.show()
     plt.close()
 
-def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", crops: Iterable[str]=brp_crops_colours.keys(), figsize=(10, 7), shape=(2, 4), title: Optional[str]=None, rasterized=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", crops: Iterable[str]=brp_crops_colours.keys(), figsize=(14, 3.5), shape=(1, 5), title: Optional[str]=None, rasterized=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons, with one panel per crop species.
+    Shape is (nrows, ncols).
     """
     # Create figure
     fig, axs = plt.subplots(*shape, figsize=figsize)

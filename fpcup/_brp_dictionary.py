@@ -30,29 +30,17 @@ maize = {'Maïs, snij-': "maize (green)",
          'Maïs, energie-': "maize (energy)",
          'Mais, energie-': "maize (energy)",}
 
-oat = {'Haver': "oat",
-       'Naakte haver': "oat (hulless)",
-       'Japanse haver': "oat (black)",}
-
-rye = {'Rogge (geen snijrogge)': "rye",
-       'Snijrogge': "rye (green)",}
-
 sorghum = {'Soedangras/Sorghum': "sorghum",}
 
 soy = {'Sojabonen': "soy beans",}
 
-spelt = {'Spelt': "spelt"}
-
 wheat = {'Tarwe, winter-': "wheat (winter)",
          'Tarwe, zomer-': "wheat (spring)",}
 
-brp_crops_NL2EN = {**barley, **maize, **oat, **rye, **sorghum, **soy, **spelt, **wheat}
+brp_crops_NL2EN = {**barley, **maize, **sorghum, **soy, **wheat}
 
 brp_crops_colours = {"barley": "#1b9e77",
                      "maize": "#e6ab02",
-                     "wheat": "#d95f02",
-                     "oat": "#7570b3",
-                     "rye": "#66a61e",
                      "sorghum": "#e7298a",
                      "soy": "#a6761d",
-                     "spelt": "#666666"}
+                     "wheat": "#d95f02",}

@@ -10,7 +10,7 @@ string.Template objects were used previously, which are more powerful, but their
 import datetime as dt
 import yaml
 
-def load_agrotemplate(template: str, **kwargs) -> list:
+def load_agrotemplate_yaml(template: str, **kwargs) -> list:
     """
     Load an agromanagement template (YAML), formatted with the provided kwargs.
     Note that any kwargs not found in the template are simply ignored.
@@ -55,6 +55,26 @@ _template_crop_date = """
 
 # Templates for a single crop with variable sowing dates
 template_date_springbarley = _template_crop_date.format(croptype="barley", variety="Spring_barley_301")
+template_date_greenmaize = _template_crop_date.format(croptype="maize", variety="Grain_maize_201")
+template_date_sorghum = _template_crop_date.format(croptype="sorghum", variety="Sorghum_VanHeemst_1988")
+template_date_soy = _template_crop_date.format(croptype="soy beans", variety="Soybean_901")
+template_date_winterwheat = _template_crop_date.format(croptype="wheat", variety="Winter_wheat_102")
+
+template_date = {"barley": template_date_springbarley,
+                 "barley (spring)": template_date_springbarley,
+                 "barley (winter)": template_date_springbarley,
+                 "maize": template_date_greenmaize,
+                 "maize (green)": template_date_greenmaize,
+                 "maize (grain)": template_date_greenmaize,
+                 "maize (mix)": template_date_greenmaize,
+                 "maize (silage)": template_date_greenmaize,
+                 "maize (sweet)": template_date_greenmaize,
+                 "maize (energy)": template_date_greenmaize,
+                 "sorghum": template_date_sorghum,
+                 "soy beans": template_date_soy,
+                 "wheat": template_date_winterwheat,
+                 "wheat (spring)": template_date_winterwheat,
+                 "wheat (winter)": template_date_winterwheat,}
 
 # Simplest example: spring barley with a set sowing date
 template_example_springbarley = template_date_springbarley.format(sowdate=date_example)

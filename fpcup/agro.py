@@ -6,7 +6,7 @@ from itertools import product
 
 from tqdm import tqdm
 
-from ._agro_templates import load_agrotemplate, template_example_springbarley, template_date_springbarley
+from ._agro_templates import load_agrotemplate_yaml, template_date, template_example_springbarley, template_date_springbarley
 from ._typing import Iterable, Type
 from .tools import make_iterable, dict_product
 
@@ -17,7 +17,7 @@ class AgromanagementData(list):
     """
     @classmethod
     def from_template(cls, template, **kwargs):
-        return cls(load_agrotemplate(template, **kwargs))
+        return cls(load_agrotemplate_yaml(template, **kwargs))
 
 class AgromanagementDataSingleCrop(AgromanagementData):
     """
@@ -53,9 +53,18 @@ class AgromanagementDataSingleCrop(AgromanagementData):
 
 agromanagement_example = AgromanagementDataSingleCrop.from_template(template_example_springbarley)
 
-def load_formatted_multi(template: str, toclass: Type=AgromanagementDataSingleCrop, progressbar=True, leave_progressbar=False, **kwargs) -> list[AgromanagementData]:
+def load_agrotemplate(crop: str, **kwargs) -> AgromanagementDataSingleCrop:
     """
-    Load an agromanagement template (YAML), formatted with the provided kwargs.
+    Load an agromanagement template for a given crop, formatted with the provided kwargs.
+    Any **kwargs are passed to AgromanagementDataSingleCrop.from_template.
+    """
+    template = template_date[crop]
+    agromanagement = AgromanagementDataSingleCrop.from_template(template, **kwargs)
+    return agromanagement
+
+def load_agrotemplate_multi(crop: str, progressbar=True, leave_progressbar=False, **kwargs) -> list[AgromanagementDataSingleCrop]:
+    """
+    Load an agromanagement template for a given crop, formatted with the provided kwargs.
     This will iterate over every iterable in kwargs; for example, you can provide multiple dates or multiple crops.
     Note that any kwargs not found in the template are simply ignored.
     """
@@ -67,7 +76,8 @@ def load_formatted_multi(template: str, toclass: Type=AgromanagementDataSingleCr
     except TypeError:
         n = None
 
-    agromanagement = [toclass.from_template(template, **k) for k in tqdm(kwargs_iterable, total=n, desc="Loading agromanagement", unit="calendars", disable=not progressbar, leave=leave_progressbar)]
+    kwargs_iterable = tqdm(kwargs_iterable, total=n, desc="Loading agromanagement", unit="calendars", disable=not progressbar, leave=leave_progressbar)
+    agromanagement = [load_agrotemplate(crop, **k) for k in kwargs_iterable]
 
     return agromanagement
 

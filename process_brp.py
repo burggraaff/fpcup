@@ -3,7 +3,7 @@ Read the BRP file in .gpkg format and process it to something more light-weight.
 BRP files can be obtained from https://www.pdok.nl/atom-downloadservices/-/article/basisregistratie-gewaspercelen-brp-
 
 Example usage:
-    %run process_brp.py data/brp/brpgewaspercelen_definitief_2022.gpkg
+    %run process_brp.py data/brp/brpgewaspercelen_definitief_2022.gpkg -vp
 """
 import geopandas as gpd
 gpd.pd.options.mode.chained_assignment = None  # Prevents unneeded warnings
@@ -75,7 +75,7 @@ if args.plots:
 
     fpcup.plotting.brp_map(brp_fpcup, column="crop_species", province="Zuid-Holland", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/f"brp{year}-map_crops-filtered-zh.pdf")
 
-    fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", saveto=args.results_dir/f"brp{year}-map_crops-individual.pdf")
+    fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", title=f"Selected crop types from {filestem}", saveto=args.results_dir/f"brp{year}-map_crops-individual.pdf")
 
 # Add centroid coordinates in WGS84 for WOFOST
 coordinates = brp_fpcup.centroid.to_crs("WGS84")

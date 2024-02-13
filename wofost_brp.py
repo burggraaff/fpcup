@@ -20,6 +20,9 @@ args = parser.parse_args()
 # Get the year from the BRP filename
 year = int(args.brp_filename.stem.split("_")[-1].split("-")[0])
 
+# Determine whether to use a common crop type or row-specific ones
+use_common_croptype = (args.crop.title() != "All")
+
 # Set up a default output folder if a custom one was not provided
 if args.output_dir is None:
     args.output_dir = fpcup.settings.DEFAULT_OUTPUT / f"brp{year}-{args.crop}"
@@ -46,20 +49,18 @@ if args.province != "All":
 
 # Set up crop data: sow dates, selecting relevant plots, setting up agromanagement calendars
 sowdate = dt.date(year, 2, 1)
-if args.crop.title() != "All":
+if use_common_croptype:
     # Select only the relevant lines from the BRP file
     brp = brp.loc[brp["crop_species"] == args.crop]
 
     if args.verbose:
         print(f"Selected only plots growing {args.crop} -- {len(brp)} sites")
 
-    agromanagementdata = fpcup.agro.AgromanagementDataSingleCrop.from_template(fpcup.agro.template_date_springbarley, sowdate=sowdate)
+    agromanagementdata = fpcup.agro.load_agrotemplate(args.crop, sowdate=sowdate)
 
     if args.verbose:
         print("Loaded agro management data:")
         print(agromanagementdata)
-else:
-    raise NotImplementedError("Cannot do multiple crops simultaneously yet.")
 
 # Pre-load data (to be improved)
 soil_dir = args.data_dir / "soil"
@@ -70,6 +71,11 @@ failed_runs = []
 # Run the simulations (minimum working example)
 for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="plot"):
     coords = (row["longitude"], row["latitude"])
+
+    # Get agromanagement data if needed
+    if not use_common_croptype:
+        crop = row["crop"]
+        agromanagementdata = fpcup.agro.load_agrotemplate(crop, sowdate=sowdate)
 
     # Fetch site data
     sitedata = fpcup.site.example(coords)
