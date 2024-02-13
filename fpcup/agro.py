@@ -4,10 +4,9 @@ Agromanagement-related stuff: load data etc
 import datetime as dt
 from itertools import product
 
-import yaml
 from tqdm import tqdm
 
-from ._agro_templates import template_crop_date, template_example_springbarley, template_date_springbarley
+from ._agro_templates import load_agrotemplate, template_example_springbarley, template_date_springbarley
 from ._typing import Iterable, Type
 from .tools import make_iterable, dict_product
 
@@ -18,7 +17,7 @@ class AgromanagementData(list):
     """
     @classmethod
     def from_template(cls, template, **kwargs):
-        return cls(load_formatted(template, **kwargs))
+        return cls(load_agrotemplate(template, **kwargs))
 
 class AgromanagementDataSingleCrop(AgromanagementData):
     """
@@ -52,33 +51,9 @@ class AgromanagementDataSingleCrop(AgromanagementData):
                 f"Start: {self.crop_start_date} ({self.crop_start_type})\n"
                 f"End: {end}")
 
-def load_formatted(template: str, **kwargs) -> list:
-    """
-    Load an agromanagement template (YAML), formatted with the provided kwargs.
-    Note that any kwargs not found in the template are simply ignored.
+agromanagement_example = AgromanagementDataSingleCrop.from_template(template_example_springbarley)
 
-    Example:
-        agro = '''
-        - {date:%Y}-01-01:
-            CropCalendar:
-                crop_name: 'barley'
-                variety_name: 'Spring_barley_301'
-                crop_start_date: {date:%Y-%m-%d}
-                crop_start_type: sowing
-                crop_end_date:
-                crop_end_type: maturity
-                max_duration: 300
-            TimedEvents: null
-            StateEvents: null
-        - {date:%Y}-12-01: null
-        '''
-        agromanagement = load_formatted(agro, date=dt.datetime(2020, 1, 1, 0, 0))
-    """
-    template_formatted = template.format(**kwargs)
-    agromanagement = yaml.safe_load(template_formatted)
-    return agromanagement
-
-def load_formatted_multi(template: str, progressbar=True, leave_progressbar=False, **kwargs) -> list[AgromanagementData]:
+def load_formatted_multi(template: str, toclass: Type=AgromanagementDataSingleCrop, progressbar=True, leave_progressbar=False, **kwargs) -> list[AgromanagementData]:
     """
     Load an agromanagement template (YAML), formatted with the provided kwargs.
     This will iterate over every iterable in kwargs; for example, you can provide multiple dates or multiple crops.
@@ -92,7 +67,7 @@ def load_formatted_multi(template: str, progressbar=True, leave_progressbar=Fals
     except TypeError:
         n = None
 
-    agromanagement = [load_formatted(template, **k) for k in tqdm(kwargs_iterable, total=n, desc="Loading agromanagement", unit="calendars", disable=not progressbar, leave=leave_progressbar)]
+    agromanagement = [toclass.from_template(template, **k) for k in tqdm(kwargs_iterable, total=n, desc="Loading agromanagement", unit="calendars", disable=not progressbar, leave=leave_progressbar)]
 
     return agromanagement
 

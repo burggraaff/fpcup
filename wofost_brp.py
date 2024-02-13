@@ -53,9 +53,10 @@ if args.crop.title() != "All":
     if args.verbose:
         print(f"Selected only plots growing {args.crop} -- {len(brp)} sites")
 
-    agromanagementdata = fpcup.agro.AgromanagementDataSingleCrop.from_template(fpcup.agro.template_date_springbarley, date=sowdate)
+    agromanagementdata = fpcup.agro.AgromanagementDataSingleCrop.from_template(fpcup.agro.template_date_springbarley, sowdate=sowdate)
 
     if args.verbose:
+        print("Loaded agro management data:")
         print(agromanagementdata)
 else:
     raise NotImplementedError("Cannot do multiple crops simultaneously yet.")

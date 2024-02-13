@@ -39,9 +39,10 @@ if args.verbose:
     print("Loaded crop data")
 
 # Agromanagement calendars
-agromanagementdata = fpcup.agro.load_formatted(fpcup.agro.template_example_springbarley)
+agromanagementdata = fpcup.agro.AgromanagementDataSingleCrop.from_template(fpcup.agro.template_example_springbarley)
 if args.verbose:
-    print("Loaded agro management data")
+    print("Loaded agro management data:")
+    print(agromanagementdata)
 
 # Loop over input data
 all_runs, n_runs = fpcup.model.bundle_parameters(sitedata, soildata, cropdata, weatherdata, agromanagementdata)
