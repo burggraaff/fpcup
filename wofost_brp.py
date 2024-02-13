@@ -48,7 +48,6 @@ if args.province != "All":
         print(f"Selected only plots in {args.province} -- {len(brp)} sites")
 
 # Set up crop data: sow dates, selecting relevant plots, setting up agromanagement calendars
-sowdate = dt.date(year, 2, 1)
 if use_common_croptype:
     # Select only the relevant lines from the BRP file
     brp = brp.loc[brp["crop_species"] == args.crop]
@@ -56,6 +55,7 @@ if use_common_croptype:
     if args.verbose:
         print(f"Selected only plots growing {args.crop} -- {len(brp)} sites")
 
+    sowdate = fpcup.agro.sowdate_range(args.crop, year)[0]
     agromanagementdata = fpcup.agro.load_agrotemplate(args.crop, sowdate=sowdate)
 
     if args.verbose:
@@ -75,6 +75,7 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     # Get agromanagement data if needed
     if not use_common_croptype:
         crop = row["crop"]
+        sowdate = fpcup.agro.sowdate_range(crop, year)[0]
         agromanagementdata = fpcup.agro.load_agrotemplate(crop, sowdate=sowdate)
 
     # Fetch site data

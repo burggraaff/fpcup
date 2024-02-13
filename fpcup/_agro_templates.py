@@ -36,8 +36,7 @@ def load_agrotemplate_yaml(template: str, **kwargs) -> list:
     agromanagement = yaml.safe_load(template_formatted)
     return agromanagement
 
-date_example = dt.date(2005, 3, 3)
-
+# TO DO: Version for winter crops, starting in summer i and ending in summer i+1
 _template_crop_date = """
 - {{sowdate:%Y}}-01-01:
     CropCalendar:
@@ -77,4 +76,5 @@ template_date = {"barley": template_date_springbarley,
                  "wheat (winter)": template_date_winterwheat,}
 
 # Simplest example: spring barley with a set sowing date
-template_example_springbarley = template_date_springbarley.format(sowdate=date_example)
+sowdate_example = dt.date(2005, 3, 3)
+template_example_springbarley = template_date_springbarley.format(sowdate=sowdate_example)

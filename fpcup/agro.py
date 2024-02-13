@@ -2,6 +2,7 @@
 Agromanagement-related stuff: load data etc
 """
 import datetime as dt
+from functools import cache
 from itertools import product
 
 from tqdm import tqdm
@@ -91,3 +92,33 @@ def generate_sowingdates(year: int | Iterable[int], days_of_year: int | Iterable
     doys = make_iterable(days_of_year)
     years_and_doys = product(years, doys)
     return [dt.datetime.strptime(f"{year}-{doy}", "%Y-%j") for year, doy in years_and_doys]
+
+# Sowing date ranges, in day-of-year (doy) format
+sowdoys_springbarley = range(40, 86)  # From the WOFOST crop parameter repository: barley.yaml
+sowdoys_greenmaize = range(115, 122)  # From the WOFOST crop parameter repository: maize.yaml
+sowdoys_sorghum = range(130, 140)  # From https://www.melkvee.nl/artikel/195909-teelttips-sorghum/
+sowdoys_soy = range(118, 119)  # From the WOFOST crop parameter repository: soybean.yaml
+sowdoys_winterwheat = range(244, 334)  # From the WOFOST crop parameter repository: wheat.yaml
+
+sowdoys = {"barley": sowdoys_springbarley,
+           "barley (spring)": sowdoys_springbarley,
+           "barley (winter)": sowdoys_springbarley,
+           "maize": sowdoys_greenmaize,
+           "maize (green)": sowdoys_greenmaize,
+           "maize (grain)": sowdoys_greenmaize,
+           "maize (mix)": sowdoys_greenmaize,
+           "maize (silage)": sowdoys_greenmaize,
+           "maize (sweet)": sowdoys_greenmaize,
+           "maize (energy)": sowdoys_greenmaize,
+           "sorghum": sowdoys_sorghum,
+           "soy": sowdoys_soy,
+           "wheat": sowdoys_winterwheat,
+           "wheat (spring)": sowdoys_winterwheat,
+           "wheat (winter)": sowdoys_winterwheat,}
+
+@cache
+def sowdate_range(crop: str, year: int) -> list[dt.datetime]:
+    """
+    Return the typical range of sowing dates for the given crop in the given year.
+    """
+    return generate_sowingdates(year, sowdoys[crop])
