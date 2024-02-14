@@ -23,6 +23,7 @@ from .agro import AgromanagementData
 from .constants import CRS_AMERSFOORT
 from .tools import make_iterable
 
+# Parameter names are from "A gentle introduction to WOFOST", De Wit & Boogaard 2021
 parameter_names = {"DVS": "Crop development stage",
                    "LAI": "Leaf area index [ha/ha]",
                    "TAGP": "Total above-ground production [kg/ha]",
@@ -33,7 +34,16 @@ parameter_names = {"DVS": "Crop development stage",
                    "TRA": "Crop transpiration [cm/day]",
                    "RD": "Crop rooting depth [cm]",
                    "SM": "Soil moisture index",
-                   "WWLOW": "Total water [cm]"}
+                   "WWLOW": "Total water [cm]",
+                   "LAIMAX": "Maximum leaf area index [ha/ha]",
+                   "CTRAT": "Cumulative crop transpiration [cm]",
+                   "DOS": "Date of sowing",
+                   "DOE": "Date of emergence",
+                   "DOA": "Date of anthesis",
+                   "DOM": "Date of maturity",
+                   "DOH": "Date of harvest",
+                   "DOV": "Date of vernalisation",
+                   "CEVST": "Cumulative soil evaporation [cm]"}
 
 
 class RunData(tuple):

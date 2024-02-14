@@ -5,12 +5,15 @@ import datetime as dt
 
 import geopandas as gpd
 import pandas as pd
-from matplotlib import pyplot as plt, patches as mpatches, ticker as mticker
 from tqdm import tqdm
+
+from matplotlib import pyplot as plt, patches as mpatches, ticker as mticker
+from matplotlib import rcParams
+rcParams.update({"axes.grid": True, "figure.dpi": 600, "grid.linestyle": "--", "hist.bins": 25, "legend.edgecolor": "black", "legend.framealpha": 1, "savefig.dpi": 600})
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Iterable, Optional, PathOrStr, StringDict
-from .model import parameter_names
+from .model import Summary, parameter_names
 from .province import nl_boundary, province_area, province_boundary
 
 # @mticker.FuncFormatter
@@ -71,7 +74,7 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
             ax.text(0.99, 0.98, text, transform=ax.transAxes, horizontalalignment="right", verticalalignment="top")
 
     if saveto:
-        plt.savefig(saveto, dpi=600, bbox_inches="tight")
+        plt.savefig(saveto, bbox_inches="tight")
     plt.show()
     plt.close()
 
@@ -96,7 +99,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, province: Optional[str]=None, f
 
         # Generate dummy patches with the same colour mapping and add those to the legend
         colour_patches = [mpatches.Patch(color=colour, label=label.capitalize()) for label, colour in colour_dict.items() if label in data[column].unique()]
-        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, edgecolor="black", framealpha=1, title=column_to_title(column))
+        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, title=column_to_title(column))
 
     # If colours are not specified, simply plot the data and let geopandas handle the colours
     else:
@@ -115,7 +118,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, province: Optional[str]=None, f
     ax.axis("equal")
 
     if saveto:
-        plt.savefig(saveto, bbox_inches="tight", dpi=600)
+        plt.savefig(saveto, bbox_inches="tight")
     plt.show()
     plt.close()
 
@@ -142,7 +145,7 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", crops
     fig.suptitle(title)
 
     if saveto:
-        plt.savefig(saveto, bbox_inches="tight", dpi=600)
+        plt.savefig(saveto, bbox_inches="tight")
     plt.show()
     plt.close()
 
@@ -153,7 +156,7 @@ def replace_year_in_datetime(date: dt.date, newyear: int=2000) -> dt.date:
     """
     return date.replace(year=newyear)
 
-def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True, show=True) -> None:
+def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True, show=True) -> None:
     """
     Plot WOFOST ensemble results.
     """
@@ -180,12 +183,46 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
         ax.set_ylabel(key)
         ax.set_ylim(ymin=0)
         ax.text(1.00, 1.00, parameter_names[key], transform=ax.transAxes, horizontalalignment="right", verticalalignment="top", bbox={"boxstyle": "round", "facecolor": "white"})
-        ax.grid()
+
     fig.align_ylabels()
-    axs[0].set_title(f"Results from {len(outputs)} WOFOST runs")
+
+    if title is None:
+        f"Results from {len(outputs)} WOFOST runs"
+    axs[0].set_title(title)
 
     if saveto is not None:
-        fig.savefig(saveto, dpi=300, bbox_inches="tight")
+        fig.savefig(saveto, bbox_inches="tight")
+
+    if show:
+        plt.show()
+
+    plt.close()
+
+def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None, show=True) -> None:
+    """
+    Plot WOFOST ensemble results.
+    """
+    # If no keys were specified, get all of them
+    if keys is None:
+        keys = summary.keys()
+
+    # Plot curves for outputs
+    fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(8, 5))
+
+    # Plot every key in the corresponding panel
+    for ax, key in zip(axs[0], keys):
+        ax.hist(summary[key])
+        ax.set_xlabel(key)
+
+    axs[0, 0].set_ylabel("Distribution")
+    fig.align_xlabels()
+
+    if title is None:
+        title = f"Results from {len(summary)} WOFOST runs"
+    fig.suptitle(title)
+
+    if saveto is not None:
+        fig.savefig(saveto, bbox_inches="tight")
 
     if show:
         plt.show()
