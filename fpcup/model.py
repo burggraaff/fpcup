@@ -148,6 +148,7 @@ class Summary(gpd.GeoDataFrame):
         Load a summary from a GeoJSON (.wsum) file.
         """
         data = read_geodataframe(filename)
+        data.set_index("run_id", inplace=True)
         return cls(data)
 
     @classmethod
@@ -180,9 +181,11 @@ class Summary(gpd.GeoDataFrame):
     def to_file(self, filename: PathOrStr, **kwargs) -> None:
         """
         Save to as a GeoJSON (.wsum) file.
+        The index has to be reset first to ensure it is written to file (annoying 'feature' of the GeoJSON driver).
         """
+        self.reset_index(inplace=True)
         write_geodataframe(self, filename, driver="GeoJSON", **kwargs)
-
+        self.set_index("run_id", inplace=True)
 
 class Result(pd.DataFrame):
     """
