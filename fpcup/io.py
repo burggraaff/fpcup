@@ -8,6 +8,7 @@ from pathlib import Path
 import geopandas as gpd
 gpd.options.io_engine = "pyogrio"
 from geopandas import GeoDataFrame, read_file as read_gpd
+from pyogrio.errors import DataSourceError
 
 import pandas as pd
 
@@ -53,8 +54,11 @@ def load_ensemble_results_folder(folder: PathOrStr, sample=False, progressbar=Tr
     n_results = len(filenames_results)
     assert n_results > 0, f"No results files found in folder {folder.absolute()}"
 
-    # Load the files
-    summary = Summary.from_folder(folder, progressbar=progressbar, leave_progressbar=leave_progressbar)
+    # Load the summary; from an ensemble file if possible
+    try:
+        summary = Summary.from_file(folder/"ensemble.wsum")
+    except DataSourceError:
+        summary = Summary.from_folder(folder, progressbar=progressbar, leave_progressbar=leave_progressbar)
 
     filenames_results = tqdm(filenames_results, total=n_results, desc="Loading results", unit="files", disable=not progressbar, leave=leave_progressbar)
     results = [Result.from_file(filename) for filename in filenames_results]
