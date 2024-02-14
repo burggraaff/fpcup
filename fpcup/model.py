@@ -5,6 +5,9 @@ from itertools import product
 from multiprocessing import Pool  # Multi-threading
 from pathlib import Path
 
+import geopandas as gpd
+gpd.options.io_engine = "pyogrio"
+from pyogrio import read_dataframe as read_geodataframe, write_dataframe as write_geodataframe
 import pandas as pd
 import shapely
 from tqdm import tqdm
@@ -17,6 +20,7 @@ from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
 from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr
 from .agro import AgromanagementData
+from .constants import CRS_AMERSFOORT
 from .tools import make_iterable
 
 parameter_names = {"DVS": "Crop development stage",
@@ -31,6 +35,7 @@ parameter_names = {"DVS": "Crop development stage",
                    "SM": "Soil moisture index",
                    "WWLOW": "Total water [cm]"}
 
+
 class RunData(tuple):
     """
     Stores the data necessary to run a PCSE simulation.
@@ -40,7 +45,7 @@ class RunData(tuple):
         parameters = ParameterProvider(sitedata=sitedata, soildata=soildata, cropdata=cropdata)
         return super().__new__(cls, (parameters, weatherdata, agromanagement))
 
-    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, *, run_id: Optional[str]=None, geometry: Optional[shapely.Geometry | tuple]=None):
+    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, *, run_id: Optional[str]=None, geometry: Optional[shapely.Geometry | tuple]=None, crs=None):
         # Easier access
         self.sitedata = sitedata
         self.soildata = soildata
@@ -61,6 +66,7 @@ class RunData(tuple):
         elif isinstance(geometry, tuple):  # Pairs of coordinates
             geometry = shapely.Point(*geometry)
         self.geometry = geometry
+        self.crs = crs
 
     def __repr__(self) -> str:
         text_parameters = type(self.parameters).__name__
@@ -89,11 +95,12 @@ class RunData(tuple):
 
         return run_id
 
+
 class RunDataBRP(RunData):
     """
     Same as RunData but specific to the BRP.
     """
-    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, brpdata: pd.Series, brpyear: int):
+    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, brpdata: pd.Series, brpyear: int, crs=CRS_AMERSFOORT):
         """
         Use a BRP data series to initialise the RunData object.
         `brpyear` is the BRP year, not the weatherdata year, so that e.g. a plot from the 2021 BRP can be simulated in 2022.
@@ -102,42 +109,55 @@ class RunDataBRP(RunData):
         self.plot_id = brpdata.name
         self.brpyear = brpyear
 
-        super().__init__(sitedata, soildata, cropdata, weatherdata, agromanagement, geometry=brpdata["geometry"])
+        super().__init__(sitedata, soildata, cropdata, weatherdata, agromanagement, geometry=brpdata["geometry"], crs=crs)
 
     def generate_run_id(self) -> str:
         sowdate = self.agromanagement.crop_start_date
         return f"brp{self.brpyear}-plot{self.plot_id}-{self.crop}-sown{sowdate:%Y%j}"
 
-class Summary(pd.DataFrame):
+
+class Summary(gpd.GeoDataFrame):
     """
     Stores a summary of the results from a PCSE ensemble run.
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.index.set_names("run_id", inplace=True)
+        self.sort_index(inplace=True)
 
     @classmethod
-    def from_model_output(cls, model: Engine, run_id: str="", **kwargs):
+    def from_model(cls, model: Engine, run_data: RunData, crs=None, **kwargs):
         """
-        Generate a summary from a model output, inserting the run_id as an index.
+        Generate a summary from a finished model, inserting the run_id as an index.
         """
         summary = model.get_summary_output()
-        index = [run_id]
-        return cls(summary, index=index, **kwargs)
+
+        # Get data from run_data
+        # TO DO: get more from run_data, e.g. soil type
+        summary[0]["geometry"] = run_data.geometry
+        index = [run_data.run_id]
+
+        if crs is None:
+            crs = run_data.crs
+
+        return cls(summary, index=index, crs=crs, **kwargs)
 
     @classmethod
     def from_file(cls, filename: PathOrStr):
         """
-        Load a summary from a CSV (.wsum) file, indexed by the 0th column (run_id).
+        Load a summary from a GeoJSON (.wsum) file.
         """
-        return cls(pd.read_csv(filename, index_col=0))
+        data = read_geodataframe(filename)
+        return cls(data)
 
     @classmethod
     def from_ensemble(cls, summaries_individual: Iterable):
         """
         Combine many Summary objects into one through concatenation.
         """
-        return cls(pd.concat(summaries_individual)).sort_index()
+        # Uses the regular Pandas concat function; when the outputs are GeoDataFrames (or Summaries), the result is a GeoDataFrame
+        data = pd.concat(summaries_individual)
+        return cls(data)
 
     @classmethod
     def from_folder(cls, folder: PathOrStr, extension: Optional[str]="*.wsum", progressbar=True, leave_progressbar=True):
@@ -156,6 +176,13 @@ class Summary(pd.DataFrame):
         filenames = tqdm(filenames, desc="Loading summaries", unit="file", disable=not progressbar, leave=leave_progressbar)
         summaries_individual = [cls.from_file(filename) for filename in filenames]
         return cls.from_ensemble(summaries_individual)
+
+    def to_file(self, filename: PathOrStr, **kwargs) -> None:
+        """
+        Save to as a GeoJSON (.wsum) file.
+        """
+        write_geodataframe(self, filename, driver="GeoJSON", **kwargs)
+
 
 class Result(pd.DataFrame):
     """
@@ -191,7 +218,6 @@ class Result(pd.DataFrame):
         output = model.get_output()
 
         # Get data from run_data if possible
-        # TO DO: get more data, e.g. soil type
         if run_data is not None:
             run_id = run_data.run_id
         else:
@@ -199,7 +225,7 @@ class Result(pd.DataFrame):
 
         # Save the summary output
         try:
-            summary = Summary.from_model_output(model, run_id=run_id)
+            summary = Summary.from_model(model, run_data=run_data)
         except IndexError:
             summary = None
 
@@ -233,8 +259,8 @@ class Result(pd.DataFrame):
     def to_file(self, output_directory: PathOrStr, *, filename: Optional[PathOrStr]=None, **kwargs) -> None:
         """
         Save the results and summary to output files:
-            output_directory / filename.wout - full results, csv
-            output_directory / filename.wsum - summary results, csv
+            output_directory / filename.wout - full results, CSV
+            output_directory / filename.wsum - summary results, GeoJSON
 
         If no filename is provided, default to using the run ID.
         """
@@ -250,7 +276,8 @@ class Result(pd.DataFrame):
 
         # Save the outputs
         self.to_csv(filename_results, **kwargs)
-        self.summary.to_csv(filename_summary, **kwargs)
+        self.summary.to_file(filename_summary, **kwargs)
+
 
 def bundle_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProvider],
                       soildata: CABOFileReader | Iterable[CABOFileReader],

@@ -107,6 +107,6 @@ else:
 # Combine the summary files into a single file
 summary = fpcup.model.Summary.from_folder(args.output_dir, leave_progressbar=args.verbose)
 summary_filename = args.output_dir / "ensemble.wsum"
-summary.to_csv(summary_filename)
+summary.to_file(summary_filename)
 if args.verbose:
     print(f"\nSaved ensemble summary to {summary_filename.absolute()}")

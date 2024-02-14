@@ -56,13 +56,14 @@ outputs, summary = fpcup.run_pcse_ensemble(all_runs, nr_runs=n_runs)
 if args.verbose:
     print("Finished runs")
 
-# Write the summary results to a CSV file
+# Write the summary results to file
+summary.set_crs(fpcup.constants.WGS84, inplace=True)
 summary_filename = args.output_dir / "ensemble.wsum"
-summary.to_csv(summary_filename)
+summary.to_file(summary_filename)
 if args.verbose:
     print(f"Saved ensemble summary to {summary_filename.absolute()}")
 
-# Write the individual outputs to CSV files
+# Write the individual outputs to file
 fpcup.io.save_ensemble_results(outputs, args.output_dir)
 if args.verbose:
     print(f"Saved individual ensemble results to {args.output_dir.absolute()}")
