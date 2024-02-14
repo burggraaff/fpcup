@@ -56,11 +56,11 @@ if use_common_croptype:
         print(f"Selected only plots growing {args.crop} -- {len(brp)} sites")
 
     sowdate = fpcup.agro.sowdate_range(args.crop, year)[0]
-    agromanagementdata = fpcup.agro.load_agrotemplate(args.crop, sowdate=sowdate)
+    agromanagement = fpcup.agro.load_agrotemplate(args.crop, sowdate=sowdate)
 
     if args.verbose:
         print("Loaded agro management data:")
-        print(agromanagementdata)
+        print(agromanagement)
 
 # Pre-load data (to be improved)
 soil_dir = args.data_dir / "soil"
@@ -70,13 +70,13 @@ cropdata = fpcup.crop.default
 failed_runs = []
 # Run the simulations (minimum working example)
 for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="plot"):
-    coords = (row["longitude"], row["latitude"])
+    coords = (row["latitude"], row["longitude"])
 
     # Get agromanagement data if needed
     if not use_common_croptype:
         crop = row["crop"]
         sowdate = fpcup.agro.sowdate_range(crop, year)[0]
-        agromanagementdata = fpcup.agro.load_agrotemplate(crop, sowdate=sowdate)
+        agromanagement = fpcup.agro.load_agrotemplate(crop, sowdate=sowdate)
 
     # Fetch site data
     sitedata = fpcup.site.example(coords)
@@ -85,11 +85,10 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     weatherdata = fpcup.weather.load_weather_data_NASAPower(coords)
 
     # Bundle parameters
-    params_agro = fpcup.model.ParameterProvider(sitedata=sitedata, soildata=soildata, cropdata=cropdata)
-    run = (params_agro, weatherdata, agromanagementdata)
+    run = fpcup.model.RunDataBRP(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, brpdata=row, brpyear=year)
 
     # Run model
-    output = fpcup.model.run_pcse_single(run, run_id=f"brp{year}-plot{i}-{agromanagementdata.crop_name}")
+    output = fpcup.model.run_pcse_single(run)
 
     # Save the results to file
     try:

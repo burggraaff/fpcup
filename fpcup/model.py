@@ -6,6 +6,7 @@ from multiprocessing import Pool  # Multi-threading
 from pathlib import Path
 
 import pandas as pd
+import shapely
 from tqdm import tqdm
 
 from pcse.base import MultiCropDataProvider, ParameterProvider, WeatherDataProvider
@@ -14,11 +15,9 @@ from pcse.fileinput import CABOFileReader
 from pcse.models import Engine, Wofost72_WLP_FD
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
-from ._typing import Callable, Iterable, Optional, PathOrStr
+from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr
 from .agro import AgromanagementData
 from .tools import make_iterable
-
-RunData = tuple[ParameterProvider, WeatherDataProvider, AgromanagementData]
 
 parameter_names = {"DVS": "Crop development stage",
                    "LAI": "Leaf area index [ha/ha]",
@@ -31,6 +30,83 @@ parameter_names = {"DVS": "Crop development stage",
                    "RD": "Crop rooting depth [cm]",
                    "SM": "Soil moisture index",
                    "WWLOW": "Total water [cm]"}
+
+class RunData(tuple):
+    """
+    Stores the data necessary to run a PCSE simulation.
+    Primarily a tuple containing the parameters in the order PCSE expects them in, with some options for geometry and run_id generation.
+    """
+    def __new__(cls, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, **kwargs):
+        parameters = ParameterProvider(sitedata=sitedata, soildata=soildata, cropdata=cropdata)
+        return super().__new__(cls, (parameters, weatherdata, agromanagement))
+
+    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, *, run_id: Optional[str]=None, geometry: Optional[shapely.Geometry | tuple]=None):
+        # Easier access
+        self.sitedata = sitedata
+        self.soildata = soildata
+        self.cropdata = cropdata
+        self.parameters = self[0]
+        self.weatherdata = self[1]
+        self.agromanagement = self[2]
+        self.crop = self.agromanagement.crop_name
+
+        # Assign a run_id, either from user input or from the run parameters
+        if run_id is None:
+            run_id = self.generate_run_id()
+        self.run_id = run_id
+
+        # Set up the shapely geometry object
+        if geometry is None:
+            geometry = shapely.Point(self.weatherdata.latitude, self.weatherdata.longitude)
+        elif isinstance(geometry, tuple):  # Pairs of coordinates
+            geometry = shapely.Point(*geometry)
+        self.geometry = geometry
+
+    def __repr__(self) -> str:
+        text_parameters = type(self.parameters).__name__
+
+        text_weather = f"{type(self.weatherdata).__name__} at ({self.weatherdata.latitude:+.4f}, {self.weatherdata.longitude:+.4f})"
+
+        if isinstance(self.geometry, shapely.Geometry):
+            text_geometry = f"{self.geometry.geom_type}, centroid ({self.geometry.centroid.x:.4f}, {self.geometry.centroid.y:.4f})"
+        else:
+            text_geometry = self.geometry
+
+        return (f"Run '{self.run_id}':\n"
+                f"ParameterProvider: {text_parameters}\n"
+                f"WeatherDataProvider: {text_weather}\n"
+                f"AgromanagementData: {self[2]}\n"
+                f"Geometry: {text_geometry}")
+
+    def generate_run_id(self) -> str:
+        """
+        Generate a run ID from PCSE model inputs.
+        """
+        soil_type = self.parameters._soildata["SOLNAM"]
+        sowdate = self.agromanagement.crop_start_date
+
+        run_id = f"{self.crop}_{soil_type}_sown{sowdate:%Y%j}_lat{self.weatherdata.latitude:.1f}-lon{self.weatherdata.longitude:.1f}"
+
+        return run_id
+
+class RunDataBRP(RunData):
+    """
+    Same as RunData but specific to the BRP.
+    """
+    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, brpdata: pd.Series, brpyear: int):
+        """
+        Use a BRP data series to initialise the RunData object.
+        `brpyear` is the BRP year, not the weatherdata year, so that e.g. a plot from the 2021 BRP can be simulated in 2022.
+        """
+        # Extract BRP data
+        self.plot_id = brpdata.name
+        self.brpyear = brpyear
+
+        super().__init__(sitedata, soildata, cropdata, weatherdata, agromanagement, geometry=brpdata["geometry"])
+
+    def generate_run_id(self) -> str:
+        sowdate = self.agromanagement.crop_start_date
+        return f"brp{self.brpyear}-plot{self.plot_id}-{self.crop}-sown{sowdate:%Y%j}"
 
 class Summary(pd.DataFrame):
     """
@@ -108,11 +184,18 @@ class Result(pd.DataFrame):
                 "\n-----")
 
     @classmethod
-    def from_model(cls, model: Engine, *, run_id: str="", **kwargs):
+    def from_model(cls, model: Engine, *, run_data: Optional[RunData]=None, **kwargs):
         """
         Initialise the main DataFrame from a model output.
         """
         output = model.get_output()
+
+        # Get data from run_data if possible
+        # TO DO: get more data, e.g. soil type
+        if run_data is not None:
+            run_id = run_data.run_id
+        else:
+            run_id = ""
 
         # Save the summary output
         try:
@@ -169,23 +252,6 @@ class Result(pd.DataFrame):
         self.to_csv(filename_results, **kwargs)
         self.summary.to_csv(filename_summary, **kwargs)
 
-def bundle_agro_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProvider],
-                      soildata: CABOFileReader | Iterable[CABOFileReader],
-                      cropdata: MultiCropDataProvider | Iterable[MultiCropDataProvider]) -> Iterable[ParameterProvider]:
-    """
-    Bundle the site, soil, and crop parameters into PCSE ParameterProvider objects.
-    """
-    # Make sure the data are iterable
-    sitedata_iter = make_iterable(sitedata, exclude=[PCSESiteDataProvider])
-    soildata_iter = make_iterable(soildata, exclude=[CABOFileReader])
-    cropdata_iter = make_iterable(cropdata, exclude=[MultiCropDataProvider])
-
-    # Combine everything
-    combined_inputs = product(sitedata_iter, soildata_iter, cropdata_iter)
-    parameters_combined = (ParameterProvider(sitedata=site, soildata=soil, cropdata=crop) for site, soil, crop in combined_inputs)
-
-    return parameters_combined
-
 def bundle_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProvider],
                       soildata: CABOFileReader | Iterable[CABOFileReader],
                       cropdata: MultiCropDataProvider | Iterable[MultiCropDataProvider],
@@ -208,48 +274,25 @@ def bundle_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProv
         n = None
 
     # Combine everything
-    agro_parameters = bundle_agro_parameters(sitedata_iter, soildata_iter, cropdata_iter)
-    combined_parameters = product(agro_parameters, weatherdata_iter, agromanagementdata_iter)
+    combined_parameters = product(sitedata_iter, soildata_iter, cropdata_iter, weatherdata_iter, agromanagementdata_iter)
+    rundata = (RunData(*params) for params in combined_parameters)
 
-    return combined_parameters, n
+    return rundata, n
 
-def run_id_from_params(parameters: ParameterProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData) -> str:
-    """
-    Generate a run ID from PCSE model inputs.
-    """
-    soil_type = parameters._soildata["SOLNAM"]
-
-    startdate = list(agromanagement[0].keys())[0]
-    sowdate = agromanagement[0][startdate]["CropCalendar"]["crop_start_date"]
-    crop_type = agromanagement[0][startdate]["CropCalendar"]["crop_name"]
-
-    latitude, longitude = weatherdata.latitude, weatherdata.longitude
-
-    run_id = f"{crop_type}_{soil_type}_sown-{sowdate:%Y-%m-%d}_lat{latitude:.1f}-lon{longitude:.1f}"
-
-    return run_id
-
-def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD, run_id: str | Callable=run_id_from_params) -> Result | None:
+def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD) -> Result | None:
     """
     Start a new PCSE model with the given inputs and run it until it terminates.
-    If run_id is a str, it is used as-is. If it is a Callable, it is applied to the model parameters.
     """
-    parameters, weatherdata, agromanagement = run_data
-
-    # Generate a run_id if a Callable was provided; otherwise, use it as-is
-    if isinstance(run_id, Callable):
-        run_id = run_id(parameters, weatherdata, agromanagement)
-
     # Run the model from start to finish
     try:
-        wofost = model(parameters, weatherdata, agromanagement)
+        wofost = model(*run_data)
         wofost.run_till_terminate()
     except WeatherDataProviderError as e:
         # This is sometimes caused by missing weather data; currently ignored silently but with a None output
         output = None
     else:
         # Convert individual output to a Result object (modified Pandas DataFrame)
-        output = Result.from_model(wofost, run_id=run_id)
+        output = Result.from_model(wofost, run_data=run_data)
 
     return output
 
