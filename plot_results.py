@@ -23,6 +23,7 @@ if args.verbose:
 
 # Load the results
 outputs, summary = fpcup.io.load_ensemble_results_folder(args.output_dir, leave_progressbar=args.verbose)
+summary.to_crs(fpcup.constants.CRS_AMERSFOORT, inplace=True)
 
 # Determine file save format
 usevector = (len(outputs) < args.vector_max)
@@ -39,7 +40,7 @@ if args.verbose:
 
 # Plot summary results
 keys_to_plot = ["LAIMAX", "TWSO", "CTRAT", "CEVST", "RD", "DOE", "DOM"]
-filename_summary = results_dir / f"WOFOST_{tag}-summary.{format_lines}"
+filename_summary = results_dir / f"WOFOST_{tag}-summary.pdf"
 
 fpcup.plotting.plot_wofost_ensemble_summary(summary, keys=keys_to_plot, saveto=filename_summary, title=f"Summary of {len(outputs)} WOFOST runs\n{tag}")
 if args.verbose:

@@ -156,7 +156,7 @@ def replace_year_in_datetime(date: dt.date, newyear: int=2000) -> dt.date:
     """
     return date.replace(year=newyear)
 
-def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True, show=True) -> None:
+def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True) -> None:
     """
     Plot WOFOST ensemble results.
     """
@@ -192,13 +192,12 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
 
     if saveto is not None:
         fig.savefig(saveto, bbox_inches="tight")
-
-    if show:
+    else:
         plt.show()
 
     plt.close()
 
-def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, title: Optional[str]=None, province: Optional[str]=None, saveto: Optional[PathOrStr]=None, show=True) -> None:
+def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, title: Optional[str]=None, province: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot WOFOST ensemble results.
     """
@@ -241,8 +240,7 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
 
     if saveto is not None:
         fig.savefig(saveto, bbox_inches="tight")
-
-    if show:
+    else:
         plt.show()
 
     plt.close()
