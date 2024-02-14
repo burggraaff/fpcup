@@ -7,8 +7,8 @@ from itertools import product
 
 from tqdm import tqdm
 
-from ._agro_templates import load_agrotemplate_yaml, template_date, template_example_springbarley, template_date_springbarley
-from ._typing import Iterable, Type
+from ._agro_templates import load_agrotemplate_yaml, _template_example_springbarley, template_date
+from ._typing import Callable, Iterable, Type
 from .tools import make_iterable, dict_product
 
 class AgromanagementData(list):
@@ -17,7 +17,7 @@ class AgromanagementData(list):
     It allows us to type check specifically for agromanagement data rather than for a generic list.
     """
     @classmethod
-    def from_template(cls, template, **kwargs):
+    def from_template(cls, template: Callable, **kwargs):
         return cls(load_agrotemplate_yaml(template, **kwargs))
 
 class AgromanagementDataSingleCrop(AgromanagementData):
@@ -52,7 +52,7 @@ class AgromanagementDataSingleCrop(AgromanagementData):
                 f"Start: {self.crop_start_date} ({self.crop_start_type})\n"
                 f"End: {end}")
 
-agromanagement_example = AgromanagementDataSingleCrop.from_template(template_example_springbarley)
+agromanagement_example = AgromanagementDataSingleCrop.from_template(_template_example_springbarley)
 
 def load_agrotemplate(crop: str, **kwargs) -> AgromanagementDataSingleCrop:
     """
