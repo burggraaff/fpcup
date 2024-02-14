@@ -34,7 +34,7 @@ if args.verbose:
 
 # Plot the individual runs
 filename_results = results_dir / f"WOFOST_{tag}-outputs.{format_lines}"
-fpcup.plotting.plot_wofost_ensemble_results(outputs, saveto=filename_results, replace_years=args.replace_years, title=f"Outputs from {len(outputs)} WOFOST runs\n{tag}")
+fpcup.plotting.plot_wofost_ensemble_results(outputs, saveto=filename_results, replace_years=args.replace_years, title=f"Outputs from {len(outputs)} WOFOST runs\n{tag}", leave_progressbar=args.verbose)
 if args.verbose:
     print(f"Saved batch results plot to {filename_results.absolute()}")
 

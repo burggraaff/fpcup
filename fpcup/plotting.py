@@ -156,7 +156,7 @@ def replace_year_in_datetime(date: dt.date, newyear: int=2000) -> dt.date:
     """
     return date.replace(year=newyear)
 
-def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True) -> None:
+def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True, progressbar=True, leave_progressbar=False) -> None:
     """
     Plot WOFOST ensemble results.
     """
@@ -167,7 +167,7 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
     # Plot curves for outputs
     fig, axs = plt.subplots(nrows=len(keys), sharex=True, figsize=(8,10))
 
-    for df in tqdm(outputs, total=len(outputs), desc="Plotting results", unit="runs"):
+    for df in tqdm(outputs, total=len(outputs), desc="Plotting outputs", unit="runs", disable=not progressbar, leave=leave_progressbar):
         # Remove the year information if desired, e.g. to compare year-by-year results
         if replace_years:
             time_axis = pd.to_datetime(df.index.to_series()).apply(replace_year_in_datetime)
