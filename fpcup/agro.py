@@ -96,7 +96,7 @@ def generate_sowingdates(year: int | Iterable[int], days_of_year: int | Iterable
 # Sowing date ranges, in day-of-year (doy) format
 sowdoys_springbarley = range(40, 86)  # From the WOFOST crop parameter repository: barley.yaml
 sowdoys_greenmaize = range(115, 122)  # From the WOFOST crop parameter repository: maize.yaml
-sowdoys_sorghum = range(130, 140)  # From https://www.melkvee.nl/artikel/195909-teelttips-sorghum/
+sowdoys_sorghum = range(130, 140)  # From https://edepot.wur.nl/427964
 sowdoys_soy = range(118, 119)  # From the WOFOST crop parameter repository: soybean.yaml
 sowdoys_winterwheat = range(244, 334)  # From the WOFOST crop parameter repository: wheat.yaml
 
