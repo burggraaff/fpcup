@@ -55,6 +55,8 @@ if args.verbose:
     print("Finished runs")
 
 # Write the summary results to file
+swap_latlon = lambda p: fpcup.model.shapely.Point(p.y, p.x)  # latitude/longitude have to be reversed for WGS84
+summary["geometry"] = summary["geometry"].apply(swap_latlon)
 summary.set_crs(fpcup.constants.WGS84, inplace=True)
 summary_filename = args.output_dir / "ensemble.wsum"
 summary.to_file(summary_filename)
