@@ -198,7 +198,7 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
 
     plt.close()
 
-def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None, show=True) -> None:
+def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, title: Optional[str]=None, province: Optional[str]=None, saveto: Optional[PathOrStr]=None, show=True) -> None:
     """
     Plot WOFOST ensemble results.
     """
@@ -207,12 +207,30 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
         keys = summary.keys()
 
     # Plot curves for outputs
-    fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(8, 5))
+    fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5))
 
-    # Plot every key in the corresponding panel
+    # First row: histograms
     for ax, key in zip(axs[0], keys):
         ax.hist(summary[key])
         ax.set_xlabel(key)
+
+    # Second row: maps
+    for ax, key in zip(axs[1], keys):
+        try:
+            im = summary.plot(key, ax=ax, rasterized=True)
+        except TypeError:  # Dates
+            continue
+
+        # Add a country/province outline
+        if province:
+            boundary = province_boundary[province]
+        else:
+            boundary = nl_boundary
+        if boundary is not None:
+            boundary.plot(ax=ax, color="black", lw=1)
+
+        ax.set_axis_off()
+        ax.axis("equal")
 
     axs[0, 0].set_ylabel("Distribution")
     fig.align_xlabels()
