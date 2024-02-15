@@ -72,19 +72,22 @@ class RunData(tuple):
 
         # Set up the shapely geometry object
         if geometry is None:
-            geometry = shapely.Point(self.weatherdata.latitude, self.weatherdata.longitude)
-        elif isinstance(geometry, tuple):  # Pairs of coordinates
-            geometry = shapely.Point(*geometry)
+            # Get the coordinates from the weatherdata; note that this often introduces a loss of precision!
+            geometry = shapely.Point(self.weatherdata.longitude, self.weatherdata.latitude)
+        elif isinstance(geometry, tuple):
+            # Pairs of coordinates - assume these are in (lat, lon) format
+            latitude, longitude = geometry
+            geometry = shapely.Point(longitude, latitude)
         self.geometry = geometry
         self.crs = crs
 
     def __repr__(self) -> str:
         text_parameters = type(self.parameters).__name__
 
-        text_weather = f"{type(self.weatherdata).__name__} at ({self.weatherdata.latitude:+.4f}, {self.weatherdata.longitude:+.4f})"
+        text_weather = f"{type(self.weatherdata).__name__} at ({self.weatherdata.latitude:+.4f} N, {self.weatherdata.longitude:+.4f} E)"
 
         if isinstance(self.geometry, shapely.Geometry):
-            text_geometry = f"{self.geometry.geom_type}, centroid ({self.geometry.centroid.x:.4f}, {self.geometry.centroid.y:.4f})"
+            text_geometry = f"{self.geometry.geom_type}, centroid ({self.geometry.centroid.x:.4f}, {self.geometry.centroid.y:.4f}) (CRS: {self.crs})"
         else:
             text_geometry = self.geometry
 
@@ -299,6 +302,7 @@ def bundle_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProv
                       agromanagementdata: AgromanagementData | Iterable[AgromanagementData]) -> tuple[Iterable[RunData], int | None]:
     """
     Bundle the site, soil, and crop parameters into PCSE ParameterProvider objects.
+    For the main parameters, a Cartesian product is used to get all their combinations.
     """
     # Make sure the data are iterable
     sitedata_iter = make_iterable(sitedata, exclude=[PCSESiteDataProvider])
