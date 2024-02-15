@@ -32,7 +32,7 @@ def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, prog
     for run in tqdm(results, total=n, desc="Saving output files", unit="files", disable=not progressbar, leave=leave_progressbar):
         run.to_file(savefolder)
 
-def load_ensemble_results_folder(folder: PathOrStr, sample=False, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
+def load_ensemble_results_folder(folder: PathOrStr, sample=False, to_list=True, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
     """
     Load all the output files in a given folder.
     The individual Result DataFrames will be assigned a run_id from their filenames.
@@ -61,6 +61,8 @@ def load_ensemble_results_folder(folder: PathOrStr, sample=False, progressbar=Tr
         summary = Summary.from_folder(folder, progressbar=progressbar, leave_progressbar=leave_progressbar)
 
     filenames_results = tqdm(filenames_results, total=n_results, desc="Loading results", unit="files", disable=not progressbar, leave=leave_progressbar)
-    results = [Result.from_file(filename) for filename in filenames_results]
+    results = (Result.from_file(filename) for filename in filenames_results)
+    if to_list or sample:
+        results = list(results)
 
     return results, summary
