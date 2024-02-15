@@ -101,7 +101,7 @@ class RunData(tuple):
         soil_type = self.parameters._soildata["SOLNAM"]
         sowdate = self.agromanagement.crop_start_date
 
-        run_id = f"{self.crop}_{soil_type}_sown{sowdate:%Y%j}_lat{self.weatherdata.latitude:.1f}-lon{self.weatherdata.longitude:.1f}"
+        run_id = f"{self.crop}_{soil_type}_sown{sowdate:%Y%j}_lat{self.weatherdata.latitude:.3f}-lon{self.weatherdata.longitude:.3f}"
 
         return run_id
 
@@ -284,8 +284,8 @@ class Result(pd.DataFrame):
             filename_base = output_directory / filename
         else:
             filename_base = output_directory / self.run_id
-        filename_results = filename_base.with_suffix(".wout")
-        filename_summary = filename_base.with_suffix(".wsum")
+        filename_results = filename_base.with_suffix(filename_base.suffix+".wout")
+        filename_summary = filename_base.with_suffix(filename_base.suffix+".wsum")
 
         # Save the outputs
         self.to_csv(filename_results, **kwargs)
