@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from matplotlib import pyplot as plt, patches as mpatches, ticker as mticker, dates as mdates
 from matplotlib import rcParams
-rcParams.update({"axes.grid": True, "figure.dpi": 600, "grid.linestyle": "--", "hist.bins": 25, "legend.edgecolor": "black", "legend.framealpha": 1, "savefig.dpi": 600})
+rcParams.update({"axes.grid": True, "figure.dpi": 600, "grid.linestyle": "--", "hist.bins": 15, "legend.edgecolor": "black", "legend.framealpha": 1, "savefig.dpi": 600})
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
@@ -207,31 +207,35 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
     if keys is None:
         keys = summary.keys()
 
-    # Plot curves for outputs
-    fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5))
+    # Create figure and panels
+    fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5), gridspec_kw={"hspace": 0.25, "height_ratios": [1, 1.5]})
 
-    # First row: histograms
-    for ax, key in zip(axs[0], keys):
+    # Loop over keys
+    for ax_col, key in zip(axs.T, keys):
         column = summary[key]
+        vmin, vmax = column.min(), column.max()
+
+        # First row: histograms
         if is_datetime(column):
-            bins = pd.date_range(column.min(), column.max())
+            bins = pd.date_range(vmin, vmax)
             locator = mdates.AutoDateLocator()
             formatter = mdates.ConciseDateFormatter(locator)
-            ax.xaxis.set_major_locator(locator)
-            ax.xaxis.set_major_formatter(formatter)
+            ax_col[0].xaxis.set_major_locator(locator)
+            ax_col[0].xaxis.set_major_formatter(formatter)
         else:
-            bins = 25
-        ax.hist(column, bins=bins)
-        ax.set_xlabel(key)
+            bins = rcParams["hist.bins"]
+        ax_col[0].hist(column, bins=bins)
+        ax_col[0].set_title(key)
+        ax_col[0].set_xlim(vmin, vmax)
 
-    # Second row: maps
-    for ax, key in zip(axs[1], keys):
-        column = summary[key]
+        # Second row: maps
         if is_datetime(column):
             column = column.apply(mdates.date2num)
-        divider = make_axes_locatable(ax)
+        vmin, vmax = column.min(), column.max()
+
+        divider = make_axes_locatable(ax_col[1])
         cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = summary.plot(column, ax=ax, rasterized=True, legend=True, cax=cax, cmap="cividis", legend_kwds={"location": "bottom"})
+        im = summary.plot(column, ax=ax_col[1], rasterized=True, vmin=vmin, vmax=vmax, legend=True, cax=cax, cmap="cividis", legend_kwds={"location": "bottom"})
 
         # Add a country/province outline
         if province:
@@ -239,10 +243,10 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
         else:
             boundary = nl_boundary
         if boundary is not None:
-            boundary.plot(ax=ax, color="black", lw=1)
+            boundary.plot(ax=ax_col[1], color="black", lw=1)
 
-        ax.set_axis_off()
-        ax.axis("equal")
+        ax_col[1].set_axis_off()
+        ax_col[1].axis("equal")
 
     axs[0, 0].set_ylabel("Distribution")
     fig.align_xlabels()
