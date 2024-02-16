@@ -45,6 +45,6 @@ if args.verbose:
 keys_to_plot = ["LAIMAX", "TWSO", "CTRAT", "CEVST", "RD", "DOE", "DOM"]
 filename_summary = results_dir / f"WOFOST_{tag}-summary.pdf"
 
-fpcup.plotting.plot_wofost_ensemble_summary(summary, keys=keys_to_plot, saveto=filename_summary, title=f"Summary of {len(outputs)} WOFOST runs\n{tag}")
+fpcup.plotting.plot_wofost_ensemble_summary(summary, keys=keys_to_plot, saveto=filename_summary, title=f"Summary of {len(summary)} WOFOST runs\n{tag}")
 if args.verbose:
     print(f"Saved batch results plot to {filename_summary.absolute()}")

@@ -215,6 +215,10 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
         column = summary[key]
         if is_datetime(column):
             bins = pd.date_range(column.min(), column.max())
+            locator = mdates.AutoDateLocator()
+            formatter = mdates.ConciseDateFormatter(locator)
+            ax.xaxis.set_major_locator(locator)
+            ax.xaxis.set_major_formatter(formatter)
         else:
             bins = 25
         ax.hist(column, bins=bins)
@@ -224,10 +228,10 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
     for ax, key in zip(axs[1], keys):
         column = summary[key]
         if is_datetime(column):
-            column = column.apply(lambda x: x.value)
+            column = column.apply(mdates.date2num)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = summary.plot(column, ax=ax, rasterized=True, legend=True, cax=cax, legend_kwds={"location": "bottom"})
+        im = summary.plot(column, ax=ax, rasterized=True, legend=True, cax=cax, cmap="cividis", legend_kwds={"location": "bottom"})
 
         # Add a country/province outline
         if province:
