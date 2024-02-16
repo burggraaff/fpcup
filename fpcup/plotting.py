@@ -256,7 +256,7 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
     fig.suptitle(title)
 
     if saveto is not None:
-        fig.savefig(saveto, bbox_inches="tight")
+        fig.savefig(saveto, bbox_inches="tight", dpi=150)
     else:
         plt.show()
 
