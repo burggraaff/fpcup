@@ -11,6 +11,8 @@ from tqdm import tqdm
 from pcse.base import WeatherDataProvider
 from pcse.db import NASAPowerWeatherDataProvider
 from pcse.fileinput import CABOWeatherDataProvider, CSVWeatherDataProvider, ExcelWeatherDataProvider
+from pcse import settings as pcse_settings
+PCSE_METEO_CACHE_DIR = Path(pcse_settings.METEO_CACHE_DIR)
 
 from .settings import DEFAULT_DATA
 from ._typing import Coordinates, Iterable
