@@ -5,11 +5,13 @@ import datetime as dt
 
 import geopandas as gpd
 import pandas as pd
+from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from tqdm import tqdm
 
-from matplotlib import pyplot as plt, patches as mpatches, ticker as mticker
+from matplotlib import pyplot as plt, patches as mpatches, ticker as mticker, dates as mdates
 from matplotlib import rcParams
 rcParams.update({"axes.grid": True, "figure.dpi": 600, "grid.linestyle": "--", "hist.bins": 25, "legend.edgecolor": "black", "legend.framealpha": 1, "savefig.dpi": 600})
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Iterable, Optional, PathOrStr, StringDict
@@ -210,15 +212,22 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
 
     # First row: histograms
     for ax, key in zip(axs[0], keys):
-        ax.hist(summary[key])
+        column = summary[key]
+        if is_datetime(column):
+            bins = pd.date_range(column.min(), column.max())
+        else:
+            bins = 25
+        ax.hist(column, bins=bins)
         ax.set_xlabel(key)
 
     # Second row: maps
     for ax, key in zip(axs[1], keys):
-        try:
-            im = summary.plot(key, ax=ax, rasterized=True)
-        except TypeError:  # Dates
-            continue
+        column = summary[key]
+        if is_datetime(column):
+            column = column.apply(lambda x: x.value)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("bottom", size="5%", pad=0.1)
+        im = summary.plot(column, ax=ax, rasterized=True, legend=True, cax=cax, legend_kwds={"location": "bottom"})
 
         # Add a country/province outline
         if province:
