@@ -199,6 +199,15 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
 
     plt.close()
 
+def _numerical_or_date_bins(column: pd.Series):
+    """
+    Generate bins for a column based on its data type.
+    """
+    if is_datetime(column):
+        return pd.date_range(column.min(), column.max())
+    else:
+        return rcParams["hist.bins"]
+
 def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, title: Optional[str]=None, province: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot WOFOST ensemble results.
@@ -210,32 +219,36 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
     # Create figure and panels
     fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5), gridspec_kw={"hspace": 0.25, "height_ratios": [1, 1.5]})
 
+    # Determine some parameters before the loop
+    summary_cols = summary[keys]
+    vmin, vmax = summary_cols.min(), summary_cols.max()
+    bins = summary_cols.apply(_numerical_or_date_bins)
+
     # Loop over keys
     for ax_col, key in zip(axs.T, keys):
         column = summary[key]
-        vmin, vmax = column.min(), column.max()
 
         # First row: histograms
         if is_datetime(column):
-            bins = pd.date_range(vmin, vmax)
             locator = mdates.AutoDateLocator()
             formatter = mdates.ConciseDateFormatter(locator)
             ax_col[0].xaxis.set_major_locator(locator)
             ax_col[0].xaxis.set_major_formatter(formatter)
-        else:
-            bins = rcParams["hist.bins"]
-        ax_col[0].hist(column, bins=bins)
+
+        column.hist(ax=ax_col[0], bins=bins[key])
         ax_col[0].set_title(key)
-        ax_col[0].set_xlim(vmin, vmax)
+        ax_col[0].set_xlim(vmin[key], vmax[key])
 
         # Second row: maps
         if is_datetime(column):
             column = column.apply(mdates.date2num)
-        vmin, vmax = column.min(), column.max()
+            vmin_here, vmax_here = column.min(), column.max()
+        else:
+            vmin_here, vmax_here = vmin[key], vmax[key]
 
         divider = make_axes_locatable(ax_col[1])
         cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = summary.plot(column, ax=ax_col[1], rasterized=True, vmin=vmin, vmax=vmax, legend=True, cax=cax, cmap="cividis", legend_kwds={"location": "bottom"})
+        im = summary.plot(column, ax=ax_col[1], rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap="cividis", legend_kwds={"location": "bottom"})
 
         # Add a country/province outline
         if province:
