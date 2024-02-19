@@ -120,6 +120,11 @@ class RunDataBRP(RunData):
         """
         # Extract BRP data
         self.plot_id = brpdata.name
+        self.crop_species = brpdata["crop_species"]
+        self.crop_code = brpdata["crop_code"]
+        self.area = brpdata["area"]
+        self.province = brpdata["province"]
+
         self.brpyear = brpyear
 
         super().__init__(sitedata, soildata, cropdata, weatherdata, agromanagement, geometry=brpdata["geometry"], crs=crs)
@@ -139,7 +144,7 @@ class Summary(gpd.GeoDataFrame):
         self.sort_index(inplace=True)
 
     @classmethod
-    def from_model(cls, model: Engine, run_data: RunData, crs=None, **kwargs):
+    def from_model(cls, model: Engine, run_data: RunData, *, crs: Optional[str]=None, **kwargs):
         """
         Generate a summary from a finished model, inserting the run_id as an index.
         """
@@ -152,6 +157,15 @@ class Summary(gpd.GeoDataFrame):
 
         if crs is None:
             crs = run_data.crs
+
+        # Extract more information for the BRP case
+        if isinstance(run_data, RunDataBRP):
+            summary[0]["plot_id"] = run_data.plot_id
+            summary[0]["crop_species"] = run_data.crop_species
+            summary[0]["crop_code"] = run_data.crop_code
+            summary[0]["area"] = run_data.area
+            summary[0]["province"] = run_data.province
+            summary[0]["brpyear"] = run_data.brpyear
 
         return cls(summary, index=index, crs=crs, **kwargs)
 
@@ -227,17 +241,14 @@ class Result(pd.DataFrame):
                 "\n-----")
 
     @classmethod
-    def from_model(cls, model: Engine, *, run_data: Optional[RunData]=None, **kwargs):
+    def from_model(cls, model: Engine, run_data: RunData, **kwargs):
         """
         Initialise the main DataFrame from a model output.
         """
         output = model.get_output()
 
         # Get data from run_data if possible
-        if run_data is not None:
-            run_id = run_data.run_id
-        else:
-            run_id = ""
+        run_id = run_data.run_id
 
         # Save the summary output
         try:
