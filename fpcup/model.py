@@ -64,6 +64,7 @@ class RunData(tuple):
         self.weatherdata = self[1]
         self.agromanagement = self[2]
         self.crop = self.agromanagement.crop_name
+        self.soiltype = soildata["SOLNAM"]
 
         # Assign a run_id, either from user input or from the run parameters
         if run_id is None:
@@ -101,10 +102,9 @@ class RunData(tuple):
         """
         Generate a run ID from PCSE model inputs.
         """
-        soil_type = self.parameters._soildata["SOLNAM"]
         sowdate = self.agromanagement.crop_start_date
 
-        run_id = f"{self.crop}_{soil_type}_sown{sowdate:%Y%j}_lat{self.weatherdata.latitude:.3f}-lon{self.weatherdata.longitude:.3f}"
+        run_id = f"{self.crop}_{self.soiltype}_sown{sowdate:%Y%j}_lat{self.weatherdata.latitude:.3f}-lon{self.weatherdata.longitude:.3f}"
 
         return run_id
 
@@ -151,8 +151,8 @@ class Summary(gpd.GeoDataFrame):
         summary = model.get_summary_output()
 
         # Get data from run_data
-        # TO DO: get more from run_data, e.g. soil type
         summary[0]["geometry"] = run_data.geometry
+        summary[0]["soiltype"] = run_data.soiltype
         index = [run_data.run_id]
 
         if crs is None:
