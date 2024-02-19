@@ -23,10 +23,27 @@ if args.verbose:
     if args.sample:
         print("Only reading a subsample of the data.")
     print(f"Figures will be saved in {results_dir.absolute()}")
+    print(f"Figures will be named <name>-{tag}")
 
-# Load the results
-outputs, summary = fpcup.io.load_ensemble_results_folder(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
-summary.to_crs(fpcup.constants.CRS_AMERSFOORT, inplace=True)
+# Load the summary file(s)
+summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
+if args.verbose:
+    print(f"Loaded summary file with {len(summary)} rows.")
+
+# Plot summary results
+keys_to_plot = ["LAIMAX", "TWSO", "CTRAT", "CEVST", "DOE", "DOM"]
+filename_summary = results_dir / f"WOFOST_{tag}-summary.pdf"
+
+fpcup.plotting.plot_wofost_ensemble_summary(summary, keys=keys_to_plot, saveto=filename_summary, title=f"Summary of {len(summary)} WOFOST runs: {tag}")
+if args.verbose:
+    print(f"Saved batch results plot to {filename_summary.absolute()}")
+
+# Space between summary and outputs sections
+if args.verbose:
+    print()
+
+# Load the individual run outputs
+outputs = fpcup.io.load_ensemble_results_from_folder(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
 
 # Determine file save format
 usevector = (len(outputs) < args.vector_max)
@@ -40,11 +57,3 @@ filename_results = results_dir / f"WOFOST_{tag}-outputs.{format_lines}"
 fpcup.plotting.plot_wofost_ensemble_results(outputs, saveto=filename_results, replace_years=args.replace_years, title=f"Outputs from {len(outputs)} WOFOST runs\n{tag}", leave_progressbar=args.verbose)
 if args.verbose:
     print(f"Saved batch results plot to {filename_results.absolute()}")
-
-# Plot summary results
-keys_to_plot = ["LAIMAX", "TWSO", "CTRAT", "CEVST", "DOE", "DOM"]
-filename_summary = results_dir / f"WOFOST_{tag}-summary.pdf"
-
-fpcup.plotting.plot_wofost_ensemble_summary(summary, keys=keys_to_plot, saveto=filename_summary, title=f"Summary of {len(summary)} WOFOST runs: {tag}")
-if args.verbose:
-    print(f"Saved batch results plot to {filename_summary.absolute()}")
