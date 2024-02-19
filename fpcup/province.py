@@ -51,19 +51,22 @@ def is_in_province(data: gpd.GeoDataFrame, province: str, province_data: dict=pr
 
     return selection_coarse
 
-def add_provinces(data: gpd.GeoDataFrame, new_column: str="province", province_data: dict=province_coarse, **kwargs) -> None:
+def add_provinces(data: gpd.GeoDataFrame, *, new_column: str="province", province_data: dict=province_coarse, progressbar=True, leave_progressbar=True, **kwargs) -> None:
     """
     Add a column with province names.
     Note: can get very slow for long dataframes.
     """
+    # Convert to the right CRS first
+    data_crs = data.to_crs(CRS_AMERSFOORT)
+
     # Generate an empty Series which will be populated with time
-    province_list = Series(data=np.tile("", len(data)), name="province", dtype=str, index=data.index)
+    province_list = Series(data=np.tile("", len(data_crs)), name="province", dtype=str, index=data_crs.index)
 
     # Loop over the provinces, find the relevant entries, and fill in the list
-    for province_name in tqdm(province_data.keys(), desc="Assigning labels", unit="province"):
+    for province_name in tqdm(province_data.keys(), desc="Assigning labels", unit="province", disable=not progressbar, leave=leave_progressbar):
         # Find the plots that have not been assigned a province yet to prevent duplicates
         where_empty = (province_list == "")
-        data_empty = data.loc[where_empty]
+        data_empty = data_crs.loc[where_empty]
 
         # Find the items that are in this province
         selection = is_in_province(data_empty, province_name, province_data=province_data, **kwargs)

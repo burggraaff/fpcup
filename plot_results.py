@@ -30,6 +30,12 @@ summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir, sample=arg
 if args.verbose:
     print(f"Loaded summary file with {len(summary)} rows.")
 
+# Add province information if this is not available
+if "province" not in summary.columns:
+    fpcup.province.add_provinces(summary, leave_progressbar=args.verbose)
+    if args.verbose:
+        print("Added province information")
+
 # Plot summary results
 keys_to_plot = ["LAIMAX", "TWSO", "CTRAT", "CEVST", "DOE", "DOM"]
 filename_summary = results_dir / f"WOFOST_{tag}-summary.pdf"
