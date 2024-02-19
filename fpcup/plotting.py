@@ -235,7 +235,7 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
             ax_col[0].xaxis.set_major_locator(locator)
             ax_col[0].xaxis.set_major_formatter(formatter)
 
-        column.hist(ax=ax_col[0], bins=bins[key])
+        column.plot.hist(ax=ax_col[0], bins=bins[key])
         ax_col[0].set_title(key)
         ax_col[0].set_xlim(vmin[key], vmax[key])
 
