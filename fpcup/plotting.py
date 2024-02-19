@@ -29,6 +29,18 @@ from .province import nl_boundary, province_area, province_boundary
 #         return "abc"
 # _capitalise_ticks = mticker.StrMethodFormatter("abc{x:}")
 
+def plot_outline(ax: plt.Axes, province: str="All", **kwargs):
+    """
+    Plot an outline of the Netherlands ("All") or a specific province (e.g. "Zuid-Holland").
+    """
+    if province == "All":
+        boundary = nl_boundary
+    else:
+        boundary = province_boundary[province]
+
+    line_kw = {"color": "black", "lw": 1, **kwargs}
+    boundary.plot(ax=ax, **line_kw)
+
 def column_to_title(column: str) -> str:
     """
     Clean up a column name (e.g. "crop_species") so it can be used as a title (e.g. "Crop species").
@@ -80,13 +92,13 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
     plt.show()
     plt.close()
 
-def brp_map(data: gpd.GeoDataFrame, column: str, province: Optional[str]=None, figsize=(10, 10), title: Optional[str]=None, rasterized=True, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+def brp_map(data: gpd.GeoDataFrame, column: str, province: Optional[str]="All", figsize=(10, 10), title: Optional[str]=None, rasterized=True, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons in the given column.
     If `province` is provided, only data within that province will be plotted, with the corresponding outline.
     """
     # Select province data if desired
-    if province:
+    if province != "All":
         assert "province" in data.columns, f"Cannot plot data by province - data do not have a 'province' column\n(columns: {data.columns}"
         province = province.title()
         data = data.loc[data["province"] == province]
@@ -108,12 +120,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, province: Optional[str]=None, f
         data.plot(ax=ax, column=column, rasterized=rasterized, **kwargs)
 
     # Add a country/province outline
-    if province:
-        boundary = province_boundary[province]
-    else:
-        boundary = nl_boundary
-    if boundary is not None:
-        boundary.plot(ax=ax, color="black", lw=1)
+    plot_outline(ax, province)
 
     ax.set_title(title)
     ax.set_axis_off()
@@ -204,11 +211,11 @@ def _numerical_or_date_bins(column: pd.Series):
     Generate bins for a column based on its data type.
     """
     if is_datetime(column):
-        return pd.date_range(column.min(), column.max())
+        return pd.date_range(column.min() - pd.Timedelta(hours=12), column.max() + pd.Timedelta(hours=12))
     else:
         return rcParams["hist.bins"]
 
-def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, title: Optional[str]=None, province: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
+def plot_wofost_ensemble_summary(summary: Summary, *, keys: Iterable[str]=None, title: Optional[str]=None, province: Optional[str]="All", saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot WOFOST ensemble results.
     """
@@ -250,16 +257,13 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, tit
         cax = divider.append_axes("bottom", size="5%", pad=0.1)
         im = summary.plot(column, ax=ax_col[1], rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap="cividis", legend_kwds={"location": "bottom"})
 
+    # Settings for map panels
+    for ax in axs[1]:
         # Add a country/province outline
-        if province:
-            boundary = province_boundary[province]
-        else:
-            boundary = nl_boundary
-        if boundary is not None:
-            boundary.plot(ax=ax_col[1], color="black", lw=1)
+        plot_outline(ax, province)
 
-        ax_col[1].set_axis_off()
-        ax_col[1].axis("equal")
+        ax.set_axis_off()
+        ax.axis("equal")
 
     axs[0, 0].set_ylabel("Distribution")
     fig.align_xlabels()

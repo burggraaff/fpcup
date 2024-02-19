@@ -29,6 +29,19 @@ province_coarse = {name: poly for name, poly in zip(provinces_coarse["naamOffici
 province_area["Friesland"] = province_area["Fryslân"]
 province_boundary["Friesland"] = province_boundary["Fryslân"]
 
+def process_input_province(province: str) -> str:
+    """
+    Take an input province name and turn it into the standard format.
+    """
+    # Convert to title case, e.g. zuid-holland -> Zuid-Holland
+    province = province.title()
+
+    # Apply common alternatives
+    if province in ("Friesland", "Fryslan"):
+        province = "Fryslân"
+
+    return province
+
 def is_in_province(data: gpd.GeoDataFrame, province: str, province_data: dict=province_coarse, use_centroid=True) -> Iterable[bool]:
     """
     For a series of geometries (e.g. BRP plots), determine if they are in the given province.
