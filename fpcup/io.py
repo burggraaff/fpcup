@@ -20,7 +20,8 @@ from .model import Result, Summary
 
 _SAMPLE_LENGTH = 10
 
-def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, progressbar=True, leave_progressbar=True) -> None:
+def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, *,
+                          progressbar=True, leave_progressbar=True) -> None:
     """
     Save all Result DataFrames in `results` to files in a given `savefolder`.
     """
@@ -35,7 +36,8 @@ def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, prog
     for run in tqdm(results, total=n, desc="Saving output files", unit="files", disable=not progressbar, leave=leave_progressbar):
         run.to_file(savefolder)
 
-def load_ensemble_summary_from_folder(folder: PathOrStr, *, crs=CRS_AMERSFOORT, sample=False, save_if_generated=True, progressbar=True, leave_progressbar=True) -> Summary:
+def load_ensemble_summary_from_folder(folder: PathOrStr, *,
+                                      crs=CRS_AMERSFOORT, sample=False, save_if_generated=True, progressbar=True, leave_progressbar=True) -> Summary:
     """
     For a given folder, try to load the ensemble summary file.
     If it is not available, load all individual summary files and combine them.
@@ -69,7 +71,8 @@ def load_ensemble_summary_from_folder(folder: PathOrStr, *, crs=CRS_AMERSFOORT, 
 
     return summary
 
-def load_ensemble_results_from_folder(folder: PathOrStr, *, extension=".wout", sample=False, progressbar=True, leave_progressbar=True) -> list[Result]:
+def load_ensemble_results_from_folder(folder: PathOrStr, *,
+                                      extension=".wout", sample=False, progressbar=True, leave_progressbar=True) -> list[Result]:
     """
     Load all the output files in a given folder.
     The individual Result DataFrames will be assigned a run_id from their filenames.

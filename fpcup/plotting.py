@@ -29,7 +29,7 @@ from .province import nl_boundary, province_area, province_boundary
 #         return "abc"
 # _capitalise_ticks = mticker.StrMethodFormatter("abc{x:}")
 
-def plot_outline(ax: plt.Axes, province: str="All", **kwargs):
+def plot_outline(ax: plt.Axes, province: str="All", **kwargs) -> None:
     """
     Plot an outline of the Netherlands ("All") or a specific province (e.g. "Zuid-Holland").
     """
@@ -47,7 +47,8 @@ def column_to_title(column: str) -> str:
     """
     return column.capitalize().replace("_", " ")
 
-def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks=True, xlabel: Optional[str]="Crop", title: Optional[str]=None, top5=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+def brp_histogram(data: gpd.GeoDataFrame, column: str, *,
+                  figsize=(3, 5), usexticks=True, xlabel: Optional[str]="Crop", title: Optional[str]=None, top5=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Make a bar plot showing the distribution of plots/crops in BRP data.
     """
@@ -92,7 +93,8 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, figsize=(3, 5), usexticks
     plt.show()
     plt.close()
 
-def brp_map(data: gpd.GeoDataFrame, column: str, province: Optional[str]="All", figsize=(10, 10), title: Optional[str]=None, rasterized=True, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+def brp_map(data: gpd.GeoDataFrame, column: str, *,
+            province: Optional[str]="All", figsize=(10, 10), title: Optional[str]=None, rasterized=True, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons in the given column.
     If `province` is provided, only data within that province will be plotted, with the corresponding outline.
@@ -131,7 +133,8 @@ def brp_map(data: gpd.GeoDataFrame, column: str, province: Optional[str]="All", 
     plt.show()
     plt.close()
 
-def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", crops: Iterable[str]=brp_crops_colours.keys(), figsize=(14, 3.5), shape=(1, 5), title: Optional[str]=None, rasterized=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
+                       crops: Iterable[str]=brp_crops_colours.keys(), figsize=(14, 3.5), shape=(1, 5), title: Optional[str]=None, rasterized=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons, with one panel per crop species.
     Shape is (nrows, ncols).
@@ -165,7 +168,8 @@ def replace_year_in_datetime(date: dt.date, newyear: int=2000) -> dt.date:
     """
     return date.replace(year=newyear)
 
-def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True, progressbar=True, leave_progressbar=False) -> None:
+def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, *,
+                                 title: Optional[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True, progressbar=True, leave_progressbar=False) -> None:
     """
     Plot WOFOST ensemble results.
     """
@@ -206,7 +210,7 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
 
     plt.close()
 
-def _numerical_or_date_bins(column: pd.Series):
+def _numerical_or_date_bins(column: pd.Series) -> int | pd.DatetimeIndex:
     """
     Generate bins for a column based on its data type.
     """
@@ -215,7 +219,8 @@ def _numerical_or_date_bins(column: pd.Series):
     else:
         return rcParams["hist.bins"]
 
-def plot_wofost_ensemble_summary(summary: Summary, *, keys: Iterable[str]=None, title: Optional[str]=None, province: Optional[str]="All", saveto: Optional[PathOrStr]=None) -> None:
+def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, *,
+                                 title: Optional[str]=None, province: Optional[str]="All", saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot WOFOST ensemble results.
     """
