@@ -88,7 +88,11 @@ if args.verbose:
 
 # Add geometry and plot the results
 byprovince_mean = fpcup.province.add_province_geometry(byprovince_mean, "area")
-byprovince_mean.plot("LAIMAX")
+filename_aggregate = results_dir / f"WOFOST_{tag}-summary-aggregate.pdf"
+
+fpcup.plotting.plot_wofost_ensemble_summary_aggregate(byprovince_mean, keys=keys_to_average, saveto=filename_aggregate)
+if args.verbose:
+    print(f"Saved batch results plot to {filename_aggregate.absolute()}")
 
 # Space between summary and outputs sections
 if args.verbose:

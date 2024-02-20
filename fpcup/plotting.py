@@ -16,7 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Iterable, Optional, PathOrStr, StringDict
 from .model import Summary, parameter_names
-from .province import nl_boundary, province_area, province_boundary
+from .province import nl_boundary, province_area, province_boundary, province_coarse
 
 # @mticker.FuncFormatter
 # def _capitalise_ticks(x, pos):
@@ -29,14 +29,17 @@ from .province import nl_boundary, province_area, province_boundary
 #         return "abc"
 # _capitalise_ticks = mticker.StrMethodFormatter("abc{x:}")
 
-def plot_outline(ax: plt.Axes, province: str="All", **kwargs) -> None:
+def plot_outline(ax: plt.Axes, province: str="All", *, coarse=False, **kwargs) -> None:
     """
     Plot an outline of the Netherlands ("All") or a specific province (e.g. "Zuid-Holland").
     """
     if province == "All":
         boundary = nl_boundary
     else:
-        boundary = province_boundary[province]
+        if coarse:
+            boundary = gpd.GeoSeries(province_coarse[province].boundary)
+        else:
+            boundary = province_boundary[province]
 
     line_kw = {"color": "black", "lw": 1, **kwargs}
     boundary.plot(ax=ax, **line_kw)
@@ -279,6 +282,61 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, *,
 
     if saveto is not None:
         fig.savefig(saveto, bbox_inches="tight", dpi=150)
+    else:
+        plt.show()
+
+    plt.close()
+
+
+def plot_wofost_ensemble_summary_aggregate(aggregate: gpd.GeoDataFrame, keys: Iterable[str]=None, *,
+                                 title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
+    """
+    Plot WOFOST ensemble summary results, aggregated by province.
+    """
+    # If no keys were specified, get all of them
+    if keys is None:
+        keys = aggregate.keys()
+
+    # Create figure and panels
+    fig, axs = plt.subplots(nrows=1, ncols=len(keys), figsize=(10, 3))
+
+    # Determine some parameters before the loop
+    aggregate_cols = aggregate[keys]
+    vmin, vmax = aggregate_cols.min(), aggregate_cols.max()
+
+    # Loop over keys
+    for ax, key in zip(axs, keys):
+        column = aggregate[key]
+
+        # Plot maps
+        if is_datetime(column):
+            column = column.apply(mdates.date2num)
+            vmin_here, vmax_here = column.min(), column.max()
+        else:
+            vmin_here, vmax_here = vmin[key], vmax[key]
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("bottom", size="5%", pad=0.1)
+        im = aggregate.plot(column, ax=ax, rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap="cividis", legend_kwds={"location": "bottom"})
+
+        ax.set_title(key)
+
+    # Settings for map panels
+    for ax in axs:
+        # Add a country/province outline
+        plot_outline(ax, lw=0.5)
+        for province in province_coarse.keys():
+            plot_outline(ax, province, coarse=True, lw=0.5)
+
+        ax.set_axis_off()
+        ax.axis("equal")
+
+    if title is None:
+        title = f"Results aggregated by province"
+    fig.suptitle(title)
+
+    if saveto is not None:
+        fig.savefig(saveto, bbox_inches="tight")
     else:
         plt.show()
 
