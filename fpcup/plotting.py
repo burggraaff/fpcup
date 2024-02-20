@@ -8,10 +8,11 @@ import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from tqdm import tqdm
 
-from matplotlib import pyplot as plt, patches as mpatches, ticker as mticker, dates as mdates
-from matplotlib import rcParams
+from matplotlib import pyplot as plt, dates as mdates, patches as mpatches, ticker as mticker
+from matplotlib import colormaps, rcParams
 rcParams.update({"axes.grid": True, "figure.dpi": 600, "grid.linestyle": "--", "hist.bins": 15, "legend.edgecolor": "black", "legend.framealpha": 1, "savefig.dpi": 600})
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+cividis_discrete = colormaps["cividis"].resampled(10)
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Iterable, Optional, PathOrStr, StringDict
@@ -263,7 +264,7 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, *,
 
         divider = make_axes_locatable(ax_col[1])
         cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = summary.plot(column, ax=ax_col[1], rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap="cividis", legend_kwds={"location": "bottom"})
+        im = summary.plot(column, ax=ax_col[1], rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom"})
 
     # Settings for map panels
     for ax in axs[1]:
@@ -317,7 +318,7 @@ def plot_wofost_ensemble_summary_aggregate(aggregate: gpd.GeoDataFrame, keys: It
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = aggregate.plot(column, ax=ax, rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap="cividis", legend_kwds={"location": "bottom"})
+        im = aggregate.plot(column, ax=ax, rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom"})
 
         ax.set_title(key)
 
