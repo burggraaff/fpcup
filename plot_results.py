@@ -61,6 +61,35 @@ fpcup.plotting.plot_wofost_ensemble_summary(summary, keys=keys_to_plot, saveto=f
 if args.verbose:
     print(f"Saved batch results plot to {filename_summary.absolute()}")
 
+# Aggregate results by province
+weighted_mean = fpcup.analysis.weighted_mean_for_DF(summary)
+byprovince = summary.groupby("province")
+
+keys_to_aggregate = ["DVS", "LAIMAX", "TWSO", "CTRAT", "CEVST", "RD", "DOS", "DOE", "DOM"]
+
+# Calculate the mean per province of several variables, weighted by plot area if possible
+keys_to_average = ["DVS", "LAIMAX", "TWSO", "CTRAT", "CEVST", "RD"]
+try:
+    byprovince_mean = byprovince[keys_to_average].agg(weighted_mean)
+# Use a normal mean if there is no area information available
+except KeyError:
+    byprovince_mean = byprovince[keys_to_average].mean()
+    filename_means = results_dir / f"WOFOST_{tag}-mean.csv"
+    if args.verbose:
+        print("Could not calculate weighted means because there is no 'area' column -- defaulting to a regular mean")
+else:  # This runs if the original `try` block succeeded
+    filename_means = results_dir / f"WOFOST_{tag}-weighted-mean.csv"
+    if args.verbose:
+        print("Calculated weighted means")
+
+byprovince_mean.to_csv(filename_means)
+if args.verbose:
+    print(f"Saved aggregate (weighted) mean columns to {filename_means.absolute()}")
+
+# Add geometry and plot the results
+byprovince_mean = fpcup.province.add_province_geometry(byprovince_mean, "area")
+byprovince_mean.plot("LAIMAX")
+
 # Space between summary and outputs sections
 if args.verbose:
     print()

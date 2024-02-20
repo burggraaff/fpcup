@@ -4,10 +4,10 @@
 
 import geopandas as gpd
 import numpy as np
-from pandas import Series
+from pandas import DataFrame, Series
 from tqdm import tqdm
 
-from ._typing import Iterable
+from ._typing import Iterable, Optional
 from .constants import CRS_AMERSFOORT
 from .settings import DEFAULT_DATA
 
@@ -16,14 +16,14 @@ nl = gpd.read_file(DEFAULT_DATA/"NL_borders.geojson")
 nl_boundary = nl.boundary
 
 # Load the provinces
-provinces = gpd.read_file(DEFAULT_DATA/"NL_provinces.geojson")
-provinces_coarse = gpd.read_file(DEFAULT_DATA/"NL_provinces_coarse.geojson")
-province_names = list(provinces["naamOfficieel"]) + ["Friesland"]
+_provinces = gpd.read_file(DEFAULT_DATA/"NL_provinces.geojson")
+_provinces_coarse = gpd.read_file(DEFAULT_DATA/"NL_provinces_coarse.geojson")
+province_names = list(_provinces["naamOfficieel"]) + ["Friesland"]
 
 # Access individual provinces using a dictionary, e.g. province_boundary["Zuid-Holland"]
-province_area = {name: poly for name, poly in zip(provinces["naamOfficieel"], provinces["geometry"])}
-province_boundary = {name: gpd.GeoSeries(outline) for name, outline in zip(provinces["naamOfficieel"], provinces.boundary)}
-province_coarse = {name: poly for name, poly in zip(provinces_coarse["naamOfficieel"], provinces_coarse["geometry"])}
+province_area = {name: poly for name, poly in zip(_provinces["naamOfficieel"], _provinces["geometry"])}
+province_boundary = {name: gpd.GeoSeries(outline) for name, outline in zip(_provinces["naamOfficieel"], _provinces.boundary)}
+province_coarse = {name: poly for name, poly in zip(_provinces_coarse["naamOfficieel"], _provinces_coarse["geometry"])}
 
 # Add an alias for Friesland/Fryslân
 province_area["Friesland"] = province_area["Fryslân"]
@@ -92,3 +92,31 @@ def add_provinces(data: gpd.GeoDataFrame, *, new_column: str="province", provinc
 
     # Add the series to the dataframe
     data[new_column] = province_list
+
+def add_province_geometry(data: DataFrame, which: str="area", *, column_name: Optional[str]=None, crs: str=CRS_AMERSFOORT) -> gpd.GeoDataFrame:
+    """
+    Add a column with province geometry to a DataFrame with a province name column/index.
+    """
+    # Remove entries that are not in the province list
+    pass
+
+    # Use the index if no column was provided
+    if column_name is None:
+        column = data.index.to_series()
+    else:
+        column = data[column_name]
+
+    # Apply the dictionary mapping
+    geometry = column.map(province_area)
+    data_new = gpd.GeoDataFrame(data, geometry=geometry, crs=crs)
+
+    # Change to outline if desired
+    # (Doing this at the start gives an error)
+    if which.lower() == "area":
+        pass
+    elif which.lower() == "outline":
+        data_new["geometry"] = data_new.boundary
+    else:
+        raise ValueError(f"Cannot add geometries of type `{which}`")
+
+    return data_new
