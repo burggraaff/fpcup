@@ -42,7 +42,7 @@ def process_input_province(province: str) -> str:
 
     return province
 
-def is_in_province(data: gpd.GeoDataFrame, province: str, province_data: dict=province_coarse, use_centroid=True) -> Iterable[bool]:
+def is_in_province(data: gpd.GeoDataFrame, province: str, *, province_data: dict=province_coarse, use_centroid=True) -> Iterable[bool]:
     """
     For a series of geometries (e.g. BRP plots), determine if they are in the given province.
     Enable `use_centroid` to see if the centre of each plot falls within the province rather than the entire plot - this is useful for plots that are split between provinces.
