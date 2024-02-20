@@ -14,7 +14,7 @@ import pandas as pd
 
 from tqdm import tqdm
 
-from ._typing import Iterable, PathOrStr
+from ._typing import Iterable, Optional, PathOrStr
 from .constants import CRS_AMERSFOORT
 from .model import Result, Summary
 
@@ -71,29 +71,36 @@ def load_ensemble_summary_from_folder(folder: PathOrStr, *,
 
     return summary
 
-def load_ensemble_results_from_folder(folder: PathOrStr, *,
+def load_ensemble_results_from_folder(folder: PathOrStr, run_ids: Optional[Iterable[PathOrStr]]=None, *,
                                       extension=".wout", sample=False, progressbar=True, leave_progressbar=True) -> list[Result]:
     """
-    Load all the output files in a given folder.
+    Load the result files in a given folder.
+    By default, load all files in the folder. If `run_ids` is specified, load only those files.
     The individual Result DataFrames will be assigned a run_id from their filenames.
 
     If `sample` is True, only return the top _SAMPLE_LENGTH (10) items (for testing purposes).
 
-    To do: See if a dict {run_id: results} makes more sense. Or wrap everything into a single class?
+    To do: See if a dict {run_id: results} makes more sense. Or wrap everything into a single EnsembleResult class?
     """
     # Get the filenames
     folder = Path(folder)
-    filenames_results = list(folder.glob("*"+extension))
+
+    # If filenames were not specified, load everything
+    if run_ids is None:
+        filenames = list(folder.glob(f"*{extension}"))
+    # If filenames were specified, load only those
+    else:
+        filenames = [folder/f"{run_id}{extension}" for run_id in run_ids]
 
     # Only return the top few items if `sample` is True
     if sample:
-        filenames_results = filenames_results[:_SAMPLE_LENGTH]
+        filenames = filenames[:_SAMPLE_LENGTH]
 
-    n_results = len(filenames_results)
+    n_results = len(filenames)
     assert n_results > 0, f"No results ({extension}) files found in folder {folder.absolute()}"
 
-    # Load the summary; from an ensemble file if possible
-    filenames_results = tqdm(filenames_results, total=n_results, desc="Loading results", unit="files", disable=not progressbar, leave=leave_progressbar)
-    results = [Result.from_file(filename) for filename in filenames_results]
+    # Load the files with an optional progressbar
+    filenames = tqdm(filenames, total=n_results, desc="Loading outputs", unit="files", disable=not progressbar, leave=leave_progressbar)
+    results = [Result.from_file(filename) for filename in filenames]
 
     return results

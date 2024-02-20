@@ -16,6 +16,8 @@ parser.add_argument("-s", "--sample", help="load only a subsample of the outputs
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
+SINGLE_PROVINCE = (args.province != "All")
+
 # Set up the input/output directories
 tag = args.output_dir.stem
 results_dir = Path.cwd() / "results"
@@ -25,10 +27,14 @@ if args.verbose:
         print("Only reading a subsample of the data.")
     print(f"Figures will be saved in {results_dir.absolute()}")
 
+# Space between setup and summary sections
+if args.verbose:
+    print()
+
 # Load the summary file(s)
 summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
 if args.verbose:
-    print(f"Loaded summary file with {len(summary)} rows.")
+    print(f"Loaded summary file -- {len(summary)} rows")
 
 # Add province information if this is not available
 if "province" not in summary.columns:
@@ -37,11 +43,11 @@ if "province" not in summary.columns:
         print("Added province information")
 
 # If we are only doing one province, select only the relevant lines from the summary file
-if args.province != "All":
+if SINGLE_PROVINCE:
     summary = summary.loc[summary["province"] == args.province]
     tag = f"{tag}-{args.province}"
     if args.verbose:
-        print(f"Selected only plots in {args.province} -- {len(summary)} sites")
+        print(f"Selected only sites in {args.province} -- {len(summary)} rows")
 
 # Useful information
 if args.verbose:
@@ -59,18 +65,21 @@ if args.verbose:
 if args.verbose:
     print()
 
-# Load the individual run outputs
-outputs = fpcup.io.load_ensemble_results_from_folder(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
+# If only one province is being done, load only the relevant files
+run_ids = summary.index if SINGLE_PROVINCE else None
+
+# Load the individual run results
+results = fpcup.io.load_ensemble_results_from_folder(args.output_dir, run_ids=run_ids, sample=args.sample, leave_progressbar=args.verbose)
 
 # Determine file save format
-usevector = (len(outputs) < args.vector_max)
-format_lines = "pdf" if usevector else "png"
+USEVECTOR = (len(results) < args.vector_max)
+format_lines = "pdf" if USEVECTOR else "png"
 if args.verbose:
-    print(f"Number of files ({len(outputs)}) is {'smaller' if usevector else 'greater'} than maximum ({args.vector_max}) - saving line plots as {'vector' if usevector else 'bitmap'} files")
+    print(f"Number of result files ({len(results)}) is {'smaller' if USEVECTOR else 'greater'} than maximum ({args.vector_max}) - saving line plots as {'vector' if USEVECTOR else 'bitmap'} files")
     print(f"Figure filenames will end in `_{tag}.{format_lines}`")
 
 # Plot the individual runs
-filename_results = results_dir / f"WOFOST_{tag}-outputs.{format_lines}"
-fpcup.plotting.plot_wofost_ensemble_results(outputs, saveto=filename_results, replace_years=args.replace_years, title=f"Outputs from {len(outputs)} WOFOST runs\n{tag}", leave_progressbar=args.verbose)
+filename_results = results_dir / f"WOFOST_{tag}-results.{format_lines}"
+fpcup.plotting.plot_wofost_ensemble_results(results, saveto=filename_results, replace_years=args.replace_years, title=f"Growth curves from {len(results)} WOFOST runs\n{tag}", leave_progressbar=args.verbose)
 if args.verbose:
     print(f"Saved batch results plot to {filename_results.absolute()}")
