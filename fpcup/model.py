@@ -67,11 +67,6 @@ class RunData(tuple):
         self.crop = self.agromanagement.crop_name
         self.soiltype = soildata["SOLNAM"]
 
-        # Assign a run_id, either from user input or from the run parameters
-        if run_id is None:
-            run_id = self.generate_run_id()
-        self.run_id = run_id
-
         # Set up the shapely geometry object
         if geometry is None:
             # Get the coordinates from the weatherdata; note that this often introduces a loss of precision!
@@ -82,6 +77,11 @@ class RunData(tuple):
             geometry = shapely.Point(longitude, latitude)
         self.geometry = geometry
         self.crs = crs
+
+        # Assign a run_id, either from user input or from the run parameters
+        if run_id is None:
+            run_id = self.generate_run_id()
+        self.run_id = run_id
 
     def __repr__(self) -> str:
         text_parameters = type(self.parameters).__name__
@@ -105,7 +105,7 @@ class RunData(tuple):
         """
         sowdate = self.agromanagement.crop_start_date
 
-        run_id = f"{self.crop}_{self.soiltype}_sown{sowdate:%Y%j}_lat{self.weatherdata.latitude:.3f}-lon{self.weatherdata.longitude:.3f}"
+        run_id = f"{self.crop}_{self.soiltype}_sown{sowdate:%Y%j}_lat{self.geometry.y:.7f}-lon{self.geometry.x:.7f}"
 
         return run_id
 

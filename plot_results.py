@@ -82,7 +82,7 @@ if AREA_AVAILABLE:
 
 # Use a normal mean if there is no area information available
 else:
-    mean_func = "mean"
+    mean_func = {key: "mean" for key in fpcup.analysis.KEYS_AGGREGATE}
     filename_means = results_dir / f"WOFOST_{tag}-mean.csv"
     if args.verbose:
         print("Could not calculate weighted means because there is no 'area' column -- defaulting to a regular mean")
@@ -104,7 +104,7 @@ if args.verbose:
 import h3pandas
 summary2 = summary.copy()
 summary2["geometry"] = summary.centroid.to_crs(fpcup.constants.WGS84)
-summaryh3 = summary2.h3.geo_to_h3_aggregate(6, mean_func)
+summaryh3 = summary2.h3.geo_to_h3_aggregate(5, mean_func)
 summaryh3.to_crs(fpcup.constants.CRS_AMERSFOORT, inplace=True)
 
 from matplotlib import pyplot as plt
