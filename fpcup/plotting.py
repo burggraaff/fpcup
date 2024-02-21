@@ -15,7 +15,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 cividis_discrete = colormaps["cividis"].resampled(10)
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
-from ._typing import Iterable, Optional, PathOrStr, StringDict
+from ._typing import Iterable, Optional, PathOrStr, RealNumber, StringDict
 from .model import Summary, parameter_names
 from .province import nl_boundary, province_area, province_boundary, province_coarse
 
@@ -224,7 +224,7 @@ def _numerical_or_date_bins(column: pd.Series) -> int | pd.DatetimeIndex:
         return rcParams["hist.bins"]
 
 def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, *,
-                                 title: Optional[str]=None, province: Optional[str]="All", saveto: Optional[PathOrStr]=None) -> None:
+                                 weights: Optional[Iterable[RealNumber]]=None, title: Optional[str]=None, province: Optional[str]="All", saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot WOFOST ensemble results.
     """
@@ -251,7 +251,7 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, *,
             ax_col[0].xaxis.set_major_locator(locator)
             ax_col[0].xaxis.set_major_formatter(formatter)
 
-        column.plot.hist(ax=ax_col[0], bins=bins[key])
+        column.plot.hist(ax=ax_col[0], bins=bins[key], weights=weights)
         ax_col[0].set_title(key)
         ax_col[0].set_xlim(vmin[key], vmax[key])
 
