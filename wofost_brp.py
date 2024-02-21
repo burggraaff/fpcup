@@ -14,6 +14,7 @@ parser.add_argument("-c", "--crop", help="crop to run simulations on (or all)", 
 parser.add_argument("-p", "--province", help="province to select plots from (or all)", default="All", choices=fpcup.province.province_names+["All"], type=fpcup.province.process_input_province)
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=fpcup.io.Path, default=None)
+parser.add_argument("-f", "--force", help="run all models even if the associated file already exists", action="store_true")
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
@@ -21,7 +22,7 @@ args = parser.parse_args()
 year = int(args.brp_filename.stem.split("_")[-1].split("-")[0])
 
 # Determine whether to use a common crop type or row-specific ones
-use_common_croptype = (args.crop.title() != "All")
+USE_COMMON_CROPTYPE = (args.crop.title() != "All")
 
 # Set up a default output folder if a custom one was not provided
 if args.output_dir is None:
@@ -46,7 +47,7 @@ if args.province != "All":
         print(f"Selected only plots in {args.province} -- {len(brp)} sites")
 
 # Set up crop data: sow dates, selecting relevant plots, setting up agromanagement calendars
-if use_common_croptype:
+if USE_COMMON_CROPTYPE:
     # Select only the relevant lines from the BRP file
     brp = brp.loc[brp["crop_species"] == args.crop]
 
@@ -71,10 +72,17 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     coords = (row["latitude"], row["longitude"])
 
     # Get agromanagement data if needed
-    if not use_common_croptype:
-        crop = row["crop"]
-        sowdate = fpcup.agro.sowdate_range(crop, year)[0]
-        agromanagement = fpcup.agro.load_agrotemplate(crop, sowdate=sowdate)
+    if not USE_COMMON_CROPTYPE:
+        args.crop = row["crop"]
+        sowdate = fpcup.agro.sowdate_range(args.crop, year)[0]
+        agromanagement = fpcup.agro.load_agrotemplate(args.crop, sowdate=sowdate)
+
+    # If desired, check if this run has been done already, and skip it if so
+    if not args.force:
+        run_id = fpcup.model.run_id_BRP(year, i, args.crop, sowdate)
+        filename = args.output_dir / f"{run_id}.wout"
+        if filename.exists():
+            continue
 
     # Fetch site data
     sitedata = fpcup.site.example(coords)

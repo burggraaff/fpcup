@@ -1,6 +1,7 @@
 """
 Functions that are useful
 """
+from datetime import date, datetime
 from itertools import product
 from multiprocessing import Pool  # Multi-threading
 from pathlib import Path
@@ -109,6 +110,14 @@ class RunData(tuple):
         return run_id
 
 
+def run_id_BRP(brpyear: int | str, plot_id: int | str, crop: str, sowdate: date) -> str:
+    """
+    Generate a run ID from BRP data.
+    Separate from the RunDataBRP class so it can be called before initialising the weather data (which tends to be slow) when checking for duplicate files.
+    """
+    return f"brp{brpyear}-plot{plot_id}-{crop}-sown{sowdate:%Y%j}"
+
+
 class RunDataBRP(RunData):
     """
     Same as RunData but specific to the BRP.
@@ -131,7 +140,7 @@ class RunDataBRP(RunData):
 
     def generate_run_id(self) -> str:
         sowdate = self.agromanagement.crop_start_date
-        return f"brp{self.brpyear}-plot{self.plot_id}-{self.crop}-sown{sowdate:%Y%j}"
+        return run_id_BRP(self.brpyear, self.plot_id, self.crop, sowdate)
 
 
 class Summary(gpd.GeoDataFrame):
