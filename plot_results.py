@@ -71,26 +71,23 @@ if args.verbose:
     print(f"Saved batch results plot to {filename_summary.absolute()}")
 
 # Aggregate results by province
-weighted_mean = fpcup.analysis.weighted_mean_for_DF(summary)
 byprovince = summary.groupby("province")
 
-keys_to_aggregate = ["DVS", "LAIMAX", "TWSO", "CTRAT", "CEVST", "RD", "DOS", "DOE", "DOM"]
-
 # Calculate the mean per province of several variables, weighted by plot area if possible
-keys_to_average = ["LAIMAX", "TWSO", "CTRAT", "CEVST"]
 if AREA_AVAILABLE:
-    byprovince_mean = byprovince[keys_to_average].agg(weighted_mean)
+    mean_func = fpcup.analysis.weighted_mean_dict(summary)
     filename_means = results_dir / f"WOFOST_{tag}-weighted-mean.csv"
     if args.verbose:
-        print("Calculated weighted means")
+        print("Calculating weighted means")
 
 # Use a normal mean if there is no area information available
 else:
-    byprovince_mean = byprovince[keys_to_average].mean()
+    mean_func = "mean"
     filename_means = results_dir / f"WOFOST_{tag}-mean.csv"
     if args.verbose:
         print("Could not calculate weighted means because there is no 'area' column -- defaulting to a regular mean")
 
+byprovince_mean = byprovince[fpcup.analysis.KEYS_AGGREGATE].agg(mean_func)
 byprovince_mean.to_csv(filename_means)
 if args.verbose:
     print(f"Saved aggregate mean columns to {filename_means.absolute()}")
@@ -99,7 +96,7 @@ if args.verbose:
 byprovince_mean = fpcup.province.add_province_geometry(byprovince_mean, "area")
 filename_aggregate = results_dir / f"WOFOST_{tag}-summary-aggregate.pdf"
 
-fpcup.plotting.plot_wofost_ensemble_summary_aggregate(byprovince_mean, keys=keys_to_average, title=f"Summary of {len(summary)} WOFOST runs (aggregate): {tag}", saveto=filename_aggregate)
+fpcup.plotting.plot_wofost_ensemble_summary_aggregate(byprovince_mean, keys=fpcup.analysis.KEYS_AGGREGATE, title=f"Summary of {len(summary)} WOFOST runs (aggregate): {tag}", saveto=filename_aggregate)
 if args.verbose:
     print(f"Saved batch results plot to {filename_aggregate.absolute()}")
 

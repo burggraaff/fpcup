@@ -299,7 +299,7 @@ def plot_wofost_ensemble_summary_aggregate(aggregate: gpd.GeoDataFrame, keys: It
         keys = aggregate.keys()
 
     # Create figure and panels
-    fig, axs = plt.subplots(nrows=1, ncols=len(keys), figsize=(10, 3))
+    fig, axs = plt.subplots(nrows=1, ncols=len(keys), figsize=(15, 3))
 
     # Determine some parameters before the loop
     aggregate_cols = aggregate[keys]
