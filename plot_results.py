@@ -90,7 +90,7 @@ if args.verbose:
 byprovince_mean = fpcup.province.add_province_geometry(byprovince_mean, "area")
 filename_aggregate = results_dir / f"WOFOST_{tag}-summary-aggregate.pdf"
 
-fpcup.plotting.plot_wofost_ensemble_summary_aggregate(byprovince_mean, keys=keys_to_average, saveto=filename_aggregate)
+fpcup.plotting.plot_wofost_ensemble_summary_aggregate(byprovince_mean, keys=keys_to_average, title=f"Summary of {len(summary)} WOFOST runs (aggregate): {tag}", saveto=filename_aggregate)
 if args.verbose:
     print(f"Saved batch results plot to {filename_aggregate.absolute()}")
 

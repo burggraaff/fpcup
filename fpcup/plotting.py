@@ -318,9 +318,7 @@ def plot_wofost_ensemble_summary_aggregate(aggregate: gpd.GeoDataFrame, keys: It
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = aggregate.plot(column, ax=ax, rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom"})
-
-        ax.set_title(key)
+        im = aggregate.plot(column, ax=ax, rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom", "label": key})
 
     # Settings for map panels
     for ax in axs:
