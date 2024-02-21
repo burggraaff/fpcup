@@ -68,7 +68,7 @@ byprovince = summary.groupby("province")
 keys_to_aggregate = ["DVS", "LAIMAX", "TWSO", "CTRAT", "CEVST", "RD", "DOS", "DOE", "DOM"]
 
 # Calculate the mean per province of several variables, weighted by plot area if possible
-keys_to_average = ["DVS", "LAIMAX", "TWSO", "CTRAT", "CEVST", "RD"]
+keys_to_average = ["LAIMAX", "TWSO", "CTRAT", "CEVST"]
 try:
     byprovince_mean = byprovince[keys_to_average].agg(weighted_mean)
 # Use a normal mean if there is no area information available
