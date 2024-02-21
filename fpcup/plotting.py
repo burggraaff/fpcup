@@ -325,7 +325,6 @@ def plot_wofost_ensemble_summary_aggregate(aggregate: gpd.GeoDataFrame, keys: It
     # Settings for map panels
     for ax in axs:
         # Add a country/province outline
-        plot_outline(ax, lw=0.5)
         for province in province_coarse.keys():
             plot_outline(ax, province, coarse=True, lw=0.5)
 
