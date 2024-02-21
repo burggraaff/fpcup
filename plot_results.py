@@ -100,6 +100,20 @@ fpcup.plotting.plot_wofost_ensemble_summary_aggregate(byprovince_mean, keys=fpcu
 if args.verbose:
     print(f"Saved aggregate mean plot to {filename_aggregate.absolute()}")
 
+# Use H3 for aggregation
+import h3pandas
+summary2 = summary.copy()
+summary2["geometry"] = summary.centroid.to_crs(fpcup.constants.WGS84)
+summaryh3 = summary2.h3.geo_to_h3_aggregate(6, mean_func)
+summaryh3.to_crs(fpcup.constants.CRS_AMERSFOORT, inplace=True)
+
+from matplotlib import pyplot as plt
+fig, ax = plt.subplots(figsize=(8,8))
+summaryh3.plot("LAIMAX", ax=ax)
+fpcup.plotting.plot_outline(ax)
+plt.savefig("test.pdf")
+plt.close()
+
 # Space between summary and outputs sections
 if args.verbose:
     print()
