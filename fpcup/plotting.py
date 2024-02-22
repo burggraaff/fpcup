@@ -68,40 +68,47 @@ def _column_to_title(column: str) -> str:
 
 
 def brp_histogram(data: gpd.GeoDataFrame, column: str, *,
-                  figsize=(3, 5), usexticks=True, xlabel: Optional[str]="Crop", title: Optional[str]=None, top5=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+                  figsize=(3, 5), usexticks=True, title: Optional[str]=None, top5=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Make a bar plot showing the distribution of plots/crops in BRP data.
     """
-    counts = data[column].value_counts()
-    areas = data.groupby([column])["area"].sum().reindex_like(counts)  # Area per group, unit [ha]
+    # Determine the number of plots and total area per group
+    counts = data[column].value_counts()  # Number of plots per group
+    areas = data.groupby(column)["area"].sum().reindex_like(counts)  # Area per group, unit [ha]
 
+    # Plot the data
     fig, axs = plt.subplots(nrows=2, sharex=True, figsize=figsize, gridspec_kw={"hspace": 0.1})
-    counts.plot.bar(ax=axs[0], color='w', edgecolor='k', hatch="//", **kwargs)
-    areas.plot.bar(ax=axs[1], color='w', edgecolor='k', hatch="//", **kwargs)
+    for data, ax in zip([counts, areas], axs):
+        data.plot.bar(ax=ax, color='w', edgecolor='k', hatch="//", **kwargs)
 
+    # Adjust ticks on x axis
     axs[0].tick_params(axis="x", bottom=False, labelbottom=False)
     if usexticks:
         # There is no cleaner way to do this because tick_params does not support horizontalalignment
-        # Capitalisation: _capitalise_ticks method did not seem to work, its arguments are ints instead of str
         xticklabels = [label.get_text().capitalize() for label in axs[1].get_xticklabels()]
         axs[1].set_xticklabels(xticklabels, rotation=45, horizontalalignment="right")
     else:
         axs[1].tick_params(axis="x", bottom=False, labelbottom=False)
 
-    if not "log" in kwargs:
-        for ax in axs:
+    # Panel settings
+    for ax in axs:
+        ax.grid(False)
+
+        if not "log" in kwargs:
             # Prevent scientific notation
             ax.ticklabel_format(axis="y", style="plain")
 
             # Set ymin explicitly
             ax.set_ylim(ymin=0)
 
-    axs[1].set_xlabel(xlabel)
-    axs[0].set_ylabel("Number of plots")
-    axs[1].set_ylabel("Total area [ha]")
+    # Adjust labels
     axs[0].set_title(title)
+    axs[0].set_ylabel("Number of plots")
+    axs[1].set_xlabel(_column_to_title(column))
+    axs[1].set_ylabel("Total area [ha]")
     fig.align_ylabels()
 
+    # Add the top 5 list in the corner
     if top5:
         float2str = lambda x: f"{x:.0f}"
         top5_text = [f"Top 5:\n{df.head().to_string(header=False, float_format=float2str)}" for df in (counts, areas)]
@@ -131,7 +138,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, *,
     # If colours are specified, plot those instead of the raw data, and add a legend
     if colour_dict:
         colours = data[column].map(colour_dict)
-        data.plot(ax=ax, color=colours, rasterized=rasterized, **kwargs)
+        data.plot.geo(ax=ax, color=colours, rasterized=rasterized, **kwargs)
 
         # Generate dummy patches with the same colour mapping and add those to the legend
         colour_patches = [mpatches.Patch(color=colour, label=label.capitalize()) for label, colour in colour_dict.items() if label in data[column].unique()]
@@ -139,7 +146,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, *,
 
     # If colours are not specified, simply plot the data and let geopandas handle the colours
     else:
-        data.plot(ax=ax, column=column, rasterized=rasterized, **kwargs)
+        data.plot.geo(ax=ax, column=column, rasterized=rasterized, **kwargs)
 
     # Panel settings
     _configure_map_panels(ax, province)
@@ -160,6 +167,7 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
     # Create figure
     fig, axs = plt.subplots(*shape, figsize=figsize)
 
+    # Plot each crop into its own panel
     for crop, ax in zip(crops, axs.ravel()):
         colour = brp_crops_colours[crop]
         data_here = data.loc[data[column] == crop]
@@ -167,8 +175,8 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
 
         ax.set_title(crop.capitalize(), color=colour)
 
+    # Panel settings
     _configure_map_panels(axs.ravel(), lw=0.2)
-
     fig.suptitle(title)
 
     if saveto:

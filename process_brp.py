@@ -37,7 +37,7 @@ brp["area"] = brp.area * fpcup.constants.m2ha
 
 # Show the distribution of plot types
 if args.plots:
-    fpcup.plotting.brp_histogram(brp, column="category", xlabel="Category", title=filestem, top5=False, saveto=args.results_dir/f"brp{year}-hist_categories.pdf")
+    fpcup.plotting.brp_histogram(brp, column="category", title=filestem, top5=False, saveto=args.results_dir/f"brp{year}-hist_categories.pdf")
     fpcup.plotting.brp_map(brp, column="category", title=f"Land usage\n{filestem}", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/f"brp{year}-map_categories.pdf")
 
 # Select cropland
