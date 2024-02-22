@@ -61,7 +61,7 @@ if args.verbose:
     print("Added crop_species column")
 
 # Add province information
-fpcup.province.add_provinces(brp_fpcup)
+fpcup.geo.add_provinces(brp_fpcup)
 if args.verbose:
     print("Added province column")
 

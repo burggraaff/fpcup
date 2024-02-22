@@ -24,8 +24,8 @@ from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Iterable, Optional, PathOrStr, RealNumber, StringDict
 from .analysis import KEYS_AGGREGATE
 from .constants import CRS_AMERSFOORT, WGS84
+from .geo import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3
 from .model import Summary, parameter_names
-from .province import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3
 from .tools import make_iterable
 
 

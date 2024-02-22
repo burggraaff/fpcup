@@ -11,7 +11,7 @@ import argparse
 parser = argparse.ArgumentParser(description="Run PCSE for plots within the BRP.")
 parser.add_argument("brp_filename", help="file to load the BRP from", type=fpcup.io.Path)
 parser.add_argument("-c", "--crop", help="crop to run simulations on (or all)", default="All", choices=("barley", "maize", "sorghum", "soy", "wheat"), type=str.lower)
-parser.add_argument("-p", "--province", help="province to select plots from (or all)", default="Netherlands", choices=fpcup.province.NAMES, type=fpcup.province.process_input_province)
+parser.add_argument("-p", "--province", help="province to select plots from (or all)", default="Netherlands", choices=fpcup.geo.NAMES, type=fpcup.geo.process_input_province)
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=fpcup.io.Path, default=None)
 parser.add_argument("-f", "--force", help="run all models even if the associated file already exists", action="store_true")

@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser("Load and plot the results from a previous PCSE
 parser.add_argument("output_dir", help="folder to load PCSE outputs from", type=Path)
 parser.add_argument("-y", "--replace_years", help="replace all years in the output with 2000", action="store_true")
 parser.add_argument("--vector_max", help="number of runs at which to switch from vector (PDF) to raster (PNG) files", type=int, default=5000)
-parser.add_argument("-p", "--province", help="province to select plots from (or all of the Netherlands)", default="Netherlands", choices=fpcup.province.NAMES, type=fpcup.province.process_input_province)
+parser.add_argument("-p", "--province", help="province to select plots from (or all of the Netherlands)", default="Netherlands", choices=fpcup.geo.NAMES, type=fpcup.geo.process_input_province)
 parser.add_argument("-s", "--sample", help="load only a subsample of the outputs, for testing", action="store_true")
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
@@ -38,7 +38,7 @@ if args.verbose:
 
 # Add province information if this is not available
 if "province" not in summary.columns:
-    fpcup.province.add_provinces(summary, leave_progressbar=args.verbose)
+    fpcup.geo.add_provinces(summary, leave_progressbar=args.verbose)
     if args.verbose:
         print("Added province information")
 
@@ -94,7 +94,7 @@ if args.verbose:
     print(f"Saved aggregate mean columns to {filename_means.absolute()}")
 
 # Add geometry and plot the results
-byprovince_mean = fpcup.province.add_province_geometry(byprovince_mean, "area")
+byprovince_mean = fpcup.geo.add_province_geometry(byprovince_mean, "area")
 filename_aggregate = results_dir / f"WOFOST_{tag}-summary-aggregate.pdf"
 
 fpcup.plotting.plot_wofost_ensemble_summary_aggregate(byprovince_mean, keys=fpcup.analysis.KEYS_AGGREGATE, title=f"Summary of {len(summary)} WOFOST runs (aggregate): {tag}", saveto=filename_aggregate)
