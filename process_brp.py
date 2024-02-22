@@ -6,6 +6,7 @@ Example usage:
     %run process_brp.py data/brp/brpgewaspercelen_definitief_2022.gpkg -vp
 """
 import geopandas as gpd
+gpd.options.io_engine = "pyogrio"
 gpd.pd.options.mode.chained_assignment = None  # Prevents unneeded warnings
 
 import fpcup

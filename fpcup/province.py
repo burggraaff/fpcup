@@ -1,33 +1,46 @@
 """
-(Try to) load map backgrounds from file so they can be plotted.
+Geography-related constants and methods.
+Includes polygons/outlines of the Netherlands and its provinces.
 """
-
 import geopandas as gpd
+gpd.options.io_engine = "pyogrio"
+import h3pandas
 import numpy as np
 from pandas import DataFrame, Series
 from tqdm import tqdm
 
-from ._typing import Iterable, Optional
-from .constants import CRS_AMERSFOORT
+from ._typing import AreaDict, BoundaryDict, Callable, Iterable, Optional
+from .constants import CRS_AMERSFOORT, WGS84
 from .settings import DEFAULT_DATA
 
-# Load the outline of the Netherlands
-nl = gpd.read_file(DEFAULT_DATA/"NL_borders.geojson")
-nl_boundary = nl.boundary
+# Constants
+PROVINCE_NAMES = ("Fryslân", "Gelderland", "Noord-Brabant", "Noord-Holland", "Overijssel", "Zuid-Holland",  "Groningen", "Zeeland", "Drenthe", "Flevoland", "Limburg", "Utrecht")  # Sorted by area
+NETHERLANDS = "Netherlands"
+NAMES = PROVINCE_NAMES + (NETHERLANDS, )
 
-# Load the provinces
+# Load the Netherlands shapefile
+_netherlands = gpd.read_file(DEFAULT_DATA/"NL_borders.geojson")
+_area_netherlands = {NETHERLANDS: _netherlands.iloc[0].geometry}  # Polygon - to be used in comparisons
+_boundary_netherlands = {NETHERLANDS: _netherlands.boundary}  # GeoSeries - to be used with .plot()
+
+# Load the province shapefiles
 _provinces = gpd.read_file(DEFAULT_DATA/"NL_provinces.geojson")
 _provinces_coarse = gpd.read_file(DEFAULT_DATA/"NL_provinces_coarse.geojson")
-province_names = list(_provinces["naamOfficieel"]) + ["Friesland"]
 
-# Access individual provinces using a dictionary, e.g. province_boundary["Zuid-Holland"]
-province_area = {name: poly for name, poly in zip(_provinces["naamOfficieel"], _provinces["geometry"])}
-province_boundary = {name: gpd.GeoSeries(outline) for name, outline in zip(_provinces["naamOfficieel"], _provinces.boundary)}
-province_coarse = {name: poly for name, poly in zip(_provinces_coarse["naamOfficieel"], _provinces_coarse["geometry"])}
+# Access individual provinces using a dictionary, e.g. area["Zuid-Holland"]
+# Note: these contain bare Polygon/MultiPolygon objects, with no CRS.
+area = {name: poly for name, poly in zip(_provinces["naamOfficieel"], _provinces["geometry"])}
+area = {**_area_netherlands, **area}
 
-# Add an alias for Friesland/Fryslân
-province_area["Friesland"] = province_area["Fryslân"]
-province_boundary["Friesland"] = province_boundary["Fryslân"]
+area_coarse = {name: poly for name, poly in zip(_provinces_coarse["naamOfficieel"], _provinces_coarse["geometry"])}
+
+# Access individual provinces using a dictionary, e.g. boundary["Zuid-Holland"]
+# Note: these contain GeoSeries objects with 1 entry, with a CRS set.
+boundary = {name: gpd.GeoSeries(outline, crs=CRS_AMERSFOORT) for name, outline in zip(_provinces["naamOfficieel"], _provinces.boundary)}
+boundary = {**_boundary_netherlands, **boundary}
+
+boundary_coarse = {name: gpd.GeoSeries(poly.boundary, crs=CRS_AMERSFOORT) for name, poly in area_coarse.items()}
+
 
 def process_input_province(province: str) -> str:
     """
@@ -39,32 +52,40 @@ def process_input_province(province: str) -> str:
     # Apply common alternatives
     if province in ("Friesland", "Fryslan"):
         province = "Fryslân"
+    elif province in ("the Netherlands", "NL", "All"):
+        province = "Netherlands"
 
     return province
 
-def is_in_province(data: gpd.GeoDataFrame, province: str, *, province_data: dict=province_coarse, use_centroid=True) -> Iterable[bool]:
+
+def is_in_province(_data: gpd.GeoDataFrame, province: str, *,
+                   province_data: AreaDict=area_coarse, use_centroid=True) -> Iterable[bool]:
     """
     For a series of geometries (e.g. BRP plots), determine if they are in the given province.
     Enable `use_centroid` to see if the centre of each plot falls within the province rather than the entire plot - this is useful for plots that are split between provinces.
     """
+    assert province in PROVINCE_NAMES, f"Unknown province '{province}'."
+
     area = province_data[province]
     if use_centroid:
-        data_here = data.centroid
+        data = _data.centroid
     else:
-        data_here = data
+        data = _data
 
     # Step 1: use the convex hull for a coarse selection
-    selection_coarse = data_here.within(area.convex_hull)
+    selection_coarse = data.within(area.convex_hull)
 
     # Step 2: use the real shape of the province
-    selection_fine = data_here.loc[selection_coarse].within(area)
+    selection_fine = data.loc[selection_coarse].within(area)
 
     # Update the coarse selection with the new information
     selection_coarse.loc[selection_coarse] = selection_fine
 
     return selection_coarse
 
-def add_provinces(data: gpd.GeoDataFrame, *, new_column: str="province", province_data: dict=province_coarse, progressbar=True, leave_progressbar=True, **kwargs) -> None:
+
+def add_provinces(data: gpd.GeoDataFrame, *,
+                  new_column: str="province", province_data: AreaDict=area_coarse, progressbar=True, leave_progressbar=True, **kwargs) -> None:
     """
     Add a column with province names.
     Note: can get very slow for long dataframes.
@@ -73,7 +94,8 @@ def add_provinces(data: gpd.GeoDataFrame, *, new_column: str="province", provinc
     data_crs = data.to_crs(CRS_AMERSFOORT)
 
     # Generate an empty Series which will be populated with time
-    province_list = Series(data=np.tile("", len(data_crs)), name="province", dtype=str, index=data_crs.index)
+    province_list = Series(data=np.tile("", len(data_crs)),
+                           name="province", dtype=str, index=data_crs.index)
 
     # Loop over the provinces, find the relevant entries, and fill in the list
     for province_name in tqdm(province_data.keys(), desc="Assigning labels", unit="province", disable=not progressbar, leave=leave_progressbar):
@@ -93,7 +115,9 @@ def add_provinces(data: gpd.GeoDataFrame, *, new_column: str="province", provinc
     # Add the series to the dataframe
     data[new_column] = province_list
 
-def add_province_geometry(data: DataFrame, which: str="area", *, column_name: Optional[str]=None, crs: str=CRS_AMERSFOORT) -> gpd.GeoDataFrame:
+
+def add_province_geometry(data: DataFrame, which: str="area", *,
+                          column_name: Optional[str]=None, crs: str=CRS_AMERSFOORT) -> gpd.GeoDataFrame:
     """
     Add a column with province geometry to a DataFrame with a province name column/index.
     """
@@ -107,7 +131,7 @@ def add_province_geometry(data: DataFrame, which: str="area", *, column_name: Op
         column = data[column_name]
 
     # Apply the dictionary mapping
-    geometry = column.map(province_area)
+    geometry = column.map(area)
     data_new = gpd.GeoDataFrame(data, geometry=geometry, crs=crs)
 
     # Change to outline if desired
@@ -120,3 +144,32 @@ def add_province_geometry(data: DataFrame, which: str="area", *, column_name: Op
         raise ValueError(f"Cannot add geometries of type `{which}`")
 
     return data_new
+
+
+def aggregate_h3(_data: gpd.GeoDataFrame, functions: dict[str, Callable] | Callable | str="mean", *,
+                 level: int=6, clipto: Optional[str]="Netherlands") -> gpd.GeoDataFrame:
+    """
+    Aggregate data to the H3 hexagonal grid.
+    `functions` is passed to DataFrame.agg.
+    `clipto` is used to get a geometry, e.g. the Netherlands or one province, to clip the results to. Set it to `None` to preserve the full grid.
+
+    TO DO: See if using `clipto` to filter data to a given province before aggregation is faster.
+    """
+    # Convert the input to WGS84 for the aggregation
+    crs_original = _data.crs
+    data = _data.copy()
+    data["geometry"] = data.centroid.to_crs(WGS84)
+
+    # Aggregate the data and convert back to the original CRS
+    data_h3 = data.h3.geo_to_h3_aggregate(level, functions)
+    data_h3.to_crs(crs_original, inplace=True)
+
+    # Clip the data if desired
+    if clipto is not None:
+        assert clipto in area.keys(), f"Cannot clip the H3 grid to '{clipto}' - unknown name. Please provide a province name, 'Netherlands', or None."
+        clipto_geometry = area[clipto]
+
+        data_h3["geometry"] = data_h3.intersection(clipto_geometry)
+        data_h3 = data_h3.loc[~data_h3.is_empty]
+
+    return data_h3

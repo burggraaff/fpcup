@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt
 
 from pcse.util import wind10to2
 
-from fpcup.province import nl, CRS_AMERSFOORT
+import fpcup
 
 filename = Path("data/meteo/NL-weather_ver2024_01_28946_162168065.csv")
 
@@ -42,7 +42,7 @@ data.sort_values(["LONGITUDE", "LATITUDE"], inplace=True)
 data = gpd.GeoDataFrame(data, geometry=gpd.points_from_xy(data["LONGITUDE"], data["LATITUDE"], crs="WGS84"))
 
 # Regrid: definitions
-data.to_crs(CRS_AMERSFOORT, inplace=True)
+data.to_crs(fpcup.constants.CRS_AMERSFOORT, inplace=True)
 xmin, xmax, ymin, ymax = data.total_bounds
 cellsize = 250  # m
 newx = np.arange(xmin, xmax+cellsize, cellsize)
@@ -63,7 +63,7 @@ vmin, vmax = np.nanmin(gridded), np.nanmax(gridded)
 fig, ax = plt.subplots(1, 1, figsize=(5,5))
 im = ax.imshow(gridded, origin="lower", extent=(newx.min(), newx.max(), newy.min(), newy.max()), vmin=vmin, vmax=vmax)
 data_day.plot(key, ax=ax, edgecolor="black", vmin=vmin, vmax=vmax)
-nl.boundary.plot(ax=ax, color="black", lw=1)
+fpcup.plotting.plot_outline(ax)
 
 fig.colorbar(im, ax=ax, label=key)
 

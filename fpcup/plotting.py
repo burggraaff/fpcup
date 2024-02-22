@@ -10,46 +10,62 @@ from tqdm import tqdm
 
 from matplotlib import pyplot as plt, dates as mdates, patches as mpatches, ticker as mticker
 from matplotlib import colormaps, rcParams
-rcParams.update({"axes.grid": True, "figure.dpi": 600, "grid.linestyle": "--", "hist.bins": 15, "legend.edgecolor": "black", "legend.framealpha": 1, "savefig.dpi": 600})
+rcParams.update({"axes.grid": True,
+                 "figure.dpi": 600,
+                 "grid.linestyle": "--",
+                 "hist.bins": 15,
+                 "image.cmap": "cividis",
+                 "legend.edgecolor": "black", "legend.framealpha": 1,
+                 "savefig.dpi": 600})
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 cividis_discrete = colormaps["cividis"].resampled(10)
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Iterable, Optional, PathOrStr, RealNumber, StringDict
+from .analysis import KEYS_AGGREGATE
+from .constants import CRS_AMERSFOORT, WGS84
 from .model import Summary, parameter_names
-from .province import nl_boundary, province_area, province_boundary, province_coarse
+from .province import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3
+from .tools import make_iterable
 
-# @mticker.FuncFormatter
-# def _capitalise_ticks(x, pos):
-#     """
-#     Helper function to capitalise str ticks in plots.
-#     """
-#     try:
-#         return x.capitalize()
-#     except AttributeError:
-#         return "abc"
-# _capitalise_ticks = mticker.StrMethodFormatter("abc{x:}")
 
-def plot_outline(ax: plt.Axes, province: str="All", *, coarse=False, **kwargs) -> None:
+def plot_outline(ax: plt.Axes, province: str="Netherlands", *,
+                 coarse: bool=False, crs: str=CRS_AMERSFOORT, **kwargs) -> None:
     """
-    Plot an outline of the Netherlands ("All") or a specific province (e.g. "Zuid-Holland").
+    Plot an outline of the Netherlands or a specific province (e.g. "Zuid-Holland").
     """
-    if province == "All":
-        boundary = nl_boundary
+    if coarse:
+        line = boundary_coarse[province].to_crs(crs)
     else:
-        if coarse:
-            boundary = gpd.GeoSeries(province_coarse[province].boundary)
-        else:
-            boundary = province_boundary[province]
+        line = boundary[province].to_crs(crs)
 
     line_kw = {"color": "black", "lw": 1, **kwargs}
-    boundary.plot(ax=ax, **line_kw)
+    line.plot(ax=ax, **line_kw)
 
-def column_to_title(column: str) -> str:
+
+def _configure_map_panels(axs: plt.Axes | Iterable[plt.Axes], province: str | Iterable[str]="Netherlands", **kwargs) -> None:
+    """
+    Apply default settings to map panels.
+    **kwargs are passed to `plot_outline` - e.g. coarse, crs, ...
+    """
+    axs = make_iterable(axs)
+    provinces = make_iterable(province)
+    for ax in axs:
+        # Country/Province outline(s)
+        for p in provinces:
+            plot_outline(ax, p, **kwargs)
+
+        # Axis settings
+        ax.set_axis_off()
+        ax.axis("equal")
+
+
+def _column_to_title(column: str) -> str:
     """
     Clean up a column name (e.g. "crop_species") so it can be used as a title (e.g. "Crop species").
     """
     return column.capitalize().replace("_", " ")
+
 
 def brp_histogram(data: gpd.GeoDataFrame, column: str, *,
                   figsize=(3, 5), usexticks=True, xlabel: Optional[str]="Crop", title: Optional[str]=None, top5=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
@@ -97,16 +113,16 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, *,
     plt.show()
     plt.close()
 
+
 def brp_map(data: gpd.GeoDataFrame, column: str, *,
-            province: Optional[str]="All", figsize=(10, 10), title: Optional[str]=None, rasterized=True, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+            province: str="Netherlands", figsize=(10, 10), title: Optional[str]=None, rasterized=True, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons in the given column.
     If `province` is provided, only data within that province will be plotted, with the corresponding outline.
     """
     # Select province data if desired
-    if province != "All":
+    if province != "Netherlands":
         assert "province" in data.columns, f"Cannot plot data by province - data do not have a 'province' column\n(columns: {data.columns}"
-        province = province.title()
         data = data.loc[data["province"] == province]
 
     # Create figure
@@ -119,23 +135,21 @@ def brp_map(data: gpd.GeoDataFrame, column: str, *,
 
         # Generate dummy patches with the same colour mapping and add those to the legend
         colour_patches = [mpatches.Patch(color=colour, label=label.capitalize()) for label, colour in colour_dict.items() if label in data[column].unique()]
-        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, title=column_to_title(column))
+        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, title=_column_to_title(column))
 
     # If colours are not specified, simply plot the data and let geopandas handle the colours
     else:
         data.plot(ax=ax, column=column, rasterized=rasterized, **kwargs)
 
-    # Add a country/province outline
-    plot_outline(ax, province)
-
+    # Panel settings
+    _configure_map_panels(ax, province)
     ax.set_title(title)
-    ax.set_axis_off()
-    ax.axis("equal")
 
     if saveto:
         plt.savefig(saveto, bbox_inches="tight")
     plt.show()
     plt.close()
+
 
 def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
                        crops: Iterable[str]=brp_crops_colours.keys(), figsize=(14, 3.5), shape=(1, 5), title: Optional[str]=None, rasterized=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
@@ -151,12 +165,9 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
         data_here = data.loc[data[column] == crop]
         data_here.plot(ax=ax, color="black", rasterized=rasterized, **kwargs)
 
-        if nl_boundary is not None:
-            nl_boundary.plot(ax=ax, color="black", lw=0.2)
-
         ax.set_title(crop.capitalize(), color=colour)
-        ax.set_axis_off()
-        ax.axis("equal")
+
+    _configure_map_panels(axs.ravel(), lw=0.2)
 
     fig.suptitle(title)
 
@@ -165,12 +176,14 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
     plt.show()
     plt.close()
 
+
 def replace_year_in_datetime(date: dt.date, newyear: int=2000) -> dt.date:
     """
     For a datetime object yyyy-mm-dd, replace yyyy with newyear.
     Note that you may get errors if your data contain leap days (mm-dd = 02-29) but your chosen `newyear` was not a leap year.
     """
     return date.replace(year=newyear)
+
 
 def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable[str]=None, *,
                                  title: Optional[str]=None, saveto: Optional[PathOrStr]=None, replace_years=True, progressbar=True, leave_progressbar=False) -> None:
@@ -214,6 +227,7 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
 
     plt.close()
 
+
 def _numerical_or_date_bins(column: pd.Series) -> int | pd.DatetimeIndex:
     """
     Generate bins for a column based on its data type.
@@ -223,15 +237,12 @@ def _numerical_or_date_bins(column: pd.Series) -> int | pd.DatetimeIndex:
     else:
         return rcParams["hist.bins"]
 
-def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, *,
-                                 weights: Optional[Iterable[RealNumber]]=None, title: Optional[str]=None, province: Optional[str]="All", saveto: Optional[PathOrStr]=None) -> None:
-    """
-    Plot WOFOST ensemble results.
-    """
-    # If no keys were specified, get all of them
-    if keys is None:
-        keys = summary.keys()
 
+def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
+                                 aggregate: bool=True, weights: Optional[Iterable[RealNumber]]=None, title: Optional[str]=None, province: Optional[str]="Netherlands", saveto: Optional[PathOrStr]=None) -> None:
+    """
+    Plot histograms and (aggregate) maps showing WOFOST run summaries.
+    """
     # Create figure and panels
     fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5), gridspec_kw={"hspace": 0.25, "height_ratios": [1, 1.5]})
 
@@ -267,12 +278,7 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=None, *,
         im = summary.plot(column, ax=ax_col[1], rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom"})
 
     # Settings for map panels
-    for ax in axs[1]:
-        # Add a country/province outline
-        plot_outline(ax, province)
-
-        ax.set_axis_off()
-        ax.axis("equal")
+    _configure_map_panels(axs[1])
 
     axs[0, 0].set_ylabel("Distribution")
     fig.align_xlabels()
@@ -321,13 +327,7 @@ def plot_wofost_ensemble_summary_aggregate(aggregate: gpd.GeoDataFrame, keys: It
         im = aggregate.plot(column, ax=ax, rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom", "label": key})
 
     # Settings for map panels
-    for ax in axs:
-        # Add a country/province outline
-        for province in province_coarse.keys():
-            plot_outline(ax, province, coarse=True, lw=0.5)
-
-        ax.set_axis_off()
-        ax.axis("equal")
+    _configure_map_panels(axs, PROVINCE_NAMES, coarse=True, lw=0.5)
 
     if title is None:
         title = f"Results aggregated by province"
