@@ -24,9 +24,12 @@ from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Iterable, Optional, PathOrStr, RealNumber, StringDict
 from .analysis import KEYS_AGGREGATE
 from .constants import CRS_AMERSFOORT, WGS84
-from .geo import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3
+from .geo import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3, entries_in_province
 from .model import Summary, parameter_names
 from .tools import make_iterable
+
+_RASTERIZE_LIMIT_GEO = 250  # Plot geo data in raster format if there are more than this number
+_RASTERIZE_GEO = lambda data: (len(data) > _RASTERIZE_LIMIT_GEO)
 
 
 def plot_outline(ax: plt.Axes, province: str="Netherlands", *,
@@ -122,18 +125,18 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, *,
 
 
 def brp_map(data: gpd.GeoDataFrame, column: str, *,
-            province: str="Netherlands", figsize=(10, 10), title: Optional[str]=None, rasterized=True, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+            province: str="Netherlands", figsize=(10, 10), title: Optional[str]=None, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons in the given column.
     If `province` is provided, only data within that province will be plotted, with the corresponding outline.
     """
     # Select province data if desired
     if province != "Netherlands":
-        assert "province" in data.columns, f"Cannot plot data by province - data do not have a 'province' column\n(columns: {data.columns}"
-        data = data.loc[data["province"] == province]
+        data = entries_in_province(data, province)
 
     # Create figure
     fig, ax = plt.subplots(1, 1, figsize=figsize)
+    rasterized = _RASTERIZE_GEO(data)
 
     # If colours are specified, plot those instead of the raw data, and add a legend
     if colour_dict:
@@ -159,24 +162,33 @@ def brp_map(data: gpd.GeoDataFrame, column: str, *,
 
 
 def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
-                       crops: Iterable[str]=brp_crops_colours.keys(), figsize=(14, 3.5), shape=(1, 5), title: Optional[str]=None, rasterized=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+                       province: str="Netherlands", crops: Iterable[str]=brp_crops_colours.keys(), figsize=(14, 3.5), shape=(1, 5), title: Optional[str]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons, with one panel per crop species.
     Shape is (nrows, ncols).
     """
+    # Select province data if desired
+    if province != "Netherlands":
+        data = entries_in_province(data, province)
+
     # Create figure
     fig, axs = plt.subplots(*shape, figsize=figsize)
 
     # Plot each crop into its own panel
     for crop, ax in zip(crops, axs.ravel()):
-        colour = brp_crops_colours[crop]
+        # Plot the plots
         data_here = data.loc[data[column] == crop]
-        data_here.plot(ax=ax, color="black", rasterized=rasterized, **kwargs)
+        number_here = len(data_here)
+        if number_here > 0:  # Only plot if there are actually plots for this crop
+            rasterized = _RASTERIZE_GEO(data_here)
+            data_here.plot(ax=ax, color="black", rasterized=rasterized, **kwargs)
 
-        ax.set_title(crop.capitalize(), color=colour)
+        # Panel parameters
+        colour = brp_crops_colours[crop]
+        ax.set_title(f"{crop.title()} ({number_here})", color=colour)
 
     # Panel settings
-    _configure_map_panels(axs.ravel(), lw=0.2)
+    _configure_map_panels(axs.ravel(), province, lw=0.2)
     fig.suptitle(title)
 
     if saveto:
@@ -281,12 +293,14 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGR
         else:
             vmin_here, vmax_here = vmin[key], vmax[key]
 
+        rasterized = _RASTERIZE_GEO(column)
+
         divider = make_axes_locatable(ax_col[1])
         cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = summary.plot(column, ax=ax_col[1], rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom"})
+        im = summary.plot(column, ax=ax_col[1], rasterized=rasterized, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom"})
 
     # Settings for map panels
-    _configure_map_panels(axs[1])
+    _configure_map_panels(axs[1], province)
 
     axs[0, 0].set_ylabel("Distribution")
     fig.align_xlabels()
@@ -307,6 +321,7 @@ def plot_wofost_ensemble_summary_aggregate(aggregate: gpd.GeoDataFrame, keys: It
                                  title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot WOFOST ensemble summary results, aggregated by province.
+    Rasterisation is ON because the province shapefiles are very complex.
     """
     # If no keys were specified, get all of them
     if keys is None:

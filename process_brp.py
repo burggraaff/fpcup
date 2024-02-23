@@ -32,13 +32,20 @@ brp.drop(columns=["jaar", "status"], inplace=True)
 brp.rename({"gewas": "crop", "gewascode": "crop_code"}, axis=1, inplace=True)
 brp["category"].replace(fpcup.site.brp_categories_NL2EN, inplace=True)
 
+# Add province information
+fpcup.geo.add_provinces(brp)
+if args.verbose:
+    print("Added province column")
+
 # Add area column (in ha)
 brp["area"] = brp.area * fpcup.constants.m2ha
 
 # Show the distribution of plot types
 if args.plots:
     fpcup.plotting.brp_histogram(brp, column="category", title=filestem, top5=False, saveto=args.results_dir/f"brp{year}-hist_categories.pdf")
-    fpcup.plotting.brp_map(brp, column="category", title=f"Land usage\n{filestem}", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/f"brp{year}-map_categories.pdf")
+
+    for province in fpcup.geo.iterate_netherlands():
+        fpcup.plotting.brp_map(brp, column="category", province=province, title=f"Land usage in {province}\n{filestem}", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/f"brp{year}-map_categories-{province}.pdf")
 
 # Select cropland
 brp_agro = brp.loc[brp["category"] == "cropland"].drop(columns=["category"])
@@ -60,11 +67,6 @@ brp_fpcup["crop_species"] = brp_fpcup["crop"].apply(fpcup.crop.main_croptype)
 if args.verbose:
     print("Added crop_species column")
 
-# Add province information
-fpcup.geo.add_provinces(brp_fpcup)
-if args.verbose:
-    print("Added province column")
-
 # Show the distribution of crop types and species
 if args.plots:
     fpcup.plotting.brp_histogram(brp_fpcup, column="crop", figsize=(7, 4), title=filestem, saveto=args.results_dir/f"brp{year}-hist_crops-filtered.pdf")
@@ -72,11 +74,10 @@ if args.plots:
 
 # Show the distribution across the country
 if args.plots:
-    fpcup.plotting.brp_map(brp_fpcup, column="crop_species", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/f"brp{year}-map_crops-filtered.pdf")
+    for province in fpcup.geo.iterate_netherlands():
+        fpcup.plotting.brp_map(brp_fpcup, column="crop_species", province=province, title=f"Selected crop types in {province}\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/f"brp{year}-map_crops-filtered-{province}.pdf")
 
-    fpcup.plotting.brp_map(brp_fpcup, column="crop_species", province="Zuid-Holland", title=f"Selected crop types\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/f"brp{year}-map_crops-filtered-zh.pdf")
-
-    fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", title=f"Selected crop types from {filestem}", saveto=args.results_dir/f"brp{year}-map_crops-individual.pdf")
+        fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", province=province, title=f"Selected crop types in {province} from {filestem}", saveto=args.results_dir/f"brp{year}-map_crops-individual-{province}.pdf")
 
 # Add centroid coordinates in WGS84 for WOFOST
 coordinates = brp_fpcup.centroid.to_crs("WGS84")

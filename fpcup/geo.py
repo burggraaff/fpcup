@@ -18,6 +18,9 @@ PROVINCE_NAMES = ("Fryslân", "Gelderland", "Noord-Brabant", "Noord-Holland", "O
 NETHERLANDS = "Netherlands"
 NAMES = PROVINCE_NAMES + (NETHERLANDS, )
 
+# For convenience: iterate over NAMES with tqdm
+iterate_netherlands = lambda disable=False, leave=True: tqdm(NAMES, desc="Looping over provinces", unit="province", disable=disable, leave=leave)
+
 # Load the Netherlands shapefile
 _netherlands = gpd.read_file(DEFAULT_DATA/"NL_borders.geojson")
 _area_netherlands = {NETHERLANDS: _netherlands.iloc[0].geometry}  # Polygon - to be used in comparisons
@@ -64,7 +67,7 @@ def is_in_province(_data: gpd.GeoDataFrame, province: str, *,
     For a series of geometries (e.g. BRP plots), determine if they are in the given province.
     Enable `use_centroid` to see if the centre of each plot falls within the province rather than the entire plot - this is useful for plots that are split between provinces.
     """
-    assert province in PROVINCE_NAMES, f"Unknown province '{province}'."
+    assert province in NAMES, f"Unknown province '{province}'."
 
     area = province_data[province]
     if use_centroid:
@@ -73,15 +76,15 @@ def is_in_province(_data: gpd.GeoDataFrame, province: str, *,
         data = _data
 
     # Step 1: use the convex hull for a coarse selection
-    selection_coarse = data.within(area.convex_hull)
+    selection = data.within(area.convex_hull)
 
     # Step 2: use the real shape of the province
-    selection_fine = data.loc[selection_coarse].within(area)
+    selection_fine = data.loc[selection].within(area)
 
-    # Update the coarse selection with the new information
-    selection_coarse.loc[selection_coarse] = selection_fine
+    # Update the selection with the new information
+    selection.loc[selection] = selection_fine
 
-    return selection_coarse
+    return selection
 
 
 def add_provinces(data: gpd.GeoDataFrame, *,
@@ -144,6 +147,32 @@ def add_province_geometry(data: DataFrame, which: str="area", *,
         raise ValueError(f"Cannot add geometries of type `{which}`")
 
     return data_new
+
+
+def entries_in_province(data: gpd.GeoDataFrame, province: str) -> gpd.GeoDataFrame:
+    """
+    Return only those entries from `data` that are in the given `province`.
+    Shorthand function that tries different approaches:
+        1. Check if `data` has a "province" column and use that.
+        2. Filter based on the geometry in `data` using is_in_province.
+    """
+    assert province in PROVINCE_NAMES, f"Unknown province '{province}'."
+
+    # First: try the "province" column
+    if "province" in data.columns:
+        entries = (data["province"] == province)
+
+    # Second: Check the data manually
+    elif "geometry" in data.columns:
+        # Convert the data to the same CRS as the province data
+        data_crs = data.to_crs(CRS_AMERSFOORT)
+        entries = is_in_province(data_crs, province)
+
+    # No other cases currently
+    else:
+        raise ValueError(f"Input does not have a 'province' column nor any geometry information.")
+
+    return data.loc[entries]
 
 
 def aggregate_h3(_data: gpd.GeoDataFrame, functions: dict[str, Callable] | Callable | str="mean", *,
