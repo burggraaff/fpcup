@@ -120,7 +120,8 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, *,
 
     if saveto:
         plt.savefig(saveto, bbox_inches="tight")
-    plt.show()
+    else:
+        plt.show()
     plt.close()
 
 
@@ -157,7 +158,8 @@ def brp_map(data: gpd.GeoDataFrame, column: str, *,
 
     if saveto:
         plt.savefig(saveto, bbox_inches="tight")
-    plt.show()
+    else:
+        plt.show()
     plt.close()
 
 
@@ -193,7 +195,8 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
 
     if saveto:
         plt.savefig(saveto, bbox_inches="tight")
-    plt.show()
+    else:
+        plt.show()
     plt.close()
 
 
