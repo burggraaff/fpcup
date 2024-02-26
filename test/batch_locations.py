@@ -13,12 +13,14 @@ parser = argparse.ArgumentParser(description="Run a PCSE ensemble for multiple l
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=Path, default=fpcup.settings.DEFAULT_OUTPUT / "locations")
 parser.add_argument("-n", "--number", help="number of locations; result may be lower due to rounding", type=int, default=400)
+parser.add_argument("-p", "--province", help="province to simulate plots in (or all)", default="Netherlands", choices=fpcup.geo.NAMES, type=fpcup.geo.process_input_province)
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
 # Generate the coordinates
 crs = fpcup.constants.WGS84
-coords = fpcup.site.grid_coordinate_linspace(latitude=(50.6, 53.6), longitude=(3.3, 7.3), n=args.number)
+bounds = fpcup.geo.boundary[args.province].to_crs(crs).bounds.iloc[0]
+coords = fpcup.site.grid_coordinate_linspace(latitude=(bounds["miny"], bounds["maxy"]), longitude=(bounds["minx"], bounds["maxx"]), n=args.number)
 if args.verbose:
     print(f"Generated {len(coords)} coordinates")
 
