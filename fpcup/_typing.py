@@ -8,9 +8,15 @@ from typing import Callable, Iterable, Optional, Type
 from geopandas import GeoSeries
 from shapely import Point, Polygon
 
+# Combinations of built-in types
 Coordinates = tuple[RealNumber, RealNumber]
 PathOrStr = PathLike | str
-StringDict = dict[str, str]
 
+# Mappings and other callables
+StringDict = dict[str, str]
+FuncDict = dict[str, Callable]
+Aggregator = FuncDict | Callable | str
+
+# Geographic data
 AreaDict = dict[str, Polygon]
 BoundaryDict = dict[str, GeoSeries]

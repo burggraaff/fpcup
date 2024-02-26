@@ -9,9 +9,11 @@ import geopandas as gpd
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
-from ._typing import Callable, Iterable
+from ._typing import Callable, FuncDict, Iterable
 
+# Columns in summary data that should be averaged over for aggregates
 KEYS_AGGREGATE = ["LAIMAX", "TWSO", "CTRAT", "CEVST"] + ["DOE", "DOM"]
+mean_dict = {key: "mean" for key in KEYS_AGGREGATE}
 
 def weighted_mean_for_DF(data: pd.DataFrame, *, weightby: str="area") -> Callable:
     """
@@ -39,7 +41,7 @@ def weighted_mean_datetime(data: pd.DataFrame, *, weightby: str="area") -> Calla
     return weighted_mean_DT
 
 def weighted_mean_dict(data: pd.DataFrame, *,
-                       keys=KEYS_AGGREGATE, weightby: str="area") -> dict[str, Callable]:
+                       keys=KEYS_AGGREGATE, weightby: str="area") -> FuncDict:
     """
     Generate a dictionary with the relevant weighted mean function for every key.
     """
@@ -47,3 +49,17 @@ def weighted_mean_dict(data: pd.DataFrame, *,
     wm_datetime = weighted_mean_datetime(data, weightby=weightby)
 
     return {key: wm_datetime if is_datetime(data[key]) else wm_numerical for key in keys}
+
+def default_aggregator(data: pd.DataFrame, *,
+                       keys=KEYS_AGGREGATE, weightby: str="area") -> FuncDict:
+    """
+    Generate an aggregator dictionary.
+    If weights are available, return weighted_mean_dict(*args, **kwargs).
+    If weights are not available, return mean_dict.
+    """
+    if weightby in data.columns:
+        aggregator = weighted_mean_dict(data, keys=keys, weightby=weightby)
+    else:
+        aggregator = mean_dict.copy()  # Return a copy in case it is edited elsewhere
+
+    return aggregator

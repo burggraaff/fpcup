@@ -21,7 +21,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 cividis_discrete = colormaps["cividis"].resampled(10)
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
-from ._typing import Iterable, Optional, PathOrStr, RealNumber, StringDict
+from ._typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
 from .analysis import KEYS_AGGREGATE
 from .constants import CRS_AMERSFOORT, WGS84
 from .geo import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3, entries_in_province
@@ -42,7 +42,7 @@ def plot_outline(ax: plt.Axes, province: str="Netherlands", *,
     else:
         line = boundary[province].to_crs(crs)
 
-    line_kw = {"color": "black", "lw": 1, **kwargs}
+    line_kw = {"color": "black", "lw": 0.5, **kwargs}
     line.plot(ax=ax, **line_kw)
 
 
@@ -261,11 +261,21 @@ def _numerical_or_date_bins(column: pd.Series) -> int | pd.DatetimeIndex:
         return rcParams["hist.bins"]
 
 
-def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
-                                 aggregate: bool=True, weights: Optional[Iterable[RealNumber]]=None, title: Optional[str]=None, province: Optional[str]="Netherlands", saveto: Optional[PathOrStr]=None) -> None:
+def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
+                                 aggregate: bool=True, aggregate_kwds={}, weights: Optional[str | Iterable[RealNumber]]=None, title: Optional[str]=None, province: Optional[str]="Netherlands", saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot histograms and (aggregate) maps showing WOFOST run summaries.
     """
+    # Aggregate the data if desired
+    if aggregate:
+        data_geo = aggregate_h3(summary, clipto=province, weightby=weights, **aggregate_kwds)
+        rasterized = False
+        dpi = rcParams["savefig.dpi"]
+    else:
+        data_geo = summary
+        rasterized = _RASTERIZE_GEO(summary)
+        dpi = 150
+
     # Create figure and panels
     fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5), gridspec_kw={"hspace": 0.25, "height_ratios": [1, 1.5]})
 
@@ -273,6 +283,10 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGR
     summary_cols = summary[keys]
     vmin, vmax = summary_cols.min(), summary_cols.max()
     bins = summary_cols.apply(_numerical_or_date_bins)
+
+    # If `weights` was given as a column name, get the associated data
+    if isinstance(weights, str):
+        weights = summary[weights]
 
     # Loop over keys
     for ax_col, key in zip(axs.T, keys):
@@ -290,17 +304,16 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGR
         ax_col[0].set_xlim(vmin[key], vmax[key])
 
         # Second row: maps
+        column = data_geo[key]
         if is_datetime(column):
             column = column.apply(mdates.date2num)
             vmin_here, vmax_here = column.min(), column.max()
         else:
             vmin_here, vmax_here = vmin[key], vmax[key]
 
-        rasterized = _RASTERIZE_GEO(column)
-
         divider = make_axes_locatable(ax_col[1])
         cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = summary.plot(column, ax=ax_col[1], rasterized=rasterized, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom"})
+        im = data_geo.plot(column, ax=ax_col[1], rasterized=rasterized, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom"})
 
     # Settings for map panels
     _configure_map_panels(axs[1], province)
@@ -313,15 +326,15 @@ def plot_wofost_ensemble_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGR
     fig.suptitle(title)
 
     if saveto is not None:
-        fig.savefig(saveto, bbox_inches="tight", dpi=150)
+        fig.savefig(saveto, bbox_inches="tight", dpi=dpi)
     else:
         plt.show()
 
     plt.close()
 
 
-def plot_wofost_ensemble_summary_aggregate(aggregate: gpd.GeoDataFrame, keys: Iterable[str]=None, *,
-                                 title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
+def plot_wofost_summary_byprovince(aggregate: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGREGATE, *,
+                                           title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot WOFOST ensemble summary results, aggregated by province.
     Rasterisation is ON because the province shapefiles are very complex.
@@ -360,7 +373,7 @@ def plot_wofost_ensemble_summary_aggregate(aggregate: gpd.GeoDataFrame, keys: It
     fig.suptitle(title)
 
     if saveto is not None:
-        fig.savefig(saveto, bbox_inches="tight")
+        fig.savefig(saveto, bbox_inches="tight", dpi=600)
     else:
         plt.show()
 

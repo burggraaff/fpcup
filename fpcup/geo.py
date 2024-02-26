@@ -2,6 +2,8 @@
 Geography-related constants and methods.
 Includes polygons/outlines of the Netherlands and its provinces.
 """
+from functools import wraps
+
 import geopandas as gpd
 gpd.options.io_engine = "pyogrio"
 import h3pandas
@@ -9,7 +11,8 @@ import numpy as np
 from pandas import DataFrame, Series
 from tqdm import tqdm
 
-from ._typing import AreaDict, BoundaryDict, Callable, Iterable, Optional
+from ._typing import Aggregator, AreaDict, BoundaryDict, Callable, Iterable, Optional, PathOrStr
+from .analysis import default_aggregator
 from .constants import CRS_AMERSFOORT, WGS84
 from .settings import DEFAULT_DATA
 
@@ -120,7 +123,7 @@ def add_provinces(data: gpd.GeoDataFrame, *,
 
 
 def add_province_geometry(data: DataFrame, which: str="area", *,
-                          column_name: Optional[str]=None, crs: str=CRS_AMERSFOORT) -> gpd.GeoDataFrame:
+                          column_name: Optional[str]=None) -> gpd.GeoDataFrame:
     """
     Add a column with province geometry to a DataFrame with a province name column/index.
     """
@@ -135,7 +138,7 @@ def add_province_geometry(data: DataFrame, which: str="area", *,
 
     # Apply the dictionary mapping
     geometry = column.map(area)
-    data_new = gpd.GeoDataFrame(data, geometry=geometry, crs=crs)
+    data_new = gpd.GeoDataFrame(data, geometry=geometry, crs=CRS_AMERSFOORT)
 
     # Change to outline if desired
     # (Doing this at the start gives an error)
@@ -175,29 +178,97 @@ def entries_in_province(data: gpd.GeoDataFrame, province: str) -> gpd.GeoDataFra
     return data.loc[entries]
 
 
-def aggregate_h3(_data: gpd.GeoDataFrame, functions: dict[str, Callable] | Callable | str="mean", *,
-                 level: int=6, clipto: Optional[str]="Netherlands") -> gpd.GeoDataFrame:
+def maintain_crs(func: Callable):
+    """
+    Decorator that ensures the output of an aggregation function is in the same CRS as the input, regardless of transformations that happen along the way.
+    """
+    @wraps(func)
+    def newfunc(data, *args, **kwargs):
+        crs_original = data.crs
+        data_new = func(data, *args, **kwargs)
+        data_new.to_crs(crs_original, inplace=True)
+        return data_new
+
+    return newfunc
+
+
+@maintain_crs
+def aggregate_province(_data: gpd.GeoDataFrame, *,
+                       aggregator: Optional[Aggregator]=None) -> gpd.GeoDataFrame:
+    """
+    Aggregate data to the provinces.
+    `aggregator` is passed to DataFrame.agg; if none is specified, then means or weighted means (depending on availability of weights) are used.
+    """
+    # Convert the input to CRS_AMERSFOORT for the aggregation and use the centroids
+    data = _data.copy()
+    data["geometry"] = data.to_crs(CRS_AMERSFOORT).centroid
+
+    # Add province information if not yet available
+    if "province" not in data.columns:
+        add_provinces(data, leave_progressbar=False)
+
+    # Aggregate the data
+    if aggregator is None:
+        aggregator = default_aggregator(data)
+    data_province = data.groupby("province").agg(aggregator)
+
+    # Add the province geometries
+    data_province = add_province_geometry(data_province)
+
+    return data_province
+
+
+def save_aggregate_province(data: gpd.GeoDataFrame, saveto: PathOrStr, **kwargs) -> None:
+    """
+    Save a provincial aggregate without the geometry information.
+    """
+    data.drop("geometry", axis=1).to_csv(saveto)
+
+
+def _default_h3_level(clipto: str) -> int:
+    """
+    Determine the default level for H3 aggregation.
+    Currently a simple choice between 7 (provinces) or 6 (Netherlands or unspecified).
+    Defined as a function rather than a dictionary to allow for future expansions, e.g. determining it by area coverage instead.
+    """
+    if clipto in PROVINCE_NAMES:
+        level = 7
+    else:
+        level = 6
+
+    return level
+
+
+@maintain_crs
+def aggregate_h3(_data: gpd.GeoDataFrame, *,
+                 aggregator: Optional[Aggregator]=None, level: Optional[int]=None, clipto: Optional[str]="Netherlands", weightby: str="area") -> gpd.GeoDataFrame:
     """
     Aggregate data to the H3 hexagonal grid.
-    `functions` is passed to DataFrame.agg.
+    `aggregator` is passed to DataFrame.agg; if none is specified, then means or weighted means (depending on availability of weights) are used.
     `clipto` is used to get a geometry, e.g. the Netherlands or one province, to clip the results to. Set it to `None` to preserve the full grid.
-
-    TO DO: See if using `clipto` to filter data to a given province before aggregation is faster.
     """
-    # Convert the input to WGS84 for the aggregation
-    crs_original = _data.crs
-    data = _data.copy()
-    data["geometry"] = data.centroid.to_crs(WGS84)
+    # Filter the data to the desired province
+    if clipto != "Netherlands":
+        _data = entries_in_province(_data, clipto)
 
-    # Aggregate the data and convert back to the original CRS
-    data_h3 = data.h3.geo_to_h3_aggregate(level, functions)
-    data_h3.to_crs(crs_original, inplace=True)
+    # Find the centroids in CRS_AMERSFOORT, then convert to WGS84 for aggregation
+    data = _data.copy()
+    centroids = data.to_crs(CRS_AMERSFOORT).centroid
+    data["geometry"] = centroids.to_crs(WGS84)
+
+    # Aggregate the data
+    if aggregator is None:
+        aggregator = default_aggregator(data, weightby=weightby)
+    if level is None:
+        level = _default_h3_level(clipto)
+    data_h3 = data.h3.geo_to_h3_aggregate(level, aggregator)
 
     # Clip the data if desired
     if clipto is not None:
         assert clipto in area.keys(), f"Cannot clip the H3 grid to '{clipto}' - unknown name. Please provide a province name, 'Netherlands', or None."
         clipto_geometry = area[clipto]
 
+        data_h3.to_crs(CRS_AMERSFOORT, inplace=True)
         data_h3["geometry"] = data_h3.intersection(clipto_geometry)
         data_h3 = data_h3.loc[~data_h3.is_empty]
 

@@ -51,16 +51,10 @@ if SINGLE_PROVINCE:
 
 # Check if area information is available (to be used in weights)
 AREA_AVAILABLE = ("area" in summary.columns)
-areas = summary["area"] if AREA_AVAILABLE else None
+weights = "area" if AREA_AVAILABLE else None
 if args.verbose:
     un = "un" if not AREA_AVAILABLE else ""
     print(f"Plot areas {un}available; histograms and means will be {un}weighted")
-
-# Define aggregation functions
-if AREA_AVAILABLE:
-    aggregator = fpcup.analysis.weighted_mean_dict(summary)
-else:
-    aggregator = {key: "mean" for key in fpcup.analysis.KEYS_AGGREGATE}
 
 # Useful information
 if args.verbose:
@@ -68,38 +62,23 @@ if args.verbose:
 
 # Plot summary results
 filename_summary = results_dir / f"WOFOST_{tag}-summary.pdf"
-
-fpcup.plotting.plot_wofost_ensemble_summary(summary, weights=areas, saveto=filename_summary, title=f"Summary of {len(summary)} WOFOST runs: {tag}", province=args.province)
+fpcup.plotting.plot_wofost_summary(summary, weights=weights, saveto=filename_summary, title=f"Summary of {len(summary)} WOFOST runs: {tag}", province=args.province)
 if args.verbose:
     print(f"Saved batch results plot to {filename_summary.absolute()}")
 
-# Aggregate results by province
-byprovince = summary.groupby("province")
-
 # Calculate the mean per province of several variables, weighted by plot area if possible
-if AREA_AVAILABLE:
-    filename_means = results_dir / f"WOFOST_{tag}-weighted-mean.csv"
+if not SINGLE_PROVINCE:
+    filename_province_means = results_dir / f"WOFOST_{tag}-summary-byprovince.csv"
+    filename_province_plot = results_dir / f"WOFOST_{tag}-summary-byprovince.pdf"
+
+    summary_byprovince = fpcup.geo.aggregate_province(summary)
+    fpcup.geo.save_aggregate_province(summary_byprovince, filename_province_means)
     if args.verbose:
-        print("Calculating weighted means")
+        print(f"Saved provincial aggregate columns to {filename_province_means.absolute()}")
 
-# Use a normal mean if there is no area information available
-else:
-    filename_means = results_dir / f"WOFOST_{tag}-mean.csv"
+    fpcup.plotting.plot_wofost_summary_byprovince(summary_byprovince, title=f"Summary of {len(summary)} WOFOST runs (by province): {tag}", saveto=filename_province_plot)
     if args.verbose:
-        print("Could not calculate weighted means because there is no 'area' column -- defaulting to a regular mean")
-
-byprovince_mean = byprovince[fpcup.analysis.KEYS_AGGREGATE].agg(aggregator)
-byprovince_mean.to_csv(filename_means)
-if args.verbose:
-    print(f"Saved aggregate mean columns to {filename_means.absolute()}")
-
-# Add geometry and plot the results
-byprovince_mean = fpcup.geo.add_province_geometry(byprovince_mean, "area")
-filename_aggregate = results_dir / f"WOFOST_{tag}-summary-aggregate.pdf"
-
-fpcup.plotting.plot_wofost_ensemble_summary_aggregate(byprovince_mean, keys=fpcup.analysis.KEYS_AGGREGATE, title=f"Summary of {len(summary)} WOFOST runs (aggregate): {tag}", saveto=filename_aggregate)
-if args.verbose:
-    print(f"Saved aggregate mean plot to {filename_aggregate.absolute()}")
+        print(f"Saved provincial aggregate plot to {filename_province_plot.absolute()}")
 
 # Space between summary and outputs sections
 if args.verbose:
