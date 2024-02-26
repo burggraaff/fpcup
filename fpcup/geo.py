@@ -251,10 +251,11 @@ def aggregate_h3(_data: gpd.GeoDataFrame, *,
     if clipto != "Netherlands":
         _data = entries_in_province(_data, clipto)
 
-    # Find the centroids in CRS_AMERSFOORT, then convert to WGS84 for aggregation
+    # Find the centroids in a projected CRS, then convert to WGS84 for aggregation
     data = _data.copy()
-    centroids = data.to_crs(CRS_AMERSFOORT).centroid
-    data["geometry"] = centroids.to_crs(WGS84)
+    if not data.crs.is_projected:
+        data.to_crs(CRS_AMERSFOORT, inplace=True)
+    data["geometry"] = data.centroid.to_crs(WGS84)
 
     # Aggregate the data
     if aggregator is None:
