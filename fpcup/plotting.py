@@ -2,6 +2,7 @@
 Functions for plotting data and results
 """
 import datetime as dt
+from functools import partial
 
 import geopandas as gpd
 import pandas as pd
@@ -11,12 +12,12 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt, dates as mdates, patches as mpatches, ticker as mticker
 from matplotlib import colormaps, rcParams
 rcParams.update({"axes.grid": True,
-                 "figure.dpi": 600,
+                 "figure.dpi": 600, "savefig.dpi": 600,
                  "grid.linestyle": "--",
                  "hist.bins": 15,
                  "image.cmap": "cividis",
                  "legend.edgecolor": "black", "legend.framealpha": 1,
-                 "savefig.dpi": 600})
+                 })
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 cividis_discrete = colormaps["cividis"].resampled(10)
 
@@ -261,11 +262,131 @@ def _numerical_or_date_bins(column: pd.Series) -> int | pd.DatetimeIndex:
         return rcParams["hist.bins"]
 
 
+def _configure_histogram_datetime(ax: plt.Axes) -> None:
+    """
+    Adjust the axes on a datetime histogram so they are formatted properly.
+    """
+    locator = mdates.AutoDateLocator()
+    ax.xaxis.set_major_locator(locator)
+
+    formatter = mdates.ConciseDateFormatter(locator)
+    ax.xaxis.set_major_formatter(formatter)
+
+
+def wofost_summary_histogram(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
+                             axs: Optional[Iterable[plt.Axes]]=None, weights: Optional[str | Iterable[RealNumber]]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
+    """
+    Plot histograms showing WOFOST run summaries.
+    If `axs` is specified, use existing Axes and do not apply figure settings or save anything.
+    If `axs` is None, create a new figure.
+    """
+    NEW_FIGURE = (axs is None)
+
+    # If `weights` was given as a column name, get the associated data
+    if isinstance(weights, str):
+        weights = summary[weights]
+
+    # Determine some parameters before the loop
+    summary_cols = summary[keys]
+    vmin, vmax = summary_cols.min(), summary_cols.max()
+    bins = summary_cols.apply(_numerical_or_date_bins)
+
+    # Configure figure and axes if none were provided
+    if NEW_FIGURE:
+        fig, axs = plt.subplots(nrows=1, ncols=len(keys), sharey=True, figsize=(3*len(keys), 3))
+    else:
+        fig = axs[0].figure  # Assume all axes are in the same figure
+
+    # Plot the histograms
+    for ax, key in zip(axs, keys):
+        column = summary[key]
+
+        if is_datetime(column):
+            _configure_histogram_datetime(ax)
+
+        column.plot.hist(ax=ax, bins=bins[key], weights=weights, facecolor="black")
+
+        # Panel settings
+        ax.set_title(key)
+        ax.set_xlim(vmin[key], vmax[key])
+
+    # Labels
+    axs[0].set_ylabel("Distribution")
+    fig.align_xlabels()
+    if NEW_FIGURE:
+        if title is None:
+            title = f"Results from {len(summary)} WOFOST runs"
+        fig.suptitle(title)
+
+    # Save/show the figure
+    if NEW_FIGURE:
+        if saveto is not None:
+            fig.savefig(saveto, bbox_inches="tight")
+        else:
+            plt.show()
+
+        plt.close()
+
+
+def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGREGATE, *,
+                       axs: Optional[Iterable[plt.Axes]]=None, title: Optional[str]=None, rasterized: bool=True,
+                       province: Optional[str]="Netherlands", coarse: bool=False,
+                       saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+    """
+    Plot geographical maps showing WOFOST run summaries.
+    If `axs` is specified, use existing Axes and do not apply figure settings or save anything.
+    If `axs` is None, create a new figure.
+    Note that `province` only determines the outline(s) to be drawn - this function does not aggregate or filter data.
+    """
+    NEW_FIGURE = (axs is None)
+
+    # Configure figure and axes if none were provided
+    if NEW_FIGURE:
+        fig, axs = plt.subplots(nrows=1, ncols=len(keys), sharex=True, sharey=True, figsize=(3*len(keys), 3))
+    else:
+        fig = axs[0].figure  # Assume all axes are in the same figure
+
+    # Plot the maps
+    for ax, key in zip(axs, keys):
+        # Second row: maps
+        column = data_geo[key]
+        if is_datetime(column):
+            column = column.apply(mdates.date2num)
+        vmin, vmax = column.min(), column.max()
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("bottom", size="5%", pad=0.1)
+        im = data_geo.plot.geo(column, ax=ax, vmin=vmin, vmax=vmax, rasterized=rasterized, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom", "label": key}, **kwargs)
+
+    # Settings for map panels
+    _configure_map_panels(axs, province, coarse=coarse, crs=data_geo.crs)
+
+    # Labels
+    if NEW_FIGURE:
+        fig.suptitle(title)
+
+    # Save/show the figure
+    if NEW_FIGURE:
+        if saveto is not None:
+            fig.savefig(saveto, bbox_inches="tight")
+        else:
+            plt.show()
+
+        plt.close()
+
+
 def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
                                  aggregate: bool=True, aggregate_kwds={}, weights: Optional[str | Iterable[RealNumber]]=None, title: Optional[str]=None, province: Optional[str]="Netherlands", saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot histograms and (aggregate) maps showing WOFOST run summaries.
     """
+    # Create figure and panels
+    fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5), gridspec_kw={"hspace": 0.25, "height_ratios": [1, 1.5]})
+
+    ### First row: histograms
+    wofost_summary_histogram(summary, keys, axs=axs[0], weights=weights)
+
+    ### Second row: maps
     # Aggregate the data if desired
     if aggregate:
         data_geo = aggregate_h3(summary, clipto=province, weightby=weights, **aggregate_kwds)
@@ -276,55 +397,14 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
         rasterized = _RASTERIZE_GEO(summary)
         dpi = 150
 
-    # Create figure and panels
-    fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5), gridspec_kw={"hspace": 0.25, "height_ratios": [1, 1.5]})
+    wofost_summary_geo(data_geo, keys, axs=axs[1], rasterized=rasterized, province=province)
 
-    # Determine some parameters before the loop
-    summary_cols = summary[keys]
-    vmin, vmax = summary_cols.min(), summary_cols.max()
-    bins = summary_cols.apply(_numerical_or_date_bins)
-
-    # If `weights` was given as a column name, get the associated data
-    if isinstance(weights, str):
-        weights = summary[weights]
-
-    # Loop over keys
-    for ax_col, key in zip(axs.T, keys):
-        column = summary[key]
-
-        # First row: histograms
-        if is_datetime(column):
-            locator = mdates.AutoDateLocator()
-            formatter = mdates.ConciseDateFormatter(locator)
-            ax_col[0].xaxis.set_major_locator(locator)
-            ax_col[0].xaxis.set_major_formatter(formatter)
-
-        column.plot.hist(ax=ax_col[0], bins=bins[key], weights=weights)
-        ax_col[0].set_title(key)
-        ax_col[0].set_xlim(vmin[key], vmax[key])
-
-        # Second row: maps
-        column = data_geo[key]
-        if is_datetime(column):
-            column = column.apply(mdates.date2num)
-            vmin_here, vmax_here = column.min(), column.max()
-        else:
-            vmin_here, vmax_here = vmin[key], vmax[key]
-
-        divider = make_axes_locatable(ax_col[1])
-        cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = data_geo.plot(column, ax=ax_col[1], rasterized=rasterized, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom"})
-
-    # Settings for map panels
-    _configure_map_panels(axs[1], province)
-
-    axs[0, 0].set_ylabel("Distribution")
-    fig.align_xlabels()
-
+    ### Figure settings
     if title is None:
         title = f"Results from {len(summary)} WOFOST runs"
     fig.suptitle(title)
 
+    ### Save/show results
     if saveto is not None:
         fig.savefig(saveto, bbox_inches="tight", dpi=dpi)
     else:
@@ -333,48 +413,4 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
     plt.close()
 
 
-def plot_wofost_summary_byprovince(aggregate: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGREGATE, *,
-                                           title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
-    """
-    Plot WOFOST ensemble summary results, aggregated by province.
-    Rasterisation is ON because the province shapefiles are very complex.
-    """
-    # If no keys were specified, get all of them
-    if keys is None:
-        keys = aggregate.keys()
-
-    # Create figure and panels
-    fig, axs = plt.subplots(nrows=1, ncols=len(keys), figsize=(15, 3))
-
-    # Determine some parameters before the loop
-    aggregate_cols = aggregate[keys]
-    vmin, vmax = aggregate_cols.min(), aggregate_cols.max()
-
-    # Loop over keys
-    for ax, key in zip(axs, keys):
-        column = aggregate[key]
-
-        # Plot maps
-        if is_datetime(column):
-            column = column.apply(mdates.date2num)
-            vmin_here, vmax_here = column.min(), column.max()
-        else:
-            vmin_here, vmax_here = vmin[key], vmax[key]
-
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("bottom", size="5%", pad=0.1)
-        im = aggregate.plot(column, ax=ax, rasterized=True, vmin=vmin_here, vmax=vmax_here, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom", "label": key})
-
-    # Settings for map panels
-    _configure_map_panels(axs, PROVINCE_NAMES, coarse=True, lw=0.5)
-
-    if title is None:
-        title = f"Results aggregated by province"
-    fig.suptitle(title)
-
-    if saveto is not None:
-        fig.savefig(saveto, bbox_inches="tight", dpi=600)
-    else:
-        plt.show()
-
-    plt.close()
+plot_wofost_summary_byprovince = partial(wofost_summary_geo, rasterized=True, province=PROVINCE_NAMES, coarse=True)
