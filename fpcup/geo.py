@@ -2,6 +2,7 @@
 Geography-related constants and methods.
 Includes polygons/outlines of the Netherlands and its provinces.
 """
+import random
 from functools import wraps
 
 import geopandas as gpd
@@ -9,6 +10,7 @@ gpd.options.io_engine = "pyogrio"
 import h3pandas
 import numpy as np
 from pandas import DataFrame, Series
+from shapely import Geometry, Point, Polygon
 from tqdm import tqdm
 
 from ._typing import Aggregator, AreaDict, BoundaryDict, Callable, Iterable, Optional, PathOrStr
@@ -46,6 +48,16 @@ boundary = {name: gpd.GeoSeries(outline, crs=CRS_AMERSFOORT) for name, outline i
 boundary = {**_boundary_netherlands, **boundary}
 
 boundary_coarse = {name: gpd.GeoSeries(poly.boundary, crs=CRS_AMERSFOORT) for name, poly in area_coarse.items()}
+
+
+def transform_geometry(geometry: Geometry, crs_old: str, crs_new: str) -> Geometry:
+    """
+    Transform a bare Geometry object from one CRS to another.
+    """
+    geometry_gpd = gpd.GeoSeries(geometry, crs=crs_old)
+    transformed_gpd = geometry_gpd.to_crs(crs_new)
+    geometry_new = transformed_gpd.iloc[0]
+    return geometry_new
 
 
 def process_input_province(province: str) -> str:
@@ -274,3 +286,50 @@ def aggregate_h3(_data: gpd.GeoDataFrame, *,
         data_h3 = data_h3.loc[~data_h3.is_empty]
 
     return data_h3
+
+
+def _generate_random_point_within_bounds(min_lon, min_lat, max_lon, max_lat) -> Point:
+    """
+    Generate one random shapely Point within the given bounds.
+    The inputs are in the same order as the outputs of Polygon.bounds (in WGS84), so this function can be called as _generate_random_point_within_bounds(*bounds).
+    """
+    latitude = random.uniform(min_lat, max_lat)
+    longitude = random.uniform(min_lon, max_lon)
+    return Point(longitude, latitude)
+
+
+def _generate_random_point_in_geometry(geometry: Geometry, *, crs=CRS_AMERSFOORT) -> Point:
+    """
+    Generate a single random point that lies within a geometry.
+    Unfortunately quite slow due to the many "contains" checks.
+    """
+    polygon = transform_geometry(geometry, crs, WGS84)  # Convert to WGS84 coordinates
+    while True:  # Infinite generator
+        # Generate points randomly until one falls within the given geometry
+        p = _generate_random_point_within_bounds(*polygon.bounds)
+
+        # If a point was successfully generated, yield it
+        if polygon.contains(p):
+            # Doing a first check with the convex hull does not help here
+            yield p
+
+
+def _generate_random_point_in_geometry_batch(geometry: Geometry, n: int, *,  crs=CRS_AMERSFOORT) -> gpd.GeoSeries:
+    """
+    Generate a batch of random points and return the ones that fall within the given geometry.
+    """
+    polygon = transform_geometry(geometry, crs, WGS84)  # Convert to WGS84 coordinates
+
+    points = gpd.GeoSeries((_generate_random_point_within_bounds(*polygon.bounds) for i in range(n)), crs=WGS84)
+    points_in_polygon = points.loc[points.within(polygon)]
+
+    return points_in_polygon
+
+
+def coverage_of_bounding_box(geometry: Geometry) -> float:
+    """
+    Calculate the fraction of its bounding box covered by a given geometry.
+    """
+    min_x, min_y, max_x, max_y = geometry.bounds
+    area_box = (max_x - min_x) * (max_y - min_y)
+    return geometry.area / area_box

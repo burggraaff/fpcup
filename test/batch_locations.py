@@ -19,8 +19,12 @@ args = parser.parse_args()
 
 # Generate the coordinates
 crs = fpcup.constants.WGS84
-bounds = fpcup.geo.boundary[args.province].to_crs(crs).bounds.iloc[0]
-coords = fpcup.site.grid_coordinate_linspace(latitude=(bounds["miny"], bounds["maxy"]), longitude=(bounds["minx"], bounds["maxx"]), n=args.number)
+SINGLE_PROVINCE = (args.province != "Netherlands")
+
+if SINGLE_PROVINCE:
+    coords = fpcup.site.generate_sites_in_province(args.province, args.number, leave_progressbar=args.verbose)
+else:
+    coords = fpcup.site.generate_sites_space(latitude=(50.7, 53.6), longitude=(3.3, 7.3), n=args.number)
 if args.verbose:
     print(f"Generated {len(coords)} coordinates")
 

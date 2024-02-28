@@ -1,16 +1,22 @@
 """
 Site-related stuff: load data etc
 """
+import random
+from functools import partial, wraps
 from itertools import product
-from random import shuffle
 
 import numpy as np
+from pandas import concat
+from shapely import Point
+from tqdm import trange
 
 from pcse.util import WOFOST72SiteDataProvider, WOFOST80SiteDataProvider
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
-from ._brp_dictionary import brp_categories_NL2EN
-from ._typing import RealNumber
+from ._typing import Callable, Coordinates, Iterable, RealNumber
+from .constants import CRS_AMERSFOORT, WGS84
+from .geo import area, _generate_random_point_in_geometry, _generate_random_point_in_geometry_batch, coverage_of_bounding_box
+
 
 def example(*args, **kwargs) -> PCSESiteDataProvider:
     """
@@ -19,48 +25,94 @@ def example(*args, **kwargs) -> PCSESiteDataProvider:
     sitedata = WOFOST72SiteDataProvider(WAV=10)
     return sitedata
 
-def grid_coordinate_range(latitude: tuple[RealNumber], longitude: tuple[RealNumber], *,
-                          shuffle_result=True) -> list[tuple[float]]:
+
+def combine_and_shuffle_coordinates(latitudes: Iterable[RealNumber], longitudes: Iterable[RealNumber], *,
+                                    shuffle: bool=True) -> list[Coordinates]:
+    """
+    Post-process lists of latitudes and longitudes into a list of combined coordinate pairs.
+    """
+    # Combine the coordinates into pairs
+    coordinates = product(latitudes, longitudes)
+    coordinates = list(coordinates)
+
+    # Randomise order
+    if shuffle:
+        random.shuffle(coordinates)  # In-place
+
+    return coordinates
+
+def generate_sites_range(latitude: tuple[RealNumber], longitude: tuple[RealNumber], *,
+                         shuffle: bool=True) -> tuple[np.ndarray, np.ndarray]:
     """
     Generate all pairs of latitude/longitude coordinates in given latitude/longitude ranges.
     Inputs should be tuples that can be passed to np.arange as parameters.
-    The output is given as a list so it can be iterated over multiple times.
-    If `shuffle_result` is True (default: True), the list is shuffled randomly, so that incomplete runs will still provide adequate coverage over the whole area.
-
-    Example:
-        coords = grid_coordinate_range(latitudes=(50, 52, 0.1), longitudes=(5, 10, 1))
     """
-    latitude_range = np.arange(*latitude)
-    longitude_range = np.arange(*longitude)
-    coordinates = product(latitude_range, longitude_range)
-    coordinates = list(coordinates)
+    latitudes = np.arange(*latitude)
+    longitudes = np.arange(*longitude)
+    return combine_and_shuffle_coordinates(latitudes, longitudes, shuffle=shuffle)
 
-    # Randomise order if desired
-    if shuffle_result:
-        shuffle(coordinates)  # In-place
 
-    return coordinates
-
-def grid_coordinate_linspace(latitude: tuple[RealNumber], longitude: tuple[RealNumber], n: int, *,
-                             shuffle_result=True) -> list[tuple[float]]:
+def generate_sites_space(latitude: tuple[RealNumber], longitude: tuple[RealNumber], n: int, *,
+                         shuffle: bool=True) -> tuple[np.ndarray, np.ndarray]:
     """
     Generate n pairs of latitude/longitude coordinates in a given area bound by latitude/longitude ranges.
     Inputs should be tuples of (min, max) latitude/longitude.
-    The output is given as a list so it can be iterated over multiple times.
     Note: the true size of the output may be smaller than n due to rounding.
-    If `shuffle_result` is True (default: True), the list is shuffled randomly, so that incomplete runs will still provide adequate coverage over the whole area.
-
-    Example:
-        coords = grid_coordinate_range(latitudes=(50, 52), longitudes=(5, 10), n=1000)
     """
     n_each = int(np.sqrt(n))
-    latitude_range = np.linspace(*latitude, n_each)
-    longitude_range = np.linspace(*longitude, n_each)
-    coordinates = product(latitude_range, longitude_range)
-    coordinates = list(coordinates)
+    latitudes = np.linspace(*latitude, n_each)
+    longitudes = np.linspace(*longitude, n_each)
+    return combine_and_shuffle_coordinates(latitudes, longitudes, shuffle=shuffle)
 
-    # Randomise order if desired
-    if shuffle_result:
-        shuffle(coordinates)  # In-place
+
+def points_to_coordinates(points: Iterable[Point]) -> list[Coordinates]:
+    """
+    Split shapely Points into (latitude, longitude) pairs.
+    """
+    return [(p.y, p.x) for p in points]
+
+
+def generate_sites_in_province_frombatch(province: str, n: int, **kwargs) -> list[Coordinates]:
+    """
+    Generate n pairs of latitude/longitude coordinates that are (roughly) uniformly distributed over the given province.
+    Points are generated in WGS84 so they may not be uniformly distributed in other CRSes.
+    The output is given as a list so it can be iterated over multiple times.
+    """
+    geometry = area[province]  # geometry in CRS_AMERSFOORT
+
+    # Estimate roughly by how much to overshoot for each iteration
+    coverage = coverage_of_bounding_box(geometry)
+    n_safe = int(n / coverage)
+
+    # Generate the first iteration of points
+    points = _generate_random_point_in_geometry_batch(geometry, n_safe)
+
+    # Iterate until there are enough points
+    while len(points) < n:
+        new_points = _generate_random_point_in_geometry_batch(geometry, n_safe//10)
+        points = concat([points, new_points])
+
+    # Cut off any excess
+    points = points.iloc[:n]
+
+    # Extract and return the latitudes and longitudes
+    coordinates = points_to_coordinates(points)
+    return coordinates
+
+
+def generate_sites_in_province_fromgenerator(province: str, n: int, *,
+                                             progressbar=True, leave_progressbar=True) -> list[Coordinates]:
+    """
+    Generate n pairs of latitude/longitude coordinates that are (roughly) uniformly distributed over the given province.
+    Points are generated in WGS84 so they may not be uniformly distributed in other CRSes.
+    The output is given as a list so it can be iterated over multiple times.
+    """
+    geometry = area[province]  # geometry in CRS_AMERSFOORT
+    point_generator = _generate_random_point_in_geometry(geometry, crs=CRS_AMERSFOORT)
+    points = [next(point_generator) for i in trange(n, desc="Generating sites", unit="site", disable=not progressbar, leave=leave_progressbar)]
+    coordinates = points_to_coordinates(points)
 
     return coordinates
+
+
+generate_sites_in_province = generate_sites_in_province_fromgenerator
