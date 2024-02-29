@@ -14,7 +14,7 @@ from shapely import Geometry, Point, Polygon
 from tqdm import tqdm
 
 from ._typing import Aggregator, AreaDict, BoundaryDict, Callable, Iterable, Optional, PathOrStr
-from .analysis import default_aggregator
+from .analysis import default_aggregator, rename_after_aggregation
 from .constants import CRS_AMERSFOORT, WGS84
 from .settings import DEFAULT_DATA
 
@@ -190,7 +190,7 @@ def entries_in_province(data: gpd.GeoDataFrame, province: str) -> gpd.GeoDataFra
     return data.loc[entries]
 
 
-def maintain_crs(func: Callable):
+def maintain_crs(func: Callable) -> Callable:
     """
     Decorator that ensures the output of an aggregation function is in the same CRS as the input, regardless of transformations that happen along the way.
     """
@@ -222,7 +222,7 @@ def aggregate_province(_data: gpd.GeoDataFrame, *,
     # Aggregate the data
     if aggregator is None:
         aggregator = default_aggregator(data)
-    data_province = data.groupby("province").agg(aggregator)
+    data_province = data.groupby("province").agg(aggregator).rename(columns=rename_after_aggregation)
 
     # Add the province geometries
     data_province = add_province_geometry(data_province)
@@ -274,7 +274,7 @@ def aggregate_h3(_data: gpd.GeoDataFrame, *,
         aggregator = default_aggregator(data, weightby=weightby)
     if level is None:
         level = _default_h3_level(clipto)
-    data_h3 = data.h3.geo_to_h3_aggregate(level, aggregator)
+    data_h3 = data.h3.geo_to_h3_aggregate(level, aggregator).rename(columns=rename_after_aggregation)
 
     # Clip the data if desired
     if clipto is not None:

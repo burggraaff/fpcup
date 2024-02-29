@@ -32,6 +32,7 @@ from .tools import make_iterable
 _RASTERIZE_LIMIT_GEO = 250  # Plot geo data in raster format if there are more than this number
 _RASTERIZE_GEO = lambda data: (len(data) > _RASTERIZE_LIMIT_GEO)
 
+KEYS_AGGREGATE_PLOT = ("n", "area", *KEYS_AGGREGATE)
 
 def plot_outline(ax: plt.Axes, province: str="Netherlands", *,
                  coarse: bool=False, crs: str=CRS_AMERSFOORT, **kwargs) -> None:
@@ -286,11 +287,6 @@ def wofost_summary_histogram(summary: Summary, keys: Iterable[str]=KEYS_AGGREGAT
     if isinstance(weights, str):
         weights = summary[weights]
 
-    # Determine some parameters before the loop
-    summary_cols = summary[keys]
-    vmin, vmax = summary_cols.min(), summary_cols.max()
-    bins = summary_cols.apply(_numerical_or_date_bins)
-
     # Configure figure and axes if none were provided
     if NEW_FIGURE:
         fig, axs = plt.subplots(nrows=1, ncols=len(keys), sharey=True, figsize=(3*len(keys), 3))
@@ -299,19 +295,24 @@ def wofost_summary_histogram(summary: Summary, keys: Iterable[str]=KEYS_AGGREGAT
 
     # Plot the histograms
     for ax, key in zip(axs, keys):
+        # Leave an empty panel for keys which may be passed from plot_wofost_summary but which only apply to the geo plot
+        if key in ("n", "area"):
+            ax.set_axis_off()
+            continue
+
         column = summary[key]
 
         if is_datetime(column):
             _configure_histogram_datetime(ax)
 
-        column.plot.hist(ax=ax, bins=bins[key], weights=weights, facecolor="black")
+        bins = _numerical_or_date_bins(column)
+        column.plot.hist(ax=ax, bins=bins, weights=weights, facecolor="black")
 
         # Panel settings
         ax.set_title(key)
-        ax.set_xlim(vmin[key], vmax[key])
+        ax.set_xlim(column.min(), column.max())
 
     # Labels
-    axs[0].set_ylabel("Distribution")
     fig.align_xlabels()
     if NEW_FIGURE:
         if title is None:
@@ -328,7 +329,14 @@ def wofost_summary_histogram(summary: Summary, keys: Iterable[str]=KEYS_AGGREGAT
         plt.close()
 
 
-def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGREGATE, *,
+def _remove_area_from_keys(keys: Iterable[str]) -> tuple[str]:
+    """
+    Remove the "area" key from a list of keys.
+    """
+    return tuple(k for k in keys if k != "area")
+
+
+def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGREGATE_PLOT, *,
                        axs: Optional[Iterable[plt.Axes]]=None, title: Optional[str]=None, rasterized: bool=True,
                        province: Optional[str]="Netherlands", coarse: bool=False,
                        saveto: Optional[PathOrStr]=None, **kwargs) -> None:
@@ -339,6 +347,10 @@ def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGR
     Note that `province` only determines the outline(s) to be drawn - this function does not aggregate or filter data.
     """
     NEW_FIGURE = (axs is None)
+
+    # Don't plot area if this is not available
+    if NEW_FIGURE and "area" in keys and "area" not in data_geo.columns:
+        keys = _remove_area_from_keys(keys)
 
     # Configure figure and axes if none were provided
     if NEW_FIGURE:
@@ -375,11 +387,15 @@ def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGR
         plt.close()
 
 
-def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
+def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLOT, *,
                                  aggregate: bool=True, aggregate_kwds={}, weights: Optional[str | Iterable[RealNumber]]=None, title: Optional[str]=None, province: Optional[str]="Netherlands", saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot histograms and (aggregate) maps showing WOFOST run summaries.
     """
+    # Don't plot area if this is not available
+    if "area" in keys and "area" not in summary.columns:
+        keys = _remove_area_from_keys(keys)
+
     # Create figure and panels
     fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5), gridspec_kw={"hspace": 0.25, "height_ratios": [1, 1.5]})
 
@@ -390,7 +406,7 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
     # Aggregate the data if desired
     if aggregate:
         data_geo = aggregate_h3(summary, clipto=province, weightby=weights, **aggregate_kwds)
-        rasterized = False
+        rasterized = True
         dpi = rcParams["savefig.dpi"]
     else:
         data_geo = summary
