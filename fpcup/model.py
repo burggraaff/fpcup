@@ -44,7 +44,10 @@ parameter_names = {"DVS": "Crop development stage",
                    "DOM": "Date of maturity",
                    "DOH": "Date of harvest",
                    "DOV": "Date of vernalisation",
-                   "CEVST": "Cumulative soil evaporation [cm]"}
+                   "CEVST": "Cumulative soil evaporation [cm]",
+                   "area": "Total area [ha]",
+                   "n": "Number of sites",
+                   }
 
 
 class RunData(tuple):
