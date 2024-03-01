@@ -214,7 +214,7 @@ class Summary(gpd.GeoDataFrame):
 
         # Load the files (with a tqdm progressbar if desired)
         filenames = tqdm(filenames, desc="Loading summaries", unit="file", disable=not progressbar, leave=leave_progressbar)
-        summaries_individual = [cls.from_file(filename) for filename in filenames]
+        summaries_individual = (cls.from_file(filename) for filename in filenames)
         return cls.from_ensemble(summaries_individual)
 
     def to_file(self, filename: PathOrStr, **kwargs) -> None:
