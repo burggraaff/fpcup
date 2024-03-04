@@ -30,8 +30,7 @@ if args.verbose:
 
 ### Generate constants
 # Soil data
-soil_dir = args.data_dir / "soil"
-soildata = fpcup.soil.load_folder(soil_dir)[0]
+soildata = fpcup.soil.soil_types["ec1"]
 if args.verbose:
     print("Loaded soil data")
 

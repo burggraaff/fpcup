@@ -64,8 +64,7 @@ if USE_COMMON_CROPTYPE:
         print(agromanagement)
 
 # Pre-load data (to be improved)
-soil_dir = args.data_dir / "soil"
-soildata = fpcup.soil.load_folder(soil_dir)[0]
+soildata = fpcup.soil.soil_types["ec1"]
 cropdata = fpcup.crop.default
 
 failed_runs = []

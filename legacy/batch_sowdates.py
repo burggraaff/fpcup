@@ -30,8 +30,7 @@ if args.verbose:
     print("Loaded weather data")
 
 # Soil data
-soil_dir = args.data_dir / "soil"
-soildata = fpcup.soil.load_folder(soil_dir)
+soildata = fpcup.soil.soil_types["ec1"]
 if args.verbose:
     print("Loaded soil data")
 
