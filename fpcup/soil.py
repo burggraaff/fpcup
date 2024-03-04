@@ -14,7 +14,7 @@ DEFAULT_SOIL_DATA = DEFAULT_DATA / "soil"
 # N.B. type hinting does not account for this yet
 dummy = DummySoilDataProvider()
 
-def load_folder(folder: PathOrStr=DEFAULT_SOIL_DATA, pattern: str="ec*") -> dict[str, CABOFileReader]:
+def load_folder(folder: PathOrStr, pattern: str="ec*") -> dict[str, CABOFileReader]:
     """
     Load all soil files from a given folder, matching a given pattern.
     """
@@ -27,4 +27,4 @@ def load_folder(folder: PathOrStr=DEFAULT_SOIL_DATA, pattern: str="ec*") -> dict
 
     return soil_files
 
-soil_types = load_folder()
+soil_types = load_folder(DEFAULT_SOIL_DATA)
