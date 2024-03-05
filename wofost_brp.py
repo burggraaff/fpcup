@@ -101,11 +101,11 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     output = fpcup.model.run_pcse_single(run)
 
     # Save the results to file
-    # try:
-    output.to_file(args.output_dir)
+    try:
+        output.to_file(args.output_dir)
     # If the run failed, saving to file will also fail, so we instead note that this run failed
-    # except AttributeError:
-        # failed_runs.append(i)
+    except AttributeError:
+        failed_runs.append(i)
 
 # Feedback on failed runs: if any failed, let the user know. If none failed, only let the user know in verbose mode.
 print()
