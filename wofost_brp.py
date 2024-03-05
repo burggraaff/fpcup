@@ -1,5 +1,8 @@
 """
 Run PCSE for plots within the BRP.
+
+Example:
+    %run wofost_brp.py data/brp/brpgewaspercelen_definitief_2022-processed.gpkg -v -c barley -p zeeland -f
 """
 from tqdm import tqdm
 import datetime as dt
@@ -98,11 +101,11 @@ for i, row in tqdm(brp.iterrows(), total=len(brp), desc="Running PCSE", unit="pl
     output = fpcup.model.run_pcse_single(run)
 
     # Save the results to file
-    try:
-        output.to_file(args.output_dir)
+    # try:
+    output.to_file(args.output_dir)
     # If the run failed, saving to file will also fail, so we instead note that this run failed
-    except AttributeError:
-        failed_runs.append(i)
+    # except AttributeError:
+        # failed_runs.append(i)
 
 # Feedback on failed runs: if any failed, let the user know. If none failed, only let the user know in verbose mode.
 print()
@@ -112,9 +115,5 @@ else:
     if args.verbose:
         print("No runs failed.")
 
-# Combine the summary files into a single file
-summary = fpcup.model.Summary.from_folder(args.output_dir, leave_progressbar=args.verbose)
-summary_filename = args.output_dir / "ensemble.wsum"
-summary.to_file(summary_filename)
-if args.verbose:
-    print(f"\nSaved ensemble summary to {summary_filename.absolute()}")
+# Save an ensemble summary
+fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose, use_existing=not args.force)

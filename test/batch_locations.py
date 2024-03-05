@@ -1,5 +1,8 @@
 """
 Run a PCSE ensemble for multiple (WGS84) coordinates, with all other parameters held constant.
+
+Example:
+    %run test/batch_locations.py -v -n 1000 -p Zeeland
 """
 from pathlib import Path
 
@@ -75,9 +78,5 @@ else:
     if args.verbose:
         print("No runs failed.")
 
-# Combine the summary files into a single file
-summary = fpcup.model.Summary.from_folder(args.output_dir, leave_progressbar=args.verbose)
-summary_filename = args.output_dir / "ensemble.wsum"
-summary.to_file(summary_filename)
-if args.verbose:
-    print(f"\nSaved ensemble summary to {summary_filename.absolute()}")
+# Save an ensemble summary
+fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose)

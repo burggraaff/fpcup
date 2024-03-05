@@ -214,9 +214,14 @@ class Summary(gpd.GeoDataFrame):
 
         # If there is an existing summary file, use that and append the new files to it
         if use_existing and ENSEMBLE_EXISTS:
-            ensemble = cls.from_file(filename_ensemble)  # Note that the ensemble gets loaded twice
+            ensemble = cls.from_file(filename_ensemble)  # Note that the ensemble may get loaded twice
             filenames = [f for f in filenames if f.stem not in ensemble.index]
-        # Do not load the ensemble if desired
+
+            # If all files are in the ensemble already, simply return that
+            if len(filenames) == 1:
+                return ensemble
+
+        # If desired, do not load the ensemble, but use all individual summaries instead
         elif not use_existing and ENSEMBLE_EXISTS:
             filenames.remove(filename_ensemble)
 

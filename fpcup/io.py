@@ -36,6 +36,28 @@ def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, *,
     for run in tqdm(results, total=n, desc="Saving output files", unit="files", disable=not progressbar, leave=leave_progressbar):
         run.to_file(savefolder)
 
+
+def save_ensemble_summary(output_dir: PathOrStr, *,
+                          verbose=False, use_existing=True) -> None:
+    """
+    Save an ensemble summary by loading the individual summary files.
+    If desired (True by default), append to an existing file.
+    Also prints some output to the user.
+    """
+    if verbose:
+        print()
+
+    # Generate the ensemble summary
+    output_dir = Path(output_dir)
+    summary = Summary.from_folder(output_dir, use_existing=use_existing, leave_progressbar=verbose)
+
+    # Save the modified ensemble summary to file
+    summary_filename = output_dir / "ensemble.wsum"
+    summary.to_file(summary_filename)
+
+    print(f"\nSaved ensemble summary ({len(summary)} runs) to {summary_filename.absolute()}")
+
+
 def load_ensemble_summary_from_folder(folder: PathOrStr, *,
                                       crs=CRS_AMERSFOORT, sample=False, save_if_generated=True, progressbar=True, leave_progressbar=True) -> Summary:
     """
@@ -70,6 +92,7 @@ def load_ensemble_summary_from_folder(folder: PathOrStr, *,
         summary.sort_values("plot_id", inplace=True)
 
     return summary
+
 
 def load_ensemble_results_from_folder(folder: PathOrStr, run_ids: Optional[Iterable[PathOrStr]]=None, *,
                                       extension=".wout", sample=False, progressbar=True, leave_progressbar=True) -> list[Result]:
