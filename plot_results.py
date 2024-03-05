@@ -51,7 +51,6 @@ if SINGLE_PROVINCE:
 
 # Check if area information is available (to be used in weights)
 AREA_AVAILABLE = ("area" in summary.columns)
-weights = "area" if AREA_AVAILABLE else None
 if args.verbose:
     un = "un" if not AREA_AVAILABLE else ""
     print(f"Plot areas {un}available; histograms and means will be {un}weighted")
@@ -62,7 +61,7 @@ if args.verbose:
 
 # Plot summary results
 filename_summary = results_dir / f"WOFOST_{tag}-summary.pdf"
-fpcup.plotting.plot_wofost_summary(summary, weights=weights, saveto=filename_summary, title=f"Summary of {len(summary)} WOFOST runs: {tag}", province=args.province)
+fpcup.plotting.plot_wofost_summary(summary, weight_by_area=AREA_AVAILABLE, saveto=filename_summary, title=f"Summary of {len(summary)} WOFOST runs: {tag}", province=args.province)
 if args.verbose:
     print(f"Saved batch results plot to {filename_summary.absolute()}")
 

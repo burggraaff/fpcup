@@ -23,7 +23,7 @@ cividis_discrete = colormaps["cividis"].resampled(10)
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
-from .analysis import KEYS_AGGREGATE
+from .aggregate import KEYS_AGGREGATE
 from .constants import CRS_AMERSFOORT, WGS84
 from .geo import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3, entries_in_province
 from .model import Summary, parameter_names
@@ -388,13 +388,23 @@ def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGR
 
 
 def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLOT, *,
-                                 aggregate: bool=True, aggregate_kwds={}, weights: Optional[str | Iterable[RealNumber]]=None, title: Optional[str]=None, province: Optional[str]="Netherlands", saveto: Optional[PathOrStr]=None) -> None:
+                                 aggregate: bool=True, aggregate_kwds: dict={}, weight_by_area: bool=True,
+                                 province: Optional[str]="Netherlands",
+                                 title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot histograms and (aggregate) maps showing WOFOST run summaries.
     """
-    # Don't plot area if this is not available
-    if "area" in keys and "area" not in summary.columns:
-        keys = _remove_area_from_keys(keys)
+    # Check for area (weight) availability
+    if weight_by_area:
+        if "area" in summary.columns:
+            weights = "area"
+        else:
+            raise ValueError("Cannot weight by area, area not available.\n"
+                             f"Available columns: {summary.columns}")
+    else:
+        if "area" in keys:
+            keys = _remove_area_from_keys(keys)
+        weights = None
 
     # Create figure and panels
     fig, axs = plt.subplots(nrows=2, ncols=len(keys), sharey="row", figsize=(15, 5), gridspec_kw={"hspace": 0.25, "height_ratios": [1, 1.5]})

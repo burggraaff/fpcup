@@ -14,7 +14,7 @@ from shapely import Geometry, Point, Polygon
 from tqdm import tqdm
 
 from ._typing import Aggregator, AreaDict, BoundaryDict, Callable, Iterable, Optional, PathOrStr
-from .analysis import default_aggregator, rename_after_aggregation
+from .aggregate import default_aggregator, rename_after_aggregation
 from .constants import CRS_AMERSFOORT, WGS84
 from .settings import DEFAULT_DATA
 

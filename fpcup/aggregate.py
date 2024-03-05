@@ -1,5 +1,5 @@
 """
-Functions for analysis
+Functions for geospatial aggregation.
 """
 from datetime import date, datetime
 
