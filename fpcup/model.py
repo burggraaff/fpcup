@@ -200,7 +200,8 @@ class Summary(gpd.GeoDataFrame):
         return cls(data)
 
     @classmethod
-    def from_folder(cls, folder: PathOrStr, extension: Optional[str]="*.wsum", progressbar=True, leave_progressbar=True):
+    def from_folder(cls, folder: PathOrStr, extension: Optional[str]="*.wsum", *,
+                    use_existing=True, progressbar=True, leave_progressbar=True):
         """
         Load an ensemble of Summary objects from a folder and combine them.
         """
@@ -209,12 +210,20 @@ class Summary(gpd.GeoDataFrame):
         filenames = list(folder.glob(extension))
         assert len(filenames) > 0, f"No files with extension '{extension}' were found in folder {folder.absolute()}"
         filename_ensemble = filenames[0].with_stem("ensemble")
-        if filename_ensemble in filenames:
+        ENSEMBLE_EXISTS = (filename_ensemble in filenames)
+
+        # If there is an existing summary file, use that and append the new files to it
+        if use_existing and ENSEMBLE_EXISTS:
+            ensemble = cls.from_file(filename_ensemble)  # Note that the ensemble gets loaded twice
+            filenames = [f for f in filenames if f.stem not in ensemble.index]
+        # Do not load the ensemble if desired
+        elif not use_existing and ENSEMBLE_EXISTS:
             filenames.remove(filename_ensemble)
 
         # Load the files (with a tqdm progressbar if desired)
         filenames = tqdm(filenames, desc="Loading summaries", unit="file", disable=not progressbar, leave=leave_progressbar)
         summaries_individual = (cls.from_file(filename) for filename in filenames)
+
         return cls.from_ensemble(summaries_individual)
 
     def to_file(self, filename: PathOrStr, **kwargs) -> None:
