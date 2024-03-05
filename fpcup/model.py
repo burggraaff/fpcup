@@ -22,6 +22,7 @@ from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr
 from .agro import AgromanagementData
 from .constants import CRS_AMERSFOORT
+from .soil import SoilType
 from .tools import make_iterable
 
 # Parameter names are from "A gentle introduction to WOFOST", De Wit & Boogaard 2021
@@ -55,11 +56,12 @@ class RunData(tuple):
     Stores the data necessary to run a PCSE simulation.
     Primarily a tuple containing the parameters in the order PCSE expects them in, with some options for geometry and run_id generation.
     """
-    def __new__(cls, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, **kwargs):
+    def __new__(cls, sitedata: PCSESiteDataProvider, soildata: SoilType, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, **kwargs):
         parameters = ParameterProvider(sitedata=sitedata, soildata=soildata, cropdata=cropdata)
         return super().__new__(cls, (parameters, weatherdata, agromanagement))
 
-    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, *, run_id: Optional[str]=None, geometry: Optional[shapely.Geometry | tuple]=None, crs=None):
+    def __init__(self, sitedata: PCSESiteDataProvider, soildata: SoilType, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, *,
+                 run_id: Optional[str]=None, geometry: Optional[shapely.Geometry | tuple]=None, crs=None):
         # Easier access
         self.sitedata = sitedata
         self.soildata = soildata
@@ -68,13 +70,14 @@ class RunData(tuple):
         self.weatherdata = self[1]
         self.agromanagement = self[2]
         self.crop = self.agromanagement.crop_name
-        self.soiltype = soildata["SOLNAM"]
+        self.soiltype = soildata.name
 
         # Set up the shapely geometry object
         if geometry is None:
-            # Get the coordinates from the weatherdata; note that this often introduces a loss of precision!
-            geometry = shapely.Point(self.weatherdata.longitude, self.weatherdata.latitude)
-        elif isinstance(geometry, tuple):
+            print("Warning: no geometry data provided - defaulting to (0, 0).")
+            geometry = (0, 0)
+
+        if isinstance(geometry, tuple):
             # Pairs of coordinates - assume these are in (lat, lon) format
             latitude, longitude = geometry
             geometry = shapely.Point(longitude, latitude)
@@ -87,7 +90,8 @@ class RunData(tuple):
         self.run_id = run_id
 
     def __repr__(self) -> str:
-        text_parameters = type(self.parameters).__name__
+        text_soil = f"{self.soiltype} ({self.soildata['SOLNAM']})"
+        text_crop = f"{self.cropdata.current_crop_name} ('{self.cropdata.current_variety_name}' from {type(self.cropdata).__name__})"
 
         text_weather = f"{type(self.weatherdata).__name__} at ({self.weatherdata.latitude:+.4f} N, {self.weatherdata.longitude:+.4f} E)"
 
@@ -97,7 +101,8 @@ class RunData(tuple):
             text_geometry = self.geometry
 
         return (f"Run '{self.run_id}':\n"
-                f"ParameterProvider: {text_parameters}\n"
+                f"Soil: {text_soil}\n"
+                f"Crop: {text_crop}\n"
                 f"WeatherDataProvider: {text_weather}\n"
                 f"AgromanagementData: {self[2]}\n"
                 f"Geometry: {text_geometry}")
@@ -108,9 +113,16 @@ class RunData(tuple):
         """
         sowdate = self.agromanagement.crop_start_date
 
-        run_id = f"{self.crop}_{self.soiltype}_sown{sowdate:%Y%j}_lat{self.geometry.y:.7f}-lon{self.geometry.x:.7f}"
+        run_id = f"{self.crop}_{self.soiltype}_dos{sowdate:%Y%j}_lat{self.geometry.y:.7f}-lon{self.geometry.x:.7f}"
 
         return run_id
+
+    def as_summary_dict(self) -> dict:
+        """
+        Return those values required by a Summary object as a dictionary.
+        """
+        return {"soiltype": self.soiltype,
+                "geometry": self.geometry}
 
 
 def run_id_BRP(brpyear: int | str, plot_id: int | str, crop: str, sowdate: date) -> str:
@@ -145,6 +157,20 @@ class RunDataBRP(RunData):
         sowdate = self.agromanagement.crop_start_date
         return run_id_BRP(self.brpyear, self.plot_id, self.crop, sowdate)
 
+    def as_summary_dict(self) -> dict:
+        """
+        Return those values required by a Summary object as a dictionary.
+        """
+        summary_general = super().as_summary_dict()
+
+        return {"plot_id": self.plot_id,
+                "province": self.province,
+                "crop_species": self.crop_species,
+                "crop_code": self.crop_code,
+                "area": self.area,
+                "brpyear": self.brpyear,
+                **summary_general}
+
 
 class Summary(gpd.GeoDataFrame):
     """
@@ -156,28 +182,18 @@ class Summary(gpd.GeoDataFrame):
         self.sort_index(inplace=True)
 
     @classmethod
-    def from_model(cls, model: Engine, run_data: RunData, *, crs: Optional[str]=None, **kwargs):
+    def from_model(cls, model: Engine, run_data: RunData, *,
+                   crs: Optional[str]=None, **kwargs):
         """
         Generate a summary from a finished model, inserting the run_id as an index.
         """
         summary = model.get_summary_output()
 
         # Get data from run_data
-        summary[0]["geometry"] = run_data.geometry
-        summary[0]["soiltype"] = run_data.soiltype
+        summary[0] = {**summary[0], **run_data.as_summary_dict()}
         index = [run_data.run_id]
-
         if crs is None:
             crs = run_data.crs
-
-        # Extract more information for the BRP case
-        if isinstance(run_data, RunDataBRP):
-            summary[0]["plot_id"] = run_data.plot_id
-            summary[0]["crop_species"] = run_data.crop_species
-            summary[0]["crop_code"] = run_data.crop_code
-            summary[0]["area"] = run_data.area
-            summary[0]["province"] = run_data.province
-            summary[0]["brpyear"] = run_data.brpyear
 
         return cls(summary, index=index, crs=crs, **kwargs)
 
@@ -248,7 +264,8 @@ class Result(pd.DataFrame):
     _internal_names = pd.DataFrame._internal_names + ["run_id", "summary"]
     _internal_names_set = set(_internal_names)
 
-    def __init__(self, data: Iterable, *, run_id: str="", summary: Optional[Summary]=None, **kwargs):
+    def __init__(self, data: Iterable, *,
+                 run_id: str="", summary: Optional[Summary]=None, **kwargs):
         # Initialise the main DataFrame from the model output
         super().__init__(data, **kwargs)
 
@@ -285,7 +302,8 @@ class Result(pd.DataFrame):
         return cls(output, run_id=run_id, summary=summary, **kwargs)
 
     @classmethod
-    def from_file(cls, filename: PathOrStr, *, run_id: Optional[str]=None, include_summary=True, **kwargs):
+    def from_file(cls, filename: PathOrStr, *,
+                  run_id: Optional[str]=None, include_summary=True, **kwargs):
         """
         Load an output file.
         If a run_id is not provided, use the filename stem.
@@ -309,7 +327,8 @@ class Result(pd.DataFrame):
 
         return cls(data, run_id=run_id, summary=summary, **kwargs)
 
-    def to_file(self, output_directory: PathOrStr, *, filename: Optional[PathOrStr]=None, **kwargs) -> None:
+    def to_file(self, output_directory: PathOrStr, *,
+                filename: Optional[PathOrStr]=None, **kwargs) -> None:
         """
         Save the results and summary to output files:
             output_directory / filename.wout - full results, CSV

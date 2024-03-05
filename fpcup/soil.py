@@ -9,10 +9,25 @@ from pcse.util import DummySoilDataProvider
 from ._typing import PathOrStr
 from .settings import DEFAULT_DATA
 
+SoilType = CABOFileReader | DummySoilDataProvider
+
 DEFAULT_SOIL_DATA = DEFAULT_DATA / "soil"
 
-# N.B. type hinting does not account for this yet
+# Dummy with default settings
 dummy = DummySoilDataProvider()
+dummy.name = "dummy"
+
+
+def load_soil_file(filename: PathOrStr) -> CABOFileReader:
+    """
+    Load a single soil file and do some minimal pre-processing.
+    """
+    filename = Path(filename)
+    data = CABOFileReader(filename)
+    data.name = filename.stem
+
+    return data
+
 
 def load_folder(folder: PathOrStr, pattern: str="ec*") -> dict[str, CABOFileReader]:
     """
@@ -23,7 +38,7 @@ def load_folder(folder: PathOrStr, pattern: str="ec*") -> dict[str, CABOFileRead
 
     # Find and then load the files
     filenames = folder.glob(pattern)
-    soil_files = {fn.stem: CABOFileReader(fn) for fn in filenames}
+    soil_files = {fn.stem: load_soil_file(fn) for fn in filenames}
 
     return soil_files
 

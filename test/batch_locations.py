@@ -33,7 +33,7 @@ if args.verbose:
 
 ### Generate constants
 # Soil data
-soildata = fpcup.soil.soil_types["ec1"]
+soildata = fpcup.soil.soil_types["ec3"]
 if args.verbose:
     print("Loaded soil data")
 
