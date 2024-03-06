@@ -103,10 +103,13 @@ def is_in_province(_data: gpd.GeoDataFrame, province: str, *,
 
 
 def add_provinces(data: gpd.GeoDataFrame, *,
-                  new_column: str="province", province_data: AreaDict=area_coarse, progressbar=True, leave_progressbar=True, **kwargs) -> None:
+                  new_column: str="province", province_data: AreaDict=area_coarse, remove_empty=True,
+                  progressbar=True, leave_progressbar=True, **kwargs) -> None:
     """
     Add a column with province names.
     Note: can get very slow for long dataframes.
+    If `remove_empty`, entries that do not fall into any province are removed.
+    **kwargs are passed to is_in_province.
     """
     # Convert to the right CRS first
     data_crs = data.to_crs(CRS_AMERSFOORT)
@@ -132,6 +135,11 @@ def add_provinces(data: gpd.GeoDataFrame, *,
 
     # Add the series to the dataframe
     data[new_column] = province_list
+
+    # Remove entries not in any province (e.g. from generating random coordinates)
+    if remove_empty:
+        index_remove = data.loc[data[new_column] == ""].index
+        data.drop(index=index_remove, inplace=True)
 
 
 def add_province_geometry(data: DataFrame, which: str="area", *,

@@ -36,18 +36,18 @@ summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir, sample=arg
 if args.verbose:
     print(f"Loaded summary file -- {len(summary)} rows")
 
-# Add province information if this is not available
-if "province" not in summary.columns:
-    fpcup.geo.add_provinces(summary, leave_progressbar=args.verbose)
-    if args.verbose:
-        print("Added province information")
-
 # If we are only doing one province, select only the relevant lines from the summary file
 if SINGLE_PROVINCE:
-    summary = summary.loc[summary["province"] == args.province]
+    summary = fpcup.geo.entries_in_province(summary, args.province)
     tag = f"{tag}-{args.province}"
     if args.verbose:
         print(f"Selected only sites in {args.province} -- {len(summary)} rows")
+
+# Otherwise, add province information to all lines, dropping those that fall outside all provinces
+elif "province" not in summary.columns:
+    fpcup.geo.add_provinces(summary, leave_progressbar=args.verbose)
+    if args.verbose:
+        print(f"Added province information -- {len(summary)} rows")
 
 # Check if area information is available (to be used in weights)
 AREA_AVAILABLE = ("area" in summary.columns)
