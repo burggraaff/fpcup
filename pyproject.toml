@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fpcup"
+authors = [
+    {name = "Olivier Burggraaff", email = "o.burggraaff@cml.leidenuniv.nl"},
+]
+description = "Consistent retrieval of crop yields using a data assimilation platform."
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["crop"]
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
