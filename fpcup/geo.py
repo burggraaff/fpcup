@@ -306,20 +306,18 @@ def _generate_random_point_within_bounds(min_lon, min_lat, max_lon, max_lat) -> 
     return Point(longitude, latitude)
 
 
-def _generate_random_point_in_geometry(geometry: Geometry, *, crs=CRS_AMERSFOORT) -> Point:
+def _generate_random_point_in_geometry(polygon: Geometry) -> Point:
     """
     Generate a single random point that lies within a geometry.
-    Unfortunately quite slow due to the many "contains" checks.
     """
-    polygon = transform_geometry(geometry, crs, WGS84)  # Convert to WGS84 coordinates
-    while True:  # Infinite generator
+    while True:  # Keep going until a point is returned/yielded
         # Generate points randomly until one falls within the given geometry
         p = _generate_random_point_within_bounds(*polygon.bounds)
 
         # If a point was successfully generated, yield it
         if polygon.contains(p):
             # Doing a first check with the convex hull does not help here
-            yield p
+            return p
 
 
 def _generate_random_point_in_geometry_batch(geometry: Geometry, n: int, *,  crs=CRS_AMERSFOORT) -> gpd.GeoSeries:

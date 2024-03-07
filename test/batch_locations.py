@@ -68,6 +68,7 @@ if __name__ == "__main__":
         print("Loaded crop data")
         print("Loaded agro management data:")
         print(agromanagement)
+        print()
 
     # Generate the coordinates
     if args.SINGLE_PROVINCE:

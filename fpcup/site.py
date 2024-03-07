@@ -2,20 +2,20 @@
 Site-related stuff: load data etc
 """
 import random
-from functools import partial, wraps
 from itertools import product
+from multiprocessing import Pool
 
 import numpy as np
 from pandas import concat
 from shapely import Point
-from tqdm import trange
+from tqdm import tqdm, trange
 
 from pcse.util import WOFOST72SiteDataProvider, WOFOST80SiteDataProvider
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
 from ._typing import Callable, Coordinates, Iterable, RealNumber
 from .constants import CRS_AMERSFOORT, WGS84
-from .geo import area, _generate_random_point_in_geometry, _generate_random_point_in_geometry_batch, coverage_of_bounding_box
+from .geo import area, _generate_random_point_in_geometry, _generate_random_point_in_geometry_batch, coverage_of_bounding_box, transform_geometry
 
 
 def example(*args, **kwargs) -> PCSESiteDataProvider:
@@ -40,6 +40,7 @@ def combine_and_shuffle_coordinates(latitudes: Iterable[RealNumber], longitudes:
         random.shuffle(coordinates)  # In-place
 
     return coordinates
+
 
 def generate_sites_range(latitude: tuple[RealNumber], longitude: tuple[RealNumber], *,
                          shuffle: bool=True) -> tuple[np.ndarray, np.ndarray]:
@@ -100,19 +101,24 @@ def generate_sites_in_province_frombatch(province: str, n: int, **kwargs) -> lis
     return coordinates
 
 
-def generate_sites_in_province_fromgenerator(province: str, n: int, *,
-                                             progressbar=True, leave_progressbar=True) -> list[Coordinates]:
+def generate_sites_in_province(province: str, n: int, *,
+                               progressbar=True, leave_progressbar=True) -> list[Coordinates]:
     """
     Generate n pairs of latitude/longitude coordinates that are (roughly) uniformly distributed over the given province.
     Points are generated in WGS84 so they may not be uniformly distributed in other CRSes.
     The output is given as a list so it can be iterated over multiple times.
     """
     geometry = area[province]  # geometry in CRS_AMERSFOORT
-    point_generator = _generate_random_point_in_geometry(geometry, crs=CRS_AMERSFOORT)
-    points = [next(point_generator) for i in trange(n, desc="Generating sites", unit="site", disable=not progressbar, leave=leave_progressbar)]
+    geometry = transform_geometry(geometry, CRS_AMERSFOORT, WGS84)  # Convert to WGS84 coordinates
+    geometry_iterable = tqdm([geometry] * n, total=n, desc="Generating sites", unit="site", disable=not progressbar, leave=leave_progressbar)
+
+    # Generate points - single process for small batches, multiprocessing for large batches
+    if n < 1000:
+        points = map(_generate_random_point_in_geometry, geometry_iterable)
+    else:
+        with Pool() as p:
+            points = list(p.imap_unordered(_generate_random_point_in_geometry, geometry_iterable, chunksize=96))
+
     coordinates = points_to_coordinates(points)
 
     return coordinates
-
-
-generate_sites_in_province = generate_sites_in_province_fromgenerator
