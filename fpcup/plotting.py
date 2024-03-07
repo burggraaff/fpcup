@@ -329,11 +329,11 @@ def wofost_summary_histogram(summary: Summary, keys: Iterable[str]=KEYS_AGGREGAT
         plt.close()
 
 
-def _remove_area_from_keys(keys: Iterable[str]) -> tuple[str]:
+def _remove_key_from_keys(keys: Iterable[str], key_to_remove: str) -> tuple[str]:
     """
-    Remove the "area" key from a list of keys.
+    Remove the key_to_remove from a list of keys.
     """
-    return tuple(k for k in keys if k != "area")
+    return tuple(k for k in keys if k != key_to_remove)
 
 
 def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGREGATE_PLOT, *,
@@ -348,9 +348,11 @@ def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGR
     """
     NEW_FIGURE = (axs is None)
 
-    # Don't plot area if this is not available
-    if NEW_FIGURE and "area" in keys and "area" not in data_geo.columns:
-        keys = _remove_area_from_keys(keys)
+    # Don't plot n, area if these are not available
+    if NEW_FIGURE:
+        for key_to_remove in ("n", "area"):
+            if key_to_remove in keys and key_to_remove not in data_geo.columns:
+                keys = _remove_key_from_keys(keys, key_to_remove)
 
     # Configure figure and axes if none were provided
     if NEW_FIGURE:
@@ -403,7 +405,7 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLO
                              f"Available columns: {summary.columns}")
     else:
         if "area" in keys:
-            keys = _remove_area_from_keys(keys)
+            keys = _remove_key_from_keys(keys, "area")
         weights = None
 
     # Create figure and panels

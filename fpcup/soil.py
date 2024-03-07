@@ -13,6 +13,25 @@ SoilType = CABOFileReader | DummySoilDataProvider
 
 DEFAULT_SOIL_DATA = DEFAULT_DATA / "soil"
 
+# Parameter names are from "A gentle introduction to WOFOST" (De Wit & Boogaard 2021) and from the CABO file descriptions
+parameter_names = {"SOLNAM": "Soil name",
+                   "CRAIRC": "Critical soil air content for aeration [cm^3 / cm^3]",
+                   "SM0": "Soil moisture content of saturated soil [cm^3 / cm^3]",
+                   "SMTAB": "Vol. soil moisture content as function of pF [log(cm) ; cm^3 / cm^3]",
+                   "SMFCF": "Soil moisture content at field capacity [cm^3 / cm^3]",
+                   "SMW": "Soil moisture content at wilting point [cm^3 / cm^3]",
+                   "RDMSOL": "Maximum rootable depth of soil [cm]",
+                   "K0": "Hydraulic conductivity of saturated soil [cm / day]",
+                   "KSUB": "Maximum percolation rate of water to subsoil [cm / day]",
+                   "SOPE": "Maximum percolation rate of water through the root zone [cm / day]",
+                   "SPADS": "1st topsoil seepage parameter deep seedbed",
+                   "SPODS": "2nd topsoil seepage parameter deep seedbed",
+                   "SPASS": "1st topsoil seepage parameter shallow seedbed",
+                   "SPOSS": "2nd topsoil seepage parameter shallow seedbed",
+                   "DEFLIM": "required moisture deficit deep seedbed",
+                   "CONTAB": "10-log hydraulic conductivity as function of pF [log(cm) ; log(cm/day)]",
+                   }
+
 # Dummy with default settings
 dummy = DummySoilDataProvider()
 dummy.name = "dummy"

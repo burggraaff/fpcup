@@ -5,6 +5,13 @@ from itertools import product
 
 from ._typing import Iterable
 
+try:
+    get_ipython()
+except NameError:
+    RUNNING_IN_IPYTHON = False
+else:
+    RUNNING_IN_IPYTHON = True
+
 def make_iterable(x: object, exclude: Iterable[type]=[str]) -> Iterable:
     """
     Check if x is an iterable.
