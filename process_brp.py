@@ -15,7 +15,7 @@ import fpcup
 import argparse
 parser = argparse.ArgumentParser("Read the BRP file in .gpkg format and process it to something more light-weight.")
 parser.add_argument("filename", help="file to be processed", type=fpcup.io.Path)
-parser.add_argument("-r", "--results_dir", help="folder to save results to", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_RESULTS / "brp")
+parser.add_argument("-r", "--results_dir", help="folder to save results to", type=fpcup.io.Path, default=fpcup.DEFAULT_RESULTS / "brp")
 parser.add_argument("-p", "--plots", help="generate plots along the way", action="store_true")
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
