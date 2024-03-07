@@ -8,13 +8,12 @@ from multiprocessing import Pool
 from tqdm import tqdm
 import time
 
-print(f"CPU count: {cpu_count()}")
-
 def _foo(my_number):
     square = my_number * my_number
     return square, square
 
 if __name__ == '__main__':
+    print(f"CPU count: {cpu_count()}")
     nmax = 7000000
     with Pool() as p:
         r1, r2 = zip(*tqdm(p.imap(_foo, range(nmax), chunksize=5), total=nmax))
