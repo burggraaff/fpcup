@@ -3,7 +3,7 @@ Functions that are useful
 """
 from datetime import date, datetime
 from itertools import product
-from multiprocessing import Pool  # Multi-threading
+from multiprocessing import Pool
 from pathlib import Path
 
 import geopandas as gpd
