@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     ### Run the model
     with Pool() as p:
-        runs_successful = list(tqdm(p.imap(run_pcse, coords, chunksize=10), total=len(coords), desc="Running models", unit="site"))
+        runs_successful = list(tqdm(p.imap(run_pcse, coords, chunksize=25), total=len(coords), desc="Running models", unit="site"))
 
     # Feedback on failed runs: if any failed, let the user know. If none failed, only let the user know in verbose mode.
     failed_runs = [run_id for run_id in runs_successful if isinstance(run_id, str)]

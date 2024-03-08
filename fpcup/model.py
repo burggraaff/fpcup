@@ -242,8 +242,13 @@ class Summary(gpd.GeoDataFrame):
             filenames.remove(filename_ensemble)
 
         # Load the files (with a tqdm progressbar if desired)
+        n = len(filenames)
         filenames = tqdm(filenames, desc="Loading summaries", unit="file", disable=not progressbar, leave=leave_progressbar)
-        summaries_individual = (cls.from_file(filename) for filename in filenames)
+        if n < 1000:
+            summaries_individual = map(cls.from_file, filenames)
+        else:
+            with Pool() as p:
+                summaries_individual = list(p.imap_unordered(cls.from_file, filenames, chunksize=100))
 
         return cls.from_ensemble(summaries_individual)
 
