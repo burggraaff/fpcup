@@ -1,15 +1,13 @@
 """
 Load and plot the results from a previous PCSE ensemble run.
 """
-from pathlib import Path
-
 import fpcup
 
 # Parse command line arguments
 import argparse
 parser = argparse.ArgumentParser("Load and plot the results from a previous PCSE ensemble run.")
-parser.add_argument("output_dir", help="folder to load PCSE outputs from", type=Path)
-parser.add_argument("-r", "--results_dir", help="folder to save plots into", type=Path, default=fpcup.DEFAULT_RESULTS)
+parser.add_argument("output_dir", help="folder to load PCSE outputs from", type=fpcup.io.Path)
+parser.add_argument("-r", "--results_dir", help="folder to save plots into", type=fpcup.io.Path, default=fpcup.DEFAULT_RESULTS)
 parser.add_argument("-y", "--replace_years", help="replace all years in the output with 2000", action="store_true")
 parser.add_argument("--vector_max", help="number of runs at which to switch from vector (PDF) to raster (PNG) files", type=int, default=5000)
 parser.add_argument("-p", "--province", help="province to select plots from (or all of the Netherlands)", default="Netherlands", choices=fpcup.geo.NAMES, type=fpcup.geo.process_input_province)
