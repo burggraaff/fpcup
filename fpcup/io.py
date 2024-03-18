@@ -2,6 +2,7 @@
 Functions for file input and output.
 """
 from functools import cache
+from multiprocessing import Pool
 from os import makedirs
 from pathlib import Path
 
@@ -124,6 +125,10 @@ def load_ensemble_results_from_folder(folder: PathOrStr, run_ids: Optional[Itera
 
     # Load the files with an optional progressbar
     filenames = tqdm(filenames, total=n_results, desc="Loading outputs", unit="files", disable=not progressbar, leave=leave_progressbar)
+    # if n_results < 1000:
     results = [Result.from_file(filename) for filename in filenames]
+    # else:
+    #     with Pool() as p:
+    #         results = list(p.imap_unordered(Result.from_file, filenames, chunksize=100))
 
     return results

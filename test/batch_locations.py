@@ -4,24 +4,20 @@ Run a PCSE ensemble for multiple (WGS84) coordinates, with all other parameters 
 Example:
     %run test/batch_locations.py -v -n 1000 -p Zeeland
 """
-import argparse
-from multiprocessing import Pool
-from pathlib import Path
-
-from tqdm import tqdm
-
 import fpcup
 
 ### Parse command line arguments
+import argparse
 parser = argparse.ArgumentParser(description="Run a PCSE ensemble for multiple location with one sowing date.")
-parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=Path, default=fpcup.settings.DEFAULT_DATA)
-parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=Path, default=fpcup.settings.DEFAULT_OUTPUT / "locations")
+parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
+parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_OUTPUT / "locations")
 parser.add_argument("-n", "--number", help="number of locations; result may be lower due to rounding", type=int, default=400)
 parser.add_argument("-p", "--province", help="province to simulate plots in (or all)", default="Netherlands", choices=fpcup.geo.NAMES, type=fpcup.geo.process_input_province)
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
 args.SINGLE_PROVINCE = (args.province != "Netherlands")
+
 
 ### Load constants
 crs = fpcup.constants.WGS84
@@ -31,11 +27,11 @@ agromanagement = fpcup.agro.agromanagement_example
 
 
 ### Worker function; this runs PCSE once for one site
-def run_pcse(coordinates: fpcup._typing.Coordinates) -> bool | str:
+def run_pcse(coordinates: fpcup._typing.Coordinates) -> bool | fpcup.model.RunData:
     """
     For a single site, get the site-dependent data, wrap it into a RunData object, and run PCSE on it.
     Returns True if the results were succesfully written to file.
-    Returns a str (the run_id) if the run failed.
+    Returns the corresponding RunData if a run failed.
     """
     # Get site data
     sitedata = fpcup.site.example(coordinates)
@@ -54,7 +50,7 @@ def run_pcse(coordinates: fpcup._typing.Coordinates) -> bool | str:
         output.to_file(args.output_dir)
     # If the run failed, saving to file will also fail, so we instead note that this run failed
     except AttributeError:
-        return run.run_id
+        return run
     else:
         return True
 
@@ -79,17 +75,7 @@ if __name__ == "__main__":
         print(f"Generated {len(coords)} coordinates")
 
     ### Run the model
-    with Pool() as p:
-        runs_successful = list(tqdm(p.imap(run_pcse, coords, chunksize=25), total=len(coords), desc="Running models", unit="site"))
-
-    # Feedback on failed runs: if any failed, let the user know. If none failed, only let the user know in verbose mode.
-    failed_runs = [run_id for run_id in runs_successful if isinstance(run_id, str)]
-    print()
-    if len(failed_runs) > 0:
-        print(f"Number of failed runs: {len(failed_runs)}/{len(coords)}")
-    else:
-        if args.verbose:
-            print("No runs failed.")
+    failed_runs = fpcup.model.run_pcse_ensemble(run_pcse, coords, unit="site", chunksize=25, verbose=args.verbose)
 
     # Save an ensemble summary
     fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose)

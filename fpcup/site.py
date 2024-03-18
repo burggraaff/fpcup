@@ -17,6 +17,9 @@ from ._typing import Callable, Coordinates, Iterable, RealNumber
 from .constants import CRS_AMERSFOORT, WGS84
 from .geo import area, _generate_random_point_in_geometry, _generate_random_point_in_geometry_batch, coverage_of_bounding_box, transform_geometry
 
+# Constants
+_THRESHOLD_PARALLEL_SITES = 1000
+
 
 def example(*args, **kwargs) -> PCSESiteDataProvider:
     """
@@ -113,7 +116,7 @@ def generate_sites_in_province(province: str, n: int, *,
     geometry_iterable = tqdm([geometry] * n, total=n, desc="Generating sites", unit="site", disable=not progressbar, leave=leave_progressbar)
 
     # Generate points - single process for small batches, multiprocessing for large batches
-    if n < 1000:
+    if n < _THRESHOLD_PARALLEL_SITES:
         points = map(_generate_random_point_in_geometry, geometry_iterable)
     else:
         with Pool() as p:

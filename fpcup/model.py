@@ -1,7 +1,8 @@
 """
-Functions that are useful
+Classes, functions, constants relating to running the WOFOST model and processing its inputs/outputs.
 """
 from datetime import date, datetime
+from functools import partial
 from itertools import product
 from multiprocessing import Pool
 from pathlib import Path
@@ -24,6 +25,9 @@ from .agro import AgromanagementData
 from .constants import CRS_AMERSFOORT
 from .soil import SoilType
 from .tools import make_iterable
+
+# Constants
+_THRESHOLD_PARALLEL_PCSE = 200
 
 # Parameter names are from "A gentle introduction to WOFOST", De Wit & Boogaard 2021
 parameter_names = {"DVS": "Crop development stage",
@@ -261,6 +265,7 @@ class Summary(gpd.GeoDataFrame):
         write_geodataframe(self, filename, driver="GeoJSON", **kwargs)
         self.set_index("run_id", inplace=True)
 
+
 class Result(pd.DataFrame):
     """
     Stores the results from a single PCSE run.
@@ -356,34 +361,6 @@ class Result(pd.DataFrame):
         self.summary.to_file(filename_summary, **kwargs)
 
 
-def bundle_parameters(sitedata: PCSESiteDataProvider | Iterable[PCSESiteDataProvider],
-                      soildata: CABOFileReader | Iterable[CABOFileReader],
-                      cropdata: MultiCropDataProvider | Iterable[MultiCropDataProvider],
-                      weatherdata: WeatherDataProvider | Iterable[WeatherDataProvider],
-                      agromanagementdata: AgromanagementData | Iterable[AgromanagementData]) -> tuple[Iterable[RunData], int | None]:
-    """
-    Bundle the site, soil, and crop parameters into PCSE ParameterProvider objects.
-    For the main parameters, a Cartesian product is used to get all their combinations.
-    """
-    # Make sure the data are iterable
-    sitedata_iter = make_iterable(sitedata, exclude=[PCSESiteDataProvider])
-    soildata_iter = make_iterable(soildata, exclude=[CABOFileReader])
-    cropdata_iter = make_iterable(cropdata, exclude=[MultiCropDataProvider])
-    weatherdata_iter = make_iterable(weatherdata, exclude=[WeatherDataProvider])
-    agromanagementdata_iter = make_iterable(agromanagementdata, exclude=[AgromanagementData])
-
-    # Determine the total number of parameter combinations, if possible
-    try:
-        n = len(sitedata_iter) * len(soildata_iter) * len(cropdata_iter) * len(weatherdata_iter) * len(agromanagementdata_iter)
-    except TypeError:
-        n = None
-
-    # Combine everything
-    combined_parameters = product(sitedata_iter, soildata_iter, cropdata_iter, weatherdata_iter, agromanagementdata_iter)
-    rundata = (RunData(*params) for params in combined_parameters)
-
-    return rundata, n
-
 def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD) -> Result | None:
     """
     Start a new PCSE model with the given inputs and run it until it terminates.
@@ -401,65 +378,50 @@ def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD) -> Resu
 
     return output
 
-def filter_ensemble_outputs(outputs: Iterable[Result | None], summary: Iterable[dict | None]) -> tuple[list[Result], list[dict], int]:
-    """
-    Filter None and other incorrect entries.
-    """
-    # Find entries that are None
-    valid_entries = [s is not None and o is not None for s, o in zip(summary, outputs)]
-    n_filtered_out = len(valid_entries) - sum(valid_entries)
 
-    # Apply the filter
-    outputs_filtered = [o for o, v in zip(outputs, valid_entries) if v]
-    summary_filtered = [s for s, v in zip(summary, valid_entries) if v]
-
-    return outputs_filtered, summary_filtered, n_filtered_out
-
-def run_pcse_ensemble(all_runs: Iterable[RunData], nr_runs: Optional[int]=None, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
+def run_pcse_ensemble(func_pcse: Callable, data_pcse: Iterable, *,
+                      n: Optional[int]=None, chunksize: int=10,
+                      unit: str="run",
+                      verbose: bool=False) -> Iterable[RunData]:
     """
     Run an entire PCSE ensemble.
-    all_runs is an iterator that zips the three model inputs (parameters, weatherdata, agromanagement) together, e.g.:
-        all_runs = product(parameters_combined, weatherdata, agromanagementdata)
+    `func_pcse` is a function that runs PCSE for a single instance of `data_pcse`.
+    For example, data_pcse might be a list of coordinates, for which func_pcse retrieves the corresponding site/weather data and then runs WOFOST.
+    Models are run in parallel if there are more than _THRESHOLD_PARALLEL_PCSE to run.
     """
-    # Run the models
-    outputs = [run_pcse_single(run_data) for run_data in tqdm(all_runs, total=nr_runs, desc="Running PCSE models", unit="runs", disable=not progressbar, leave=leave_progressbar)]
+    # Determine the number of inputs and set up a progressbar
+    if n is None:
+        try:
+            n = len(data_pcse)
+        except TypeError:
+            n = None
+    _tqdm_here = partial(tqdm, total=n, desc="Running models", unit=unit, leave=verbose)
 
-    # Get the summaries
-    summaries_individual = [o.summary for o in outputs]
+    # Determine whether to use multiprocessing
+    if n is None:
+        USE_MULTIPROCESSING = False
+    elif n < _THRESHOLD_PARALLEL_PCSE:
+        USE_MULTIPROCESSING = False
+    else:
+        USE_MULTIPROCESSING = True
 
-    # Clean up the results
-    outputs, summaries_individual, n_filtered_out = filter_ensemble_outputs(outputs, summaries_individual)
-    if n_filtered_out > 0:
-        print(f"{n_filtered_out} runs failed.")
+    # Actually run the model
+    if USE_MULTIPROCESSING:
+        with Pool() as p:
+            outputs = list(_tqdm_here(p.imap_unordered(func_pcse, data_pcse, chunksize=chunksize)))
+    else:
+        outputs = list(map(func_pcse, _tqdm_here(data_pcse)))
 
-    # Convert the summary to a Summary object (modified DataFrame)
-    summary = Summary.from_ensemble(summaries_individual)
+    # Determine which runs failed / were skipped
+    failed_runs = [o for o in outputs if isinstance(o, RunData)]
+    if len(failed_runs) > 0:
+        print(f"Number of failed runs: {len(failed_runs)}/{n}")
+    else:
+        if verbose:
+            print("No runs failed.")
 
-    return outputs, summary
+    skipped_runs = [o for o in outputs if o is False]
+    if verbose:
+        print(f"Number of skipped runs: {len(skipped_runs)}/{n}")
 
-def run_pcse_ensemble_parallel(all_runs: Iterable[RunData], nr_runs: Optional[int]=None, progressbar=True, leave_progressbar=True) -> tuple[list[Result], Summary]:
-    """
-    Note: Very unstable!
-    Parallelised version of run_pcse_ensemble.
-
-    Run an entire PCSE ensemble at once.
-    all_runs is an iterator that zips the three model inputs (parameters, weatherdata, agromanagement) together, e.g.:
-        all_runs = product(parameters_combined, weatherdata, agromanagementdata)
-    """
-    # Run the models
-    with Pool() as p:
-        # outputs = tqdm(p.map(run_pcse_single, all_runs, chunksize=3), total=nr_runs, desc="Running PCSE models", unit="runs", disable=not progressbar, leave=leave_progressbar)
-        outputs = p.map(run_pcse_single, all_runs, chunksize=3)
-
-    # Get the summaries
-    summaries_individual = [o.summary for o in outputs]
-
-    # Clean up the results
-    outputs, summaries_individual, n_filtered_out = filter_ensemble_outputs(outputs, summaries_individual)
-    if n_filtered_out > 0:
-        print(f"{n_filtered_out} runs failed.")
-
-    # Convert the summary to a Summary object (modified DataFrame)
-    summary = Summary.from_ensemble(summaries_individual)
-
-    return outputs, summary
+    return failed_runs

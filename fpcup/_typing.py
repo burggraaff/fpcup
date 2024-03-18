@@ -6,6 +6,7 @@ from os import PathLike
 from typing import Callable, Iterable, Optional, Type
 
 from geopandas import GeoSeries
+from pandas import Series
 from shapely import Point, Polygon
 
 # Combinations of built-in types
