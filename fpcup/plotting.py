@@ -29,6 +29,8 @@ from .geo import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, a
 from .model import Summary, parameter_names
 from .tools import make_iterable
 
+# Constants
+_RASTERIZE_LIMIT_LINES = 1000
 _RASTERIZE_LIMIT_GEO = 250  # Plot geo data in raster format if there are more than this number
 _RASTERIZE_GEO = lambda data: (len(data) > _RASTERIZE_LIMIT_GEO)
 
@@ -215,6 +217,10 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
     """
     Plot WOFOST ensemble results.
     """
+    # Determine rasterization based on number of lines
+    rasterized = (len(outputs) > _RASTERIZE_LIMIT_LINES)
+    saveto = saveto.with_suffix(".png") if rasterized else saveto.with_suffix(".pdf")
+
     # If no keys were specified, get all of them
     if keys is None:
         keys = outputs[0].keys()
@@ -231,7 +237,7 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
 
         # Plot every key in the corresponding panel
         for ax, key in zip(axs, keys):
-            ax.plot(time_axis, df[key], alpha=0.25)
+            ax.plot(time_axis, df[key], alpha=0.25, rasterized=rasterized)
 
     axs[-1].set_xlabel("Time")
     for ax, key in zip(axs, keys):
