@@ -2,7 +2,6 @@
 Functions for file input and output.
 """
 from functools import cache, partial
-from multiprocessing import Pool
 from os import makedirs
 from pathlib import Path
 
@@ -18,10 +17,10 @@ from tqdm import tqdm
 from ._typing import Iterable, Optional, PathOrStr
 from .constants import CRS_AMERSFOORT
 from .model import Result, Summary
+from .multiprocessing import multiprocess_file_io
 
 # Constants
 _SAMPLE_LENGTH = 10
-_THRESHOLD_PARALLEL_LOADING = 1000
 
 def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, *,
                           progressbar=True, leave_progressbar=True) -> None:
@@ -128,11 +127,6 @@ def load_ensemble_results_from_folder(folder: PathOrStr, run_ids: Optional[Itera
     assert n_results > 0, f"No results ({extension}) files found in folder {folder.absolute()}"
 
     # Load the files with an optional progressbar
-    filenames = tqdm(filenames, total=n_results, desc="Loading outputs", unit="files", disable=not progressbar, leave=leave_progressbar)
-    if n_results < _THRESHOLD_PARALLEL_LOADING:
-        results = list(map(_load_ensemble_result_simple, filenames))
-    else:
-        with Pool() as p:
-            results = list(p.imap_unordered(_load_ensemble_result_simple, filenames, chunksize=25))
+    results = multiprocess_file_io(_load_ensemble_result_simple, filenames, n=n_results, progressbar=progressbar, leave_progressbar=leave_progressbar, desc="Loading PCSE outputs")
 
     return results

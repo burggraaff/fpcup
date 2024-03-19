@@ -1,5 +1,8 @@
 """
 Load and plot the results from a previous PCSE ensemble run.
+
+Example:
+    python plot_results.py data/locations/ -v
 """
 import fpcup
 
@@ -8,8 +11,8 @@ import argparse
 parser = argparse.ArgumentParser("Load and plot the results from a previous PCSE ensemble run.")
 parser.add_argument("output_dir", help="folder to load PCSE outputs from", type=fpcup.io.Path)
 parser.add_argument("-r", "--results_dir", help="folder to save plots into", type=fpcup.io.Path, default=fpcup.DEFAULT_RESULTS)
-parser.add_argument("-y", "--replace_years", help="replace all years in the output with 2000", action="store_true")
 parser.add_argument("-p", "--province", help="province to select plots from (or all of the Netherlands)", default="Netherlands", choices=fpcup.geo.NAMES, type=fpcup.geo.process_input_province)
+parser.add_argument("-y", "--replace_years", help="replace all years in the output with 2000", action="store_true")
 parser.add_argument("-s", "--sample", help="load only a subsample of the outputs, for testing", action="store_true")
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
@@ -18,6 +21,7 @@ args.SINGLE_PROVINCE = (args.province != "Netherlands")
 
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
+    fpcup.multiprocessing.freeze_support()
     ### Setup
     # Set up the input/output directories
     tag = args.output_dir.stem

@@ -2,7 +2,7 @@
 Run a PCSE ensemble for multiple (WGS84) coordinates, with all other parameters held constant.
 
 Example:
-    %run test/batch_locations.py -v -n 1000 -p Zeeland
+    python test/batch_locations.py -v -n 1000 -p Zeeland
 """
 import fpcup
 
@@ -57,6 +57,7 @@ def run_pcse(coordinates: fpcup._typing.Coordinates) -> bool | fpcup.model.RunDa
 
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
+    fpcup.multiprocessing.freeze_support()
     ### Setup
     # Feedback on constants
     if args.verbose:
@@ -75,7 +76,8 @@ if __name__ == "__main__":
         print(f"Generated {len(coords)} coordinates")
 
     ### Run the model
-    failed_runs = fpcup.model.run_pcse_ensemble(run_pcse, coords, unit="site", chunksize=25, verbose=args.verbose)
+    model_statuses = fpcup.model.multiprocess_pcse(run_pcse, coords, leave_progressbar=args.verbose)
+    failed_runs = fpcup.model.process_model_statuses(model_statuses, verbose=args.verbose)
 
     # Save an ensemble summary
     fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose)

@@ -2,17 +2,10 @@
 Legacy code for bundling parameters.
 Probably won't be re-used.
 """
-from datetime import date, datetime
 from itertools import product
-from multiprocessing import Pool
-from pathlib import Path
 
 import geopandas as gpd
 gpd.options.io_engine = "pyogrio"
-from pyogrio import read_dataframe as read_geodataframe, write_dataframe as write_geodataframe
-import pandas as pd
-import shapely
-from tqdm import tqdm
 
 from pcse.base import MultiCropDataProvider, ParameterProvider, WeatherDataProvider
 from pcse.exceptions import WeatherDataProviderError

@@ -3,7 +3,6 @@ Site-related stuff: load data etc
 """
 import random
 from itertools import product
-from multiprocessing import Pool
 
 import numpy as np
 from pandas import concat
@@ -16,9 +15,7 @@ from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 from ._typing import Callable, Coordinates, Iterable, RealNumber
 from .constants import CRS_AMERSFOORT, WGS84
 from .geo import area, _generate_random_point_in_geometry, _generate_random_point_in_geometry_batch, coverage_of_bounding_box, transform_geometry
-
-# Constants
-_THRESHOLD_PARALLEL_SITES = 1000
+from .multiprocessing import multiprocess_site_generation
 
 
 def example(*args, **kwargs) -> PCSESiteDataProvider:
@@ -113,14 +110,10 @@ def generate_sites_in_province(province: str, n: int, *,
     """
     geometry = area[province]  # geometry in CRS_AMERSFOORT
     geometry = transform_geometry(geometry, CRS_AMERSFOORT, WGS84)  # Convert to WGS84 coordinates
-    geometry_iterable = tqdm([geometry] * n, total=n, desc="Generating sites", unit="site", disable=not progressbar, leave=leave_progressbar)
+    geometry_iterable = [geometry] * n
 
-    # Generate points - single process for small batches, multiprocessing for large batches
-    if n < _THRESHOLD_PARALLEL_SITES:
-        points = map(_generate_random_point_in_geometry, geometry_iterable)
-    else:
-        with Pool() as p:
-            points = list(p.imap_unordered(_generate_random_point_in_geometry, geometry_iterable, chunksize=96))
+    # Generate points
+    points = multiprocess_site_generation(_generate_random_point_in_geometry, geometry_iterable, progressbar=progressbar, leave_progressbar=leave_progressbar)
 
     coordinates = points_to_coordinates(points)
 

@@ -4,7 +4,7 @@ Plots for a user-provided crop (e.g. barley) are selected and only these are use
 Currently does not support using different variants/cultivars.
 
 Example:
-    %run wofost_brp.py data/brp/brpgewaspercelen_definitief_2022-processed.gpkg -v -c barley -p zeeland -f
+    python wofost_brp.py data/brp/brpgewaspercelen_definitief_2022-processed.gpkg -v -c barley -p zeeland -f
 """
 import fpcup
 
@@ -76,10 +76,12 @@ def run_pcse(i_row: tuple[int, fpcup._typing.Series]) -> bool | fpcup.model.RunD
 
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
+    fpcup.multiprocessing.freeze_support()
     ### Setup
     # Feedback on constants
     if args.verbose:
         print(f"Default save folder: {args.output_dir.absolute()}")
+        print()
 
     # Make the output folder if it does not exist yet
     fpcup.io.makedirs(args.output_dir, exist_ok=True)
@@ -99,7 +101,7 @@ if __name__ == "__main__":
 
     # If we are only doing one province, select only the relevant lines from the BRP file
     if args.SINGLE_PROVINCE:
-        brp = brp.loc[brp["province"] == args.province]
+        brp = fpcup.geo.entries_in_province(brp, args.province)
 
         if args.verbose:
             print(f"Selected only plots in {args.province} -- {len(brp)} sites")
@@ -108,7 +110,8 @@ if __name__ == "__main__":
     brp_rows = list(brp.iterrows())
 
     ### Run the model
-    failed_runs = fpcup.model.run_pcse_ensemble(run_pcse, brp_rows, unit="site", chunksize=25, verbose=args.verbose)
+    model_statuses = fpcup.model.multiprocess_pcse(run_pcse, brp_rows, leave_progressbar=args.verbose)
+    failed_runs = fpcup.model.process_model_statuses(model_statuses, verbose=args.verbose)
 
     # Save an ensemble summary
     fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose, use_existing=not args.force)

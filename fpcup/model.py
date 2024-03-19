@@ -2,9 +2,6 @@
 Classes, functions, constants relating to running the WOFOST model and processing its inputs/outputs.
 """
 from datetime import date, datetime
-from functools import partial
-from itertools import product
-from multiprocessing import Pool
 from pathlib import Path
 
 import geopandas as gpd
@@ -12,7 +9,6 @@ gpd.options.io_engine = "pyogrio"
 from pyogrio import read_dataframe as read_geodataframe, write_dataframe as write_geodataframe
 import pandas as pd
 import shapely
-from tqdm import tqdm
 
 from pcse.base import MultiCropDataProvider, ParameterProvider, WeatherDataProvider
 from pcse.exceptions import WeatherDataProviderError
@@ -23,11 +19,9 @@ from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr
 from .agro import AgromanagementData
 from .constants import CRS_AMERSFOORT
+from .multiprocessing import multiprocess_file_io, multiprocess_pcse
 from .soil import SoilType
 from .tools import make_iterable
-
-# Constants
-_THRESHOLD_PARALLEL_PCSE = 200
 
 # Parameter names are from "A gentle introduction to WOFOST", De Wit & Boogaard 2021
 parameter_names = {"DVS": "Crop development stage",
@@ -191,24 +185,15 @@ class Summary(gpd.GeoDataFrame):
         """
         Generate a summary from a finished model, inserting the run_id as an index.
         """
-        summary = model.get_summary_output()
+        data = model.get_summary_output()
 
         # Get data from run_data
-        summary[0] = {**summary[0], **run_data.as_summary_dict()}
+        data[0] = {**data[0], **run_data.as_summary_dict()}
         index = [run_data.run_id]
         if crs is None:
             crs = run_data.crs
 
-        return cls(summary, index=index, crs=crs, **kwargs)
-
-    @classmethod
-    def from_file(cls, filename: PathOrStr):
-        """
-        Load a summary from a GeoJSON (.wsum) file.
-        """
-        data = read_geodataframe(filename)
-        data.set_index("run_id", inplace=True)
-        return cls(data)
+        return cls(data, index=index, crs=crs, **kwargs)
 
     @classmethod
     def from_ensemble(cls, summaries_individual: Iterable):
@@ -217,6 +202,15 @@ class Summary(gpd.GeoDataFrame):
         """
         # Uses the regular Pandas concat function; when the outputs are GeoDataFrames (or Summaries), the result is a GeoDataFrame
         data = pd.concat(summaries_individual)
+        return cls(data)
+
+    @classmethod
+    def from_file(cls, filename: PathOrStr):
+        """
+        Load a summary from a GeoJSON (.wsum) file.
+        """
+        data = read_geodataframe(filename)
+        data.set_index("run_id", inplace=True)
         return cls(data)
 
     @classmethod
@@ -246,13 +240,7 @@ class Summary(gpd.GeoDataFrame):
             filenames.remove(filename_ensemble)
 
         # Load the files (with a tqdm progressbar if desired)
-        n = len(filenames)
-        filenames = tqdm(filenames, desc="Loading summaries", unit="file", disable=not progressbar, leave=leave_progressbar)
-        if n < 1000:
-            summaries_individual = map(cls.from_file, filenames)
-        else:
-            with Pool() as p:
-                summaries_individual = list(p.imap_unordered(cls.from_file, filenames, chunksize=100))
+        summaries_individual = multiprocess_file_io(cls.from_file, filenames, progressbar=progressbar, leave_progressbar=leave_progressbar, desc="Loading summaries")
 
         return cls.from_ensemble(summaries_individual)
 
@@ -379,40 +367,17 @@ def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD) -> Resu
     return output
 
 
-def run_pcse_ensemble(func_pcse: Callable, data_pcse: Iterable, *,
-                      n: Optional[int]=None, chunksize: int=10,
-                      unit: str="run",
-                      verbose: bool=False) -> Iterable[RunData]:
+def process_model_statuses(outputs: Iterable[bool | RunData], *, verbose: bool=True) -> Iterable[RunData]:
     """
-    Run an entire PCSE ensemble.
-    `func_pcse` is a function that runs PCSE for a single instance of `data_pcse`.
-    For example, data_pcse might be a list of coordinates, for which func_pcse retrieves the corresponding site/weather data and then runs WOFOST.
-    Models are run in parallel if there are more than _THRESHOLD_PARALLEL_PCSE to run.
+    Determine which runs in a PCSE ensemble failed / were skipped.
+    Succesful runs will have a True status.
+    Skipped runs will have a False status.
+    Failed runs will have their RunData as their status.
+
+    The RunData of the failed runs are returned for further analysis.
     """
-    # Determine the number of inputs and set up a progressbar
-    if n is None:
-        try:
-            n = len(data_pcse)
-        except TypeError:
-            n = None
-    _tqdm_here = partial(tqdm, total=n, desc="Running models", unit=unit, leave=verbose)
+    n = len(outputs)
 
-    # Determine whether to use multiprocessing
-    if n is None:
-        USE_MULTIPROCESSING = False
-    elif n < _THRESHOLD_PARALLEL_PCSE:
-        USE_MULTIPROCESSING = False
-    else:
-        USE_MULTIPROCESSING = True
-
-    # Actually run the model
-    if USE_MULTIPROCESSING:
-        with Pool() as p:
-            outputs = list(_tqdm_here(p.imap_unordered(func_pcse, data_pcse, chunksize=chunksize)))
-    else:
-        outputs = list(map(func_pcse, _tqdm_here(data_pcse)))
-
-    # Determine which runs failed / were skipped
     failed_runs = [o for o in outputs if isinstance(o, RunData)]
     if len(failed_runs) > 0:
         print(f"Number of failed runs: {len(failed_runs)}/{n}")
@@ -421,7 +386,10 @@ def run_pcse_ensemble(func_pcse: Callable, data_pcse: Iterable, *,
             print("No runs failed.")
 
     skipped_runs = [o for o in outputs if o is False]
-    if verbose:
+    if len(skipped_runs) > 0:
         print(f"Number of skipped runs: {len(skipped_runs)}/{n}")
+    else:
+        if verbose:
+            print("No runs skipped.")
 
     return failed_runs
