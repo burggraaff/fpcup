@@ -1,7 +1,7 @@
 """
 Functions for file input and output.
 """
-from functools import cache
+from functools import cache, partial
 from multiprocessing import Pool
 from os import makedirs
 from pathlib import Path
@@ -19,7 +19,9 @@ from ._typing import Iterable, Optional, PathOrStr
 from .constants import CRS_AMERSFOORT
 from .model import Result, Summary
 
+# Constants
 _SAMPLE_LENGTH = 10
+_THRESHOLD_PARALLEL_LOADING = 1000
 
 def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, *,
                           progressbar=True, leave_progressbar=True) -> None:
@@ -95,8 +97,10 @@ def load_ensemble_summary_from_folder(folder: PathOrStr, *,
     return summary
 
 
+_load_ensemble_result_simple = partial(Result.from_file, run_id=None, include_summary=False)
 def load_ensemble_results_from_folder(folder: PathOrStr, run_ids: Optional[Iterable[PathOrStr]]=None, *,
-                                      extension=".wout", sample=False, progressbar=True, leave_progressbar=True) -> list[Result]:
+                                      extension=".wout", sample=False,
+                                      progressbar=True, leave_progressbar=True) -> list[Result]:
     """
     Load the result files in a given folder.
     By default, load all files in the folder. If `run_ids` is specified, load only those files.
@@ -125,10 +129,10 @@ def load_ensemble_results_from_folder(folder: PathOrStr, run_ids: Optional[Itera
 
     # Load the files with an optional progressbar
     filenames = tqdm(filenames, total=n_results, desc="Loading outputs", unit="files", disable=not progressbar, leave=leave_progressbar)
-    # if n_results < 1000:
-    results = [Result.from_file(filename) for filename in filenames]
-    # else:
-    #     with Pool() as p:
-    #         results = list(p.imap_unordered(Result.from_file, filenames, chunksize=100))
+    if n_results < _THRESHOLD_PARALLEL_LOADING:
+        results = list(map(_load_ensemble_result_simple, filenames))
+    else:
+        with Pool() as p:
+            results = list(p.imap_unordered(_load_ensemble_result_simple, filenames, chunksize=25))
 
     return results

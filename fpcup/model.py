@@ -313,7 +313,7 @@ class Result(pd.DataFrame):
 
     @classmethod
     def from_file(cls, filename: PathOrStr, *,
-                  run_id: Optional[str]=None, include_summary=True, **kwargs):
+                  run_id: Optional[str]=None, include_summary=False, **kwargs):
         """
         Load an output file.
         If a run_id is not provided, use the filename stem.
