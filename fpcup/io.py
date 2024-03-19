@@ -10,8 +10,6 @@ gpd.options.io_engine = "pyogrio"
 from geopandas import GeoDataFrame, read_file as read_gpd
 from pyogrio.errors import DataSourceError
 
-import pandas as pd
-
 from tqdm import tqdm
 
 from ._typing import Iterable, Optional, PathOrStr

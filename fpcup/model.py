@@ -23,6 +23,7 @@ from .multiprocessing import multiprocess_file_io, multiprocess_pcse
 from .soil import SoilType
 from .tools import make_iterable
 
+### Constants
 # Parameter names are from "A gentle introduction to WOFOST", De Wit & Boogaard 2021
 parameter_names = {"DVS": "Crop development stage",
                    "LAI": "Leaf area index [ha/ha]",
@@ -49,6 +50,7 @@ parameter_names = {"DVS": "Crop development stage",
                    }
 
 
+### Classes to help store PCSE inputs and outputs
 class RunData(tuple):
     """
     Stores the data necessary to run a PCSE simulation.
@@ -337,6 +339,7 @@ class Result(pd.DataFrame):
         output_directory = Path(output_directory)
 
         # Generate the output filenames from the user input (`filename`) or from the run id (default)
+        # The suffix step cannot be done with just .with_suffix(".wout") in case the filename contains .
         if filename is not None:
             filename_base = output_directory / filename
         else:
@@ -349,6 +352,7 @@ class Result(pd.DataFrame):
         self.summary.to_file(filename_summary, **kwargs)
 
 
+### Running PCSE
 def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD) -> Result | None:
     """
     Start a new PCSE model with the given inputs and run it until it terminates.
@@ -367,6 +371,7 @@ def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD) -> Resu
     return output
 
 
+### Processing PCSE outputs
 def process_model_statuses(outputs: Iterable[bool | RunData], *, verbose: bool=True) -> Iterable[RunData]:
     """
     Determine which runs in a PCSE ensemble failed / were skipped.
