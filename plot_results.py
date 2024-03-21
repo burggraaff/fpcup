@@ -6,7 +6,7 @@ Example:
 """
 import fpcup
 
-# Parse command line arguments
+### Parse command line arguments
 import argparse
 parser = argparse.ArgumentParser("Load and plot the results from a previous PCSE ensemble run.")
 parser.add_argument("output_dir", help="folder to load PCSE outputs from", type=fpcup.io.Path)

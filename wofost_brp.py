@@ -80,7 +80,7 @@ if __name__ == "__main__":
     ### Setup
     # Feedback on constants
     if args.verbose:
-        print(f"Default save folder: {args.output_dir.absolute()}")
+        print(f"Save folder: {args.output_dir.absolute()}")
         print()
 
     # Make the output folder if it does not exist yet
