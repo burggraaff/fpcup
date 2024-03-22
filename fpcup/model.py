@@ -61,7 +61,8 @@ class RunData(tuple):
         return super().__new__(cls, (parameters, weatherdata, agromanagement))
 
     def __init__(self, sitedata: PCSESiteDataProvider, soildata: SoilType, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, *,
-                 run_id: Optional[str]=None, geometry: Optional[shapely.Geometry | tuple]=None, crs=None):
+                 run_id: Optional[str]=None, prefix: Optional[str]="", suffix: Optional[str]="",
+                 geometry: Optional[shapely.Geometry | tuple]=None, crs=None):
         # Easier access
         self.sitedata = sitedata
         self.soildata = soildata
@@ -87,6 +88,7 @@ class RunData(tuple):
         # Assign a run_id, either from user input or from the run parameters
         if run_id is None:
             run_id = self.generate_run_id()
+            run_id = "_".join(s for s in (prefix, run_id, suffix) if s)
         self.run_id = run_id
 
     def __repr__(self) -> str:
@@ -137,7 +139,8 @@ class RunDataBRP(RunData):
     """
     Same as RunData but specific to the BRP.
     """
-    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, brpdata: pd.Series, brpyear: int, crs=CRS_AMERSFOORT):
+    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, brpdata: pd.Series, brpyear: int, *,
+                 crs=CRS_AMERSFOORT, **kwargs):
         """
         Use a BRP data series to initialise the RunData object.
         `brpyear` is the BRP year, not the weatherdata year, so that e.g. a plot from the 2021 BRP can be simulated in 2022.
@@ -151,7 +154,7 @@ class RunDataBRP(RunData):
 
         self.brpyear = brpyear
 
-        super().__init__(sitedata, soildata, cropdata, weatherdata, agromanagement, geometry=brpdata["geometry"], crs=crs)
+        super().__init__(sitedata, soildata, cropdata, weatherdata, agromanagement, geometry=brpdata["geometry"], crs=crs, **kwargs)
 
     def generate_run_id(self) -> str:
         sowdate = self.agromanagement.crop_start_date

@@ -50,10 +50,8 @@ def run_pcse(soildata_and_depth: tuple[fpcup.soil.SoilType, int], *,
     soildata = copy(_soildata)
     soildata["RDMSOL"] = depth
 
-    run_id = f"{args.crop}_{_soildata.name}_RDMSOL-{depth:d}_dos{sowdate:%Y%j}_lat{coordinates[0]:.7f}-lon{coordinates[1]:.7f}"
-
     # Combine input data
-    run = fpcup.model.RunData(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=coordinates, crs=crs, run_id=run_id)
+    run = fpcup.model.RunData(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=coordinates, crs=crs, suffix=f"RDMSOL-{depth:d}")
 
     # Run model
     output = fpcup.model.run_pcse_single(run)
@@ -72,6 +70,9 @@ def run_pcse(soildata_and_depth: tuple[fpcup.soil.SoilType, int], *,
 if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
     ### Setup
+    # Make the output folder if it does not exist yet
+    fpcup.io.makedirs(args.output_dir, exist_ok=True)
+
     # Feedback on constants
     if args.verbose:
         print(f"Save folder: {args.output_dir.absolute()}")

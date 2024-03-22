@@ -59,6 +59,9 @@ def run_pcse(coordinates: fpcup._typing.Coordinates) -> bool | fpcup.model.RunDa
 if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
     ### Setup
+    # Make the output folder if it does not exist yet
+    fpcup.io.makedirs(args.output_dir, exist_ok=True)
+
     # Feedback on constants
     if args.verbose:
         print("Loaded soil data")
