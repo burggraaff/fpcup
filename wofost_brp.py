@@ -60,6 +60,7 @@ def run_pcse(i_row: tuple[int, fpcup._typing.Series]) -> bool | fpcup.model.RunD
 
     # Combine input data
     run = fpcup.model.RunDataBRP(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, brpdata=row, brpyear=args.YEAR)
+    run.to_file(args.output_dir)
 
     # Run model
     output = fpcup.model.run_pcse_single(run)

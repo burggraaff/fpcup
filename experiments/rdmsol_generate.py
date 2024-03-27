@@ -46,12 +46,11 @@ def run_pcse(soildata_and_depth: tuple[fpcup.soil.SoilType, int], *,
     Returns the corresponding RunData if a run failed.
     """
     # Setup
-    _soildata, depth = soildata_and_depth
-    soildata = copy(_soildata)
-    soildata["RDMSOL"] = depth
+    soildata, depth = soildata_and_depth
 
     # Combine input data
-    run = fpcup.model.RunData(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=coordinates, crs=crs, suffix=f"RDMSOL-{depth:d}")
+    run = fpcup.model.RunData(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, override={"RDMSOL": depth}, geometry=coordinates, crs=crs)
+    run.to_file(args.output_dir)
 
     # Run model
     output = fpcup.model.run_pcse_single(run)

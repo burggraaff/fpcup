@@ -21,15 +21,10 @@ if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
     ### Setup
     # Load the ensemble summary
-    summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir)
-
-    # Get the crop types
-    crop_from_run_id = lambda run_id: run_id.split("_")[0]
-    summary["crop"] = summary.index.to_series().apply(crop_from_run_id)
-
-    # Get the associated RDMSOLs
-    rdmsol_from_run_id = lambda run_id: int(run_id.split("RDMSOL-")[1].split("_")[0])
-    summary["RDMSOL"] = summary.index.to_series().apply(rdmsol_from_run_id)
+    inputsummary, summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir)
+    # Join
+    inputsummary.drop(columns=["geometry"], inplace=True)
+    summary = summary.join(inputsummary)
     summary.sort_values("RDMSOL", inplace=True)
 
     # Plot summary outputs as a function of RDMSOL for each crop, soiltype, and site

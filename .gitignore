@@ -9,6 +9,7 @@ results/
 *.gpkg
 *.pdf
 *.png
+*.wrun
 *.wout
 *.wsum
 *.xlsx

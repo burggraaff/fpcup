@@ -41,6 +41,7 @@ def run_pcse(coordinates: fpcup._typing.Coordinates) -> bool | fpcup.model.RunDa
 
     # Combine input data
     run = fpcup.model.RunData(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=coordinates, crs=crs)
+    run.to_file(args.output_dir)
 
     # Run model
     output = fpcup.model.run_pcse_single(run)

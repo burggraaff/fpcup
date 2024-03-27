@@ -2,7 +2,7 @@
 Load and plot the results from a previous PCSE ensemble run.
 
 Example:
-    python plot_results.py data/locations/ -v
+    python plot_results.py outputs/locations/ -v
 """
 import fpcup
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     ### Summary
     # Load the summary file(s)
-    summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
+    inputsummary, summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
     if args.verbose:
         print(f"Loaded summary file -- {len(summary)} rows")
 

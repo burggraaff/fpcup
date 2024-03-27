@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from ._typing import Iterable, Optional, PathOrStr
 from .constants import CRS_AMERSFOORT
-from .model import Result, Summary
+from .model import InputSummary, Result, Summary, _SUFFIX_RUNDATA, _SUFFIX_OUTPUTS, _SUFFIX_SUMMARY
 from .multiprocessing import multiprocess_file_io
 
 # Constants
@@ -38,7 +38,7 @@ def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, *,
 
 
 def save_ensemble_summary(output_dir: PathOrStr, *,
-                          verbose=False, use_existing=True) -> None:
+                          use_existing=True, verbose=False) -> None:
     """
     Save an ensemble summary by loading the individual summary files.
     If desired (True by default), append to an existing file.
@@ -47,38 +47,34 @@ def save_ensemble_summary(output_dir: PathOrStr, *,
     if verbose:
         print()
 
-    # Generate the ensemble summary
+    # Generate the ensemble summaries
     output_dir = Path(output_dir)
-    summary = Summary.from_folder(output_dir, use_existing=use_existing, leave_progressbar=verbose)
 
-    # Save the modified ensemble summary to file
-    summary_filename = output_dir / "ensemble.wsum"
-    summary.to_file(summary_filename)
+    for summarytype, suffix in zip([InputSummary, Summary], [_SUFFIX_RUNDATA, _SUFFIX_SUMMARY]):
+        # Load individual files
+        summary = summarytype.from_folder(output_dir, use_existing=use_existing, leave_progressbar=verbose)
 
-    print(f"\nSaved ensemble summary ({len(summary)} runs) to {summary_filename.absolute()}")
+        # Save the modified ensemble summary to file
+        summary_filename = output_dir / ("ensemble" + suffix)
+        summary.to_file(summary_filename)
+
+        print(f"\nSaved ensemble summary ({len(summary)} runs) to {summary_filename.absolute()}")
 
 
-def load_ensemble_summary_from_folder(folder: PathOrStr, *,
-                                      crs=CRS_AMERSFOORT, sample=False, save_if_generated=True, progressbar=True, leave_progressbar=True) -> Summary:
+def _load_ensemble_summary_from_folder_single(folder: PathOrStr, summarytype: type, suffix: str, *,
+                                      crs=CRS_AMERSFOORT, sample=False, save_if_generated=True, progressbar=True, leave_progressbar=True) -> InputSummary | Summary:
     """
-    For a given folder, try to load the ensemble summary file.
-    If it is not available, load all individual summary files and combine them.
+    For a given folder, try to load the ensemble input/output summary files.
     """
     # Set up the folder and filename
     folder = Path(folder)
-    ensemble_filename = folder/"ensemble.wsum"
+    ensemble_filename = folder / ("ensemble" + suffix)
 
-    # Load the ensemble summary
-    try:
-        summary = Summary.from_file(ensemble_filename)
+    summary = summarytype.from_folder(folder)
 
-    # If the ensemble summary was not available, load individual files
-    except DataSourceError:
-        summary = Summary.from_folder(folder, progressbar=progressbar, leave_progressbar=leave_progressbar)
-
-        # Save the ensemble to file if desired
-        if save_if_generated and not sample:
-            summary.to_file(ensemble_filename)
+    # Save the ensemble to file if desired
+    if save_if_generated and not sample:
+        summary.to_file(ensemble_filename)
 
     # Subsample if desired
     if sample:
@@ -92,6 +88,17 @@ def load_ensemble_summary_from_folder(folder: PathOrStr, *,
         summary.sort_values("plot_id", inplace=True)
 
     return summary
+
+
+def load_ensemble_summary_from_folder(folder: PathOrStr, *,
+                                      sample=False, save_if_generated=True, **kwargs) -> tuple[InputSummary, Summary]:
+    """
+    For a given folder, try to load the ensemble input/output summary files.
+    """
+    inputsummary = _load_ensemble_summary_from_folder_single(folder, InputSummary, _SUFFIX_RUNDATA, sample=sample, save_if_generated=save_if_generated, **kwargs)
+    summary = _load_ensemble_summary_from_folder_single(folder, Summary, _SUFFIX_SUMMARY, sample=sample, save_if_generated=save_if_generated, **kwargs)
+
+    return inputsummary, summary
 
 
 _load_ensemble_result_simple = partial(Result.from_file, run_id=None, include_summary=False)

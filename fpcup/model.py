@@ -21,9 +21,13 @@ from .agro import AgromanagementData
 from .constants import CRS_AMERSFOORT
 from .multiprocessing import multiprocess_file_io, multiprocess_pcse
 from .soil import SoilType
-from .tools import make_iterable
+from .tools import copy, indent2, make_iterable
 
 ### Constants
+_SUFFIX_RUNDATA = ".wrun"
+_SUFFIX_OUTPUTS = ".wout"
+_SUFFIX_SUMMARY = ".wsum"
+
 # Parameter names are from "A gentle introduction to WOFOST", De Wit & Boogaard 2021
 parameter_names = {"DVS": "Crop development stage",
                    "LAI": "Leaf area index [ha/ha]",
@@ -49,6 +53,8 @@ parameter_names = {"DVS": "Crop development stage",
                    "n": "Number of sites",
                    }
 
+_GEOMETRY_DEFAULT = (0, 0)
+
 
 ### Classes to help store PCSE inputs and outputs
 class RunData(tuple):
@@ -57,74 +63,171 @@ class RunData(tuple):
     Primarily a tuple containing the parameters in the order PCSE expects them in, with some options for geometry and run_id generation.
     """
     def __new__(cls, sitedata: PCSESiteDataProvider, soildata: SoilType, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, **kwargs):
-        parameters = ParameterProvider(sitedata=sitedata, soildata=soildata, cropdata=cropdata)
+        """
+        Creates (but does not initialise) a new RunData object from the 5 PCSE inputs.
+        The first three inputs (sitedata, soildata, cropdata) are wrapped into a PCSE ParameterProvider.
+        The sitedata, soildata, and cropdata are shallow-copied to prevent edits in place.
+        The weatherdata are not copied to conserve memory, and because these are treated as read-only in PCSE.
+        """
+        parameters = ParameterProvider(sitedata=copy(sitedata), soildata=copy(soildata), cropdata=copy(cropdata))
         return super().__new__(cls, (parameters, weatherdata, agromanagement))
 
     def __init__(self, sitedata: PCSESiteDataProvider, soildata: SoilType, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, *,
-                 run_id: Optional[str]=None, prefix: Optional[str]="", suffix: Optional[str]="",
-                 geometry: Optional[shapely.Geometry | tuple]=None, crs=None):
+                 override: Optional[dict]={},
+                 run_id: Optional[str]=None, prefix: Optional[str]=None, suffix: Optional[str]=None,
+                 geometry: Optional[shapely.Geometry | Coordinates]=None, crs=None):
+        """
+        Initialises a newly created RunData object.
+        """
         # Easier access
-        self.sitedata = sitedata
-        self.soildata = soildata
-        self.cropdata = cropdata
         self.parameters = self[0]
         self.weatherdata = self[1]
         self.agromanagement = self[2]
-        self.crop = self.agromanagement.crop_name
         self.soiltype = soildata.name
 
+        # Apply override parameters
+        self.parameters.update(override)
+        self.overrides = copy(self.parameters._override)
+
+        # Assign geometry parameters
+        self._initialise_geometry(geometry, crs)
+
+        # Assign a run_id, either from user input or from the run parameters
+        if run_id is None:
+            run_id = self.generate_run_id()
+            run_id = "_".join(s for s in (prefix, run_id, suffix) if s is not None)
+        self.run_id = run_id
+
+    def _initialise_geometry(self, geometry: Optional[shapely.Geometry | Coordinates]=None, crs: Optional[str]=None) -> None:
+        """
+        Add geometry/CRS properties to self.
+        """
         # Set up the shapely geometry object
         if geometry is None:
-            print("Warning: no geometry data provided - defaulting to (0, 0).")
-            geometry = (0, 0)
+            print(f"Warning: no geometry data provided - defaulting to {_GEOMETRY_DEFAULT}.")
+            geometry = _GEOMETRY_DEFAULT
 
         if isinstance(geometry, tuple):
             # Pairs of coordinates - assume these are in (lat, lon) format
             latitude, longitude = geometry
             geometry = shapely.Point(longitude, latitude)
+
         self.geometry = geometry
         self.crs = crs
 
-        # Assign a run_id, either from user input or from the run parameters
-        if run_id is None:
-            run_id = self.generate_run_id()
-            run_id = "_".join(s for s in (prefix, run_id, suffix) if s)
-        self.run_id = run_id
+    @property
+    def crop_name(self) -> str:
+        return self[2].crop_name
+
+    @property
+    def crop_variety(self) -> str:
+        return self[2].crop_variety
+
+    @property
+    def site_description(self) -> str:
+        return f"Site: {self.parameters._sitedata.__class__.__name__}(WAV={self.parameters['WAV']})"
+
+    @property
+    def soil_description(self) -> str:
+        return f"Soil: {self.soiltype} ({self.parameters['SOLNAM']})"
+
+    @property
+    def crop_description(self) -> str:
+        return f"Crop: {self.crop_name} ('{self.crop_variety}' from {self.parameters._cropdata.__class__.__name__})"
+
+    @property
+    def overrides_description(self) -> str:
+        if len(self.overrides) == 0:
+            overridetext = "None"
+        else:
+            overridetext = repr(self.overrides)
+        return f"Overrides: {overridetext}"
+
+    @property
+    def parameter_description(self) -> str:
+        individual_descriptions = "\n".join([self.site_description,
+                                             self.soil_description,
+                                             self.crop_description,
+                                             self.overrides_description])
+
+        return "\n".join([f"{self.parameters.__class__.__name__}",
+                          indent2(individual_descriptions)])
+
+    @property
+    def weather_description(self) -> str:
+        return f"{type(self.weatherdata).__name__} at ({self.weatherdata.latitude:+.4f} N, {self.weatherdata.longitude:+.4f} E)"
+
+    @property
+    def agro_description(self) -> str:
+        return str(self[2])
+
+    @property
+    def geometry_description(self) -> str:
+        if isinstance(self.geometry, shapely.Geometry):
+            return f"{self.geometry.geom_type}, centroid ({self.geometry.centroid.x:.4f}, {self.geometry.centroid.y:.4f}) (CRS: {self.crs})"
+        else:
+            return str(self.geometry)
 
     def __repr__(self) -> str:
-        text_soil = f"{self.soiltype} ({self.soildata['SOLNAM']})"
-        text_crop = f"{self.cropdata.current_crop_name} ('{self.cropdata.current_variety_name}' from {type(self.cropdata).__name__})"
+        return f"Run '{self.run_id}'"
 
-        text_weather = f"{type(self.weatherdata).__name__} at ({self.weatherdata.latitude:+.4f} N, {self.weatherdata.longitude:+.4f} E)"
+    def __str__(self) -> str:
+        individual_descriptions = "\n".join([self.parameter_description,
+                                             self.weather_description,
+                                             self.agro_description,
+                                             self.geometry_description])
 
-        if isinstance(self.geometry, shapely.Geometry):
-            text_geometry = f"{self.geometry.geom_type}, centroid ({self.geometry.centroid.x:.4f}, {self.geometry.centroid.y:.4f}) (CRS: {self.crs})"
-        else:
-            text_geometry = self.geometry
+        return "\n".join([repr(self),
+                          indent2(individual_descriptions)])
 
-        return (f"Run '{self.run_id}':\n"
-                f"Soil: {text_soil}\n"
-                f"Crop: {text_crop}\n"
-                f"WeatherDataProvider: {text_weather}\n"
-                f"AgromanagementData: {self[2]}\n"
-                f"Geometry: {text_geometry}")
+    def _generate_run_id_base(self) -> str:
+        """
+        Basic run ID generation; this function should be overridden by inheriting classes.
+        """
+        sowdate = self.agromanagement.crop_start_date
+        return f"{self.crop_name}_{self.soiltype}_dos{sowdate:%Y%j}_lat{self.geometry.y:.7f}-lon{self.geometry.x:.7f}"
 
     def generate_run_id(self) -> str:
         """
         Generate a run ID from PCSE model inputs.
         """
-        sowdate = self.agromanagement.crop_start_date
+        run_id = self._generate_run_id_base()
 
-        run_id = f"{self.crop}_{self.soiltype}_dos{sowdate:%Y%j}_lat{self.geometry.y:.7f}-lon{self.geometry.x:.7f}"
+        if len(self.overrides) > 0:
+            override_text = "_".join(f"{key}-{value}" for key, value in sorted(self.overrides.items()))
+            run_id = "_".join([run_id, override_text])
 
         return run_id
 
-    def as_summary_dict(self) -> dict:
+    def summary_dict(self) -> dict:
         """
-        Return those values required by a Summary object as a dictionary.
+        Return inputs that should be in the Summary; mostly used for inheritance.
         """
-        return {"soiltype": self.soiltype,
+        return {"geometry": self.geometry}
+
+    def input_dict(self) -> dict:
+        """
+        Return all inputs as a dictionary.
+        """
+        return {"WAV": self.parameters["WAV"],
+                "soiltype": self.soiltype,
+                "crop": self.crop_name,
+                "variety": self.crop_variety,
+                **self.overrides,
                 "geometry": self.geometry}
+
+    def to_file(self, output_directory: PathOrStr, **kwargs) -> None:
+        """
+        Save to a GeoJSON (.wrun) file.
+        Essentially shorthand for creating an InputSummary object and saving that to file, with a filename based on the current run_id.
+        """
+        # Set up filename
+        output_directory = Path(output_directory)
+        filename = output_directory / (self.run_id + _SUFFIX_RUNDATA)
+
+        # Create dataframe and save
+        input_summary = InputSummary.from_rundata(self)
+        input_summary.to_file(filename, **kwargs)
 
 
 def run_id_BRP(brpyear: int | str, plot_id: int | str, crop: str, sowdate: date) -> str:
@@ -156,49 +259,53 @@ class RunDataBRP(RunData):
 
         super().__init__(sitedata, soildata, cropdata, weatherdata, agromanagement, geometry=brpdata["geometry"], crs=crs, **kwargs)
 
-    def generate_run_id(self) -> str:
+    def _generate_run_id_base(self) -> str:
         sowdate = self.agromanagement.crop_start_date
-        return run_id_BRP(self.brpyear, self.plot_id, self.crop, sowdate)
+        return run_id_BRP(self.brpyear, self.plot_id, self.crop_name, sowdate)
 
-    def as_summary_dict(self) -> dict:
+    def summary_dict(self) -> dict:
         """
         Return those values required by a Summary object as a dictionary.
         """
-        summary_general = super().as_summary_dict()
+        return {"province": self.province,
+                "crop_species": self.crop_species,
+                "area": self.area,
+                "brpyear": self.brpyear,
+                **super().summary_dict()}
 
+    def input_dict(self) -> dict:
+        """
+        Return all inputs as a dictionary.
+        """
         return {"plot_id": self.plot_id,
                 "province": self.province,
                 "crop_species": self.crop_species,
                 "crop_code": self.crop_code,
                 "area": self.area,
                 "brpyear": self.brpyear,
-                **summary_general}
+                **super().input_dict()}
 
 
-class Summary(gpd.GeoDataFrame):
+class GeneralSummary(gpd.GeoDataFrame):
     """
-    Stores a summary of the results from a PCSE ensemble run.
+    General class for Summary-like objects.
+    Subclassed for inputs and outputs.
     """
+    _suffix_default = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.index.set_names("run_id", inplace=True)
         self.sort_index(inplace=True)
 
     @classmethod
-    def from_model(cls, model: Engine, run_data: RunData, *,
-                   crs: Optional[str]=None, **kwargs):
+    def from_file(cls, filename: PathOrStr):
         """
-        Generate a summary from a finished model, inserting the run_id as an index.
+        Load a summary from a GeoJSON (.wrun / .wsum) file.
         """
-        data = model.get_summary_output()
-
-        # Get data from run_data
-        data[0] = {**data[0], **run_data.as_summary_dict()}
-        index = [run_data.run_id]
-        if crs is None:
-            crs = run_data.crs
-
-        return cls(data, index=index, crs=crs, **kwargs)
+        data = read_geodataframe(filename)
+        data.set_index("run_id", inplace=True)
+        return cls(data)
 
     @classmethod
     def from_ensemble(cls, summaries_individual: Iterable):
@@ -210,20 +317,14 @@ class Summary(gpd.GeoDataFrame):
         return cls(data)
 
     @classmethod
-    def from_file(cls, filename: PathOrStr):
-        """
-        Load a summary from a GeoJSON (.wsum) file.
-        """
-        data = read_geodataframe(filename)
-        data.set_index("run_id", inplace=True)
-        return cls(data)
-
-    @classmethod
-    def from_folder(cls, folder: PathOrStr, extension: Optional[str]="*.wsum", *,
+    def from_folder(cls, folder: PathOrStr, extension: Optional[str]=None, *,
                     use_existing=True, progressbar=True, leave_progressbar=True):
         """
         Load an ensemble of Summary objects from a folder and combine them.
         """
+        if extension is None:
+            extension = "*" + cls._suffix_default
+
         # Find all summary files in the folder, except a previously existing ensemble one (if it exists)
         folder = Path(folder)
         filenames = list(folder.glob(extension))
@@ -251,12 +352,54 @@ class Summary(gpd.GeoDataFrame):
 
     def to_file(self, filename: PathOrStr, **kwargs) -> None:
         """
-        Save to as a GeoJSON (.wsum) file.
+        Save to a GeoJSON file.
         The index has to be reset first to ensure it is written to file (annoying 'feature' of the GeoJSON driver).
         """
         self.reset_index(inplace=True)
         write_geodataframe(self, filename, driver="GeoJSON", **kwargs)
         self.set_index("run_id", inplace=True)
+
+
+class InputSummary(GeneralSummary):
+    """
+    Store a summary of the inputs for a PCSE ensemble run.
+    """
+    _suffix_default = _SUFFIX_RUNDATA
+
+    @classmethod
+    def from_rundata(cls, run_data: RunData):
+        """
+        Generate an Inputs objects from a RunData object.
+        """
+        return cls(index=[run_data.run_id], data=run_data.input_dict(), geometry=[run_data.geometry], crs=run_data.crs)
+
+
+class Summary(GeneralSummary):
+    """
+    Stores a summary of the results from a PCSE ensemble run.
+    """
+    _suffix_default = _SUFFIX_SUMMARY
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.index.set_names("run_id", inplace=True)
+        self.sort_index(inplace=True)
+
+    @classmethod
+    def from_model(cls, model: Engine, run_data: RunData, *,
+                   crs: Optional[str]=None, **kwargs):
+        """
+        Generate a summary from a finished model, inserting the run_id as an index.
+        """
+        data = model.get_summary_output()
+
+        # Get data from run_data
+        data[0] = {**run_data.summary_dict(), **data[0]}
+        index = [run_data.run_id]
+        if crs is None:
+            crs = run_data.crs
+
+        return cls(data, index=index, crs=crs, **kwargs)
 
 
 class Result(pd.DataFrame):
@@ -320,7 +463,7 @@ class Result(pd.DataFrame):
 
         # Try to load the associated summary file
         if include_summary:
-            summary_filename = filename.with_suffix(".wsum")
+            summary_filename = filename.with_suffix(_SUFFIX_SUMMARY)
             try:
                 summary = Summary.from_file(summary_filename)
             except FileNotFoundError:
@@ -347,8 +490,8 @@ class Result(pd.DataFrame):
             filename_base = output_directory / filename
         else:
             filename_base = output_directory / self.run_id
-        filename_results = filename_base.with_suffix(filename_base.suffix+".wout")
-        filename_summary = filename_base.with_suffix(filename_base.suffix+".wsum")
+        filename_results = filename_base.with_suffix(filename_base.suffix + _SUFFIX_OUTPUTS)
+        filename_summary = filename_base.with_suffix(filename_base.suffix + _SUFFIX_SUMMARY)
 
         # Save the outputs
         self.to_csv(filename_results, **kwargs)

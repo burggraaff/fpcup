@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from ._agro_templates import load_agrotemplate_yaml, _template_example_springbarley, template_date
 from ._typing import Callable, Iterable, Type
-from .tools import make_iterable, dict_product
+from .tools import dict_product, indent2, make_iterable
 
 class AgromanagementData(list):
     """
@@ -41,16 +41,33 @@ class AgromanagementDataSingleCrop(AgromanagementData):
         self.crop_end_date = self.calendar["crop_end_date"]
         self.crop_end_type = self.calendar["crop_end_type"]
 
-    def __repr__(self) -> str:
+    @property
+    def crop(self) -> str:
+        return f"{self.crop_name}/{self.crop_variety}"
+
+    @property
+    def _start(self) -> str:
+        return f"{self.crop_start_date} ({self.crop_start_type})"
+
+    @property
+    def _end(self) -> str:
         if self.crop_end_date is None:
             end = self.crop_end_type
         else:
             end = f"{self.crop_end_date} ({self.crop_end_type})"
+        return end
 
-        return ("Agromanagement data for a single crop.\n"
-                f"Crop: {self.crop_name} (variety: {self.crop_variety})\n"
-                f"Start: {self.crop_start_date} ({self.crop_start_type})\n"
-                f"End: {end}")
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} ({self.crop_name}/{self.crop_variety}) ; {self._start} -- {self._end}"
+
+    def __str__(self) -> str:
+        classtext = f"{self.__class__.__name__}"
+        datatext = (f"Crop: {self.crop}\n"
+                    f"Start: {self._start}\n"
+                    f"End: {self._end}")
+
+        return "\n".join([classtext,
+                          indent2(datatext)])
 
 agromanagement_example = AgromanagementDataSingleCrop.from_template(_template_example_springbarley)
 

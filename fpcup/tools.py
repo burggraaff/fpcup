@@ -1,7 +1,11 @@
 """
 Tools without a common theme.
 """
+from copy import copy
+from functools import partial
 from itertools import product
+from textwrap import indent
+indent2 = partial(indent, prefix="  ")
 
 from ._typing import Iterable
 
@@ -11,6 +15,7 @@ except NameError:
     RUNNING_IN_IPYTHON = False
 else:
     RUNNING_IN_IPYTHON = True
+
 
 def make_iterable(x: object, exclude: Iterable[type]=[str]) -> Iterable:
     """
