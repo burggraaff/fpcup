@@ -26,10 +26,11 @@ args = parser.parse_args()
 
 
 ### Load constants
+parameter = "RDMSOL"
 YEAR = 2022
-RDMSOLs = list(range(10, 150, 1))
+parameterrange = list(range(*fpcup.soil.parameters[parameter].bounds, 1))
 soiltypes = fpcup.soil.soil_types.values()
-iterable = list(product(soiltypes, RDMSOLs))
+iterable = list(product(soiltypes, parameterrange))
 crs = fpcup.constants.WGS84
 cropdata = fpcup.crop.default
 sowdate = fpcup.agro.sowdate_range(args.crop, YEAR)[0]
