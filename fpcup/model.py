@@ -16,12 +16,12 @@ from pcse.fileinput import CABOFileReader
 from pcse.models import Engine, Wofost72_WLP_FD
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
-from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr
+from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr, PCSEDateParameter, PCSENumericParameter
 from .agro import AgromanagementData
 from .constants import CRS_AMERSFOORT
 from .multiprocessing import multiprocess_file_io, multiprocess_pcse
 from .soil import SoilType
-from .tools import copy, indent2, make_iterable
+from .tools import copy, indent2, parameterdict
 
 ### Constants
 _SUFFIX_RUNDATA = ".wrun"
@@ -29,29 +29,30 @@ _SUFFIX_OUTPUTS = ".wout"
 _SUFFIX_SUMMARY = ".wsum"
 
 # Parameter names are from "A gentle introduction to WOFOST", De Wit & Boogaard 2021
-parameter_names = {"DVS": "Crop development stage",
-                   "LAI": "Leaf area index [ha/ha]",
-                   "TAGP": "Total above-ground production [kg/ha]",
-                   "TWSO": "Total weight - storage organs [kg/ha]",
-                   "TWLV": "Total weight - leaves [kg/ha]",
-                   "TWST": "Total weight - stems [kg/ha]",
-                   "TWRT": "Total weight - roots [kg/ha]",
-                   "TRA": "Crop transpiration [cm/day]",
-                   "RD": "Crop rooting depth [cm]",
-                   "SM": "Soil moisture index",
-                   "WWLOW": "Total water [cm]",
-                   "LAIMAX": "Maximum leaf area index [ha/ha]",
-                   "CTRAT": "Cumulative crop transpiration [cm]",
-                   "DOS": "Date of sowing",
-                   "DOE": "Date of emergence",
-                   "DOA": "Date of anthesis",
-                   "DOM": "Date of maturity",
-                   "DOH": "Date of harvest",
-                   "DOV": "Date of vernalisation",
-                   "CEVST": "Cumulative soil evaporation [cm]",
-                   "area": "Total area [ha]",
-                   "n": "Number of sites",
-                   }
+kgperha = "kg / ha"
+
+DVS = PCSENumericParameter(name="DVS", description="Crop development state (-0.1 = sowing; 0 = emergence; 1 = flowering; 2 = maturity)", plotname="Crop development state", bounds=(-0.1, 2))
+LAI = PCSENumericParameter(name="LAI", description="Leaf area index", unit="ha / ha", bounds=(0, 12))
+TAGP = PCSENumericParameter(name="TAGP", description="Total above-ground production", unit=kgperha, bounds=(0, 150000))
+TWSO = PCSENumericParameter(name="TWSO", description="Total weight of storage organs", unit=kgperha, bounds=(0, 100000))
+TWLV = PCSENumericParameter(name="TWLV", description="Total weight of leaves", unit=kgperha, bounds=(0, 100000))
+TWST = PCSENumericParameter(name="TWST", description="Total weight of stems", unit=kgperha, bounds=(0, 100000))
+TWRT = PCSENumericParameter(name="TWSO", description="Total weight of roots", unit=kgperha, bounds=(0, 100000))
+TRA = PCSENumericParameter(name="TRA", description="Crop transpiration", unit="cm / day")
+RD = PCSENumericParameter(name="RD", description="Rooting depth", unit="cm", bounds=(10, 150))
+SM = PCSENumericParameter(name="SM", description="Actual soil moisture content in rooted zone", plotname="Soil moisture index", bounds=(0.01, 0.9))
+WWLOW = PCSENumericParameter(name="WWLOW", description="Amount of water in whole rootable zone", plotname="Water in rootable zone", unit="cm", bounds=(0, 150))
+LAIMAX = PCSENumericParameter(name="LAIMAX", description="Maximum LAI reached during growth cycle", plotname="Maximum leaf area index", unit="ha / ha")
+CTRAT = PCSENumericParameter(name="CTRAT", description="Cumulative crop transpiration", unit="cm", bounds=(0, 100))
+CEVST = PCSENumericParameter(name="CEVST", description="Cumulative soil transpiration", unit="cm")
+DOS = PCSEDateParameter(name="DOS", description="Date of sowing")
+DOE = PCSEDateParameter(name="DOE", description="Date of emergence")
+DOA = PCSEDateParameter(name="DOA", description="Date of anthesis")
+DOM = PCSEDateParameter(name="DOM", description="Date of maturity")
+DOH = PCSEDateParameter(name="DOH", description="Date of harvest")
+DOV = PCSEDateParameter(name="DOV", description="Date of vernalisation")
+
+parameters = parameterdict(DVS, LAI, TAGP, TWSO, TWLV, TWST, TWRT, TRA, RD, SM, WWLOW, LAIMAX, CTRAT, CEVST, DOS, DOE, DOA, DOM, DOH, DOV)
 
 _GEOMETRY_DEFAULT = (0, 0)
 

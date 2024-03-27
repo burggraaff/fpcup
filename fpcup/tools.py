@@ -7,7 +7,7 @@ from itertools import product
 from textwrap import indent
 indent2 = partial(indent, prefix="  ")
 
-from ._typing import Iterable
+from ._typing import Iterable, PCSEParameter
 
 try:
     get_ipython()
@@ -31,6 +31,7 @@ def make_iterable(x: object, exclude: Iterable[type]=[str]) -> Iterable:
     else:
         return [x]
 
+
 def dict_product(d: dict) -> list[dict]:
     """
     For a dict `d` with iterable values, return the Cartesian product, i.e. all combinations of values in those iterables.
@@ -41,3 +42,10 @@ def dict_product(d: dict) -> list[dict]:
     d_all_iterable = {key: make_iterable(value) for key, value in d.items()}
     d_product = [dict(zip(d_all_iterable.keys(), i)) for i in product(*d_all_iterable.values())]
     return d_product
+
+
+def parameterdict(*params: Iterable[PCSEParameter]) -> dict[str, PCSEParameter]:
+    """
+    Combines an iterable of PCSEParameter objects into a dictionary, with their name as their key.
+    """
+    return {p.name: p for p in params}

@@ -23,10 +23,13 @@ cividis_discrete = colormaps["cividis"].resampled(10)
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
-from .aggregate import KEYS_AGGREGATE
+from .aggregate import KEYS_AGGREGATE, parameters as agg_parameters
 from .constants import CRS_AMERSFOORT, WGS84
+from .crop import parameters as crop_parameters
 from .geo import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3, entries_in_province
-from .model import Summary, parameter_names
+from .model import Summary, parameters as model_parameters
+from .site import parameters as site_parameters
+from .soil import parameters as soil_parameters
 from .tools import make_iterable
 
 # Constants
@@ -35,6 +38,8 @@ _RASTERIZE_LIMIT_GEO = 250  # Plot geo data in raster format if there are more t
 _RASTERIZE_GEO = lambda data: (len(data) > _RASTERIZE_LIMIT_GEO)
 
 KEYS_AGGREGATE_PLOT = ("n", "area", *KEYS_AGGREGATE)
+
+parameter_names = {**agg_parameters, **crop_parameters, **model_parameters, **site_parameters, **soil_parameters}
 
 def plot_outline(ax: plt.Axes, province: str="Netherlands", *,
                  coarse: bool=False, crs: str=CRS_AMERSFOORT, **kwargs) -> None:

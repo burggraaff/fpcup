@@ -9,7 +9,13 @@ import geopandas as gpd
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
-from ._typing import Callable, FuncDict, Iterable
+from ._typing import Callable, FuncDict, Iterable, PCSENumericParameter
+from .tools import parameterdict
+
+# Parameters for plotting
+area = PCSENumericParameter(name="area", description="Total plot area", unit="ha")
+n = PCSENumericParameter(name="area", description="Number of sites")
+parameters = parameterdict(area, n)
 
 # Columns in summary data that should be averaged over for aggregates
 # H3pandas does not support the tuple-dict system, e.g. {"n": ("DVS", "count")}, so it has to be done in an ugly way
