@@ -58,7 +58,7 @@ def save_ensemble_summary(output_dir: PathOrStr, *,
         summary_filename = output_dir / ("ensemble" + suffix)
         summary.to_file(summary_filename)
 
-        print(f"\nSaved ensemble summary ({len(summary)} runs) to {summary_filename.absolute()}")
+        print(f"Saved ensemble summary ({len(summary)} runs) to {summary_filename.absolute()}")
 
 
 def _load_ensemble_summary_from_folder_single(folder: PathOrStr, summarytype: type, suffix: str, *,
