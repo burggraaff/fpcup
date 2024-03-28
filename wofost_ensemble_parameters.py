@@ -4,7 +4,7 @@ All available soil types are tested.
 A specified number of sites, roughly central to the Netherlands, are used.
 
 Example:
-    python experiments/parameter_sensitivity.py rdmsol wav -n 100 -v -c barley -s 16
+    python wofost_ensemble_parameters.py rdmsol wav -n 100 -v -c barley -s 16
 """
 from functools import partial
 
