@@ -3,10 +3,12 @@ Classes and functions for dealing with PCSE input and output parameters in a sta
 Includes a non-comprehensive list of parameters, sorted by subject and input/output status.
 """
 from dataclasses import dataclass
+from itertools import product
 
 import numpy as np
 
 from ._typing import Iterable, Optional, RealNumber
+from .tools import dict_product
 
 ### Classes for dealing with parameters
 @dataclass
@@ -94,7 +96,7 @@ IFUNRN = PCSEFlag(name="IFUNRN", description="Flag indicating the way the non-in
 
 SOLNAM = PCSELabel(name="SOLNAM", description="Soil name")
 
-n = PCSENumericParameter(name="area", description="Number of sites")
+n = PCSENumericParameter(name="n", description="Number of sites")
 area = PCSENumericParameter(name="area", description="Total plot area", unit="ha")
 WAV = PCSENumericParameter(name="WAV", description="Initial amount of water in rootable zone in excess of wilting point", plotname="Initial amount of water", unit="cm", bounds=(0, 50))
 NOTINF = PCSENumericParameter(name="NOTINF", description="Non-infiltrating fraction", bounds=(0, 1))
@@ -169,3 +171,14 @@ site_parameters = parameterdict(WAV, NOTINF, SMLIM, SSI, SSMAX, IFUNRN)
 
 all_parameters = {**pcse_inputs, **pcse_outputs, **pcse_summary_outputs,
                   **aggregate_parameters, **crop_parameters, **soil_parameters, **site_parameters}
+
+
+### Functions related to generating ensembles
+def generate_ensemble_space(*parameter_names, n: int=100) -> dict:
+    """
+    Generate an iterable spanning the input space for any number of parameter_names.
+    """
+    parameters = [all_parameters[name] for name in sorted(parameter_names)]
+    parameter_ranges = {p.name: p.generate_space(n) for p in parameters}
+    combined = dict_product(parameter_ranges)
+    return combined

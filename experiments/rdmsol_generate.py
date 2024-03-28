@@ -1,12 +1,11 @@
 """
-Run a PCSE ensemble for different values of RDMSOL (maximum rooting depth) to determine its effect.
+Run a PCSE ensemble for different values of input parameters to determine their effect.
 All available soil types are tested.
-A single site, roughly central to the Netherlands, is used.
+A specified number of sites, roughly central to the Netherlands, are used.
 
 Example:
-    python experiments/rdmsol_generate.py -v -c barley -n 9
+    python experiments/parameter_sensitivity.py rdmsol wav -n 100 -v -c barley -s 16
 """
-from itertools import product
 from functools import partial
 
 from tqdm import tqdm
@@ -16,42 +15,39 @@ import fpcup
 ### Parse command line arguments
 import argparse
 parser = argparse.ArgumentParser(description="Run a PCSE ensemble for different values of RDMSOL (maximum rooting depth) to determine its effect.")
+parser.add_argument("parameter_names", help="parameter(s) to iterate over", type=str.upper, nargs="*")
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
-parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_OUTPUT / "rdmsol")
+parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to (default: generated from parameters)", type=fpcup.io.Path, default=None)
+parser.add_argument("-n", "--number", help="number of values per parameter; note the exponential increase in runs when doing multiple parameters", type=int, default=100)
 parser.add_argument("-c", "--crop", help="crop to run simulations on", default="barley", choices=("barley", "maize", "sorghum", "soy", "wheat"), type=str.lower)
-parser.add_argument("-n", "--number", help="number of locations; result may be lower due to rounding", type=int, default=25)
+parser.add_argument("-s", "--number_sites", help="number of sites; result may be lower due to rounding", type=int, default=16)
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
+# Generate output folder name from parameters
+if args.output_dir is None:
+    args.output_dir = fpcup.settings.DEFAULT_OUTPUT / "-".join(args.parameter_names)
 
 ### Load constants
-parameter_name = "RDMSOL"
-parameter = fpcup.parameters.pcse_inputs[parameter_name]
-parameterrange = parameter.generate_space(n=100)
-
 YEAR = 2022
-soiltypes = fpcup.soil.soil_types.values()
-iterable = list(product(soiltypes, parameterrange))
 crs = fpcup.constants.WGS84
 cropdata = fpcup.crop.default
 sowdate = fpcup.agro.sowdate_range(args.crop, YEAR)[0]
 agromanagement = fpcup.agro.load_agrotemplate(args.crop, sowdate=sowdate)
+soiltypes = list(fpcup.soil.soil_types.values())
 
 
 ### Worker function; this runs PCSE once for one site
-def run_pcse(soildata_and_depth: tuple[fpcup.soil.SoilType, int], *,
-                                       coordinates: fpcup._typing.Coordinates, sitedata: fpcup.site.PCSESiteDataProvider, weatherdata: fpcup.weather.WeatherDataProvider) -> bool | fpcup.model.RunDataBRP:
+def run_pcse(overrides: fpcup._typing.Iterable[dict[str, fpcup._typing.Number]], *,
+             coordinates: fpcup._typing.Coordinates, sitedata: fpcup.site.PCSESiteDataProvider, weatherdata: fpcup.weather.WeatherDataProvider, soildata: fpcup.soil.SoilType) -> bool | fpcup.model.RunDataBRP:
     """
-    For a single pair of soil type and depth (RDMSOL), wrap the data into a RunData object, and run PCSE on it.
-    Uses pre-made sitedata and weatherdata provided through a `partial` object.
+    For a single dictionary of override values (e.g. RDMSOL and WAV), wrap the data into a RunData object, and run PCSE on it.
+    The other kwargs (e.g. sitedata, weatherdata) must be provided beforehand through a `partial` object.
     Returns True if the results were succesfully written to file.
     Returns the corresponding RunData if a run failed.
     """
-    # Setup
-    soildata, depth = soildata_and_depth
-
     # Combine input data
-    run = fpcup.model.RunData(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, override={parameter_name: depth}, geometry=coordinates, crs=crs)
+    run = fpcup.model.RunData(override=overrides, sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=coordinates, crs=crs)
     run.to_file(args.output_dir)
 
     # Run model
@@ -82,22 +78,31 @@ if __name__ == "__main__":
         print(agromanagement)
         print()
 
+    # Generate the iterable
+    iterable = fpcup.parameters.generate_ensemble_space(*args.parameter_names, n=args.number)
+    if args.verbose:
+        print(f"Iterating over the following parameters: {args.parameter_names}")
+        print(f"Length of iterator: {len(iterable)}")
+
     # Generate the coordinates
-    coords = fpcup.site.generate_sites_space(latitude=(51, 53), longitude=(4, 6), n=args.number)
+    coords = fpcup.site.generate_sites_space(latitude=(51, 53), longitude=(4, 6), n=args.number_sites)
     if args.verbose:
         print(f"Generated {len(coords)} coordinates.")
 
     ### Loop over sites (coordinates)
+    if args.verbose:
+        print(f"Expected total runs: {len(iterable) * len(coords) * len(soiltypes)}")
     model_statuses_combined = []
     for c in tqdm(coords, desc="Sites", unit="site", leave=args.verbose):
-        ### Generate site-specific data
-        sitedata = fpcup.site.example(c)
-        weatherdata = fpcup.weather.load_weather_data_NASAPower(c)
-        run_pcse_site = partial(run_pcse, coordinates=c, sitedata=sitedata, weatherdata=weatherdata)
+        for soildata in tqdm(soiltypes, desc="Soil types", unit="type", leave=False):
+            ### Generate site-specific data
+            sitedata = fpcup.site.example(c)
+            weatherdata = fpcup.weather.load_weather_data_NASAPower(c)
+            run_pcse_site = partial(run_pcse, coordinates=c, sitedata=sitedata, weatherdata=weatherdata, soildata=soildata)
 
-        ### Run the model
-        model_statuses = fpcup.model.multiprocess_pcse(run_pcse_site, iterable, leave_progressbar=False)
-        model_statuses_combined.extend(model_statuses)
+            ### Run the model
+            model_statuses = fpcup.model.multiprocess_pcse(run_pcse_site, iterable, leave_progressbar=False)
+            model_statuses_combined.extend(model_statuses)
 
     failed_runs = fpcup.model.process_model_statuses(model_statuses, verbose=args.verbose)
 
