@@ -12,22 +12,12 @@ from tqdm import tqdm, trange
 from pcse.util import WOFOST72SiteDataProvider, WOFOST80SiteDataProvider
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
-from ._typing import Callable, Coordinates, Iterable, PCSEFlag, PCSENumericParameter, RealNumber
+from ._typing import Callable, Coordinates, Iterable, RealNumber
 from .constants import CRS_AMERSFOORT, WGS84
 from .geo import area, _generate_random_point_in_geometry, _generate_random_point_in_geometry_batch, coverage_of_bounding_box, transform_geometry
 from .multiprocessing import multiprocess_site_generation
-from .tools import parameterdict
+from .parameters import site_parameters
 
-# Parameter information from "A gentle introduction to WOFOST" (De Wit & Boogaard 2021)
-WAV = PCSENumericParameter(name="WAV", description="Initial amount of water in rootable zone in excess of wilting point", plotname="Initial amount of water", unit="cm", bounds=(0, 50))
-NOTINF = PCSENumericParameter(name="NOTINF", description="Non-infiltrating fraction", bounds=(0, 1))
-SMLIM = PCSENumericParameter(name="SMLIM", description="Maximum initial soil moisture in rooted zone", plotname="Maximum initial soil moisture", unit="cm", bounds=(0, 10))
-SSI = PCSENumericParameter(name="SSI", description="Initial surface storage", unit="cm", bounds=(0, 2))
-SSMAX = PCSENumericParameter(name="SSMAX", description="Maximum surface storage capacity", unit="cm", bounds=(0, 2))
-
-IFUNRN = PCSEFlag(name="IFUNRN", description="Flag indicating the way the non-infiltrating fraction of rainfall is determined")
-
-parameters = parameterdict(WAV, NOTINF, SMLIM, SSI, SSMAX, IFUNRN)
 
 def example(*args, **kwargs) -> PCSESiteDataProvider:
     """

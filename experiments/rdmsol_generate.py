@@ -6,7 +6,6 @@ A single site, roughly central to the Netherlands, is used.
 Example:
     python experiments/rdmsol_generate.py -v -c barley -n 9
 """
-from copy import copy
 from itertools import product
 from functools import partial
 
@@ -26,9 +25,11 @@ args = parser.parse_args()
 
 
 ### Load constants
-parameter = "RDMSOL"
+parameter_name = "RDMSOL"
+parameter = fpcup.parameters.pcse_inputs[parameter_name]
+parameterrange = parameter.generate_space(n=100)
+
 YEAR = 2022
-parameterrange = list(range(*fpcup.soil.parameters[parameter].bounds, 1))
 soiltypes = fpcup.soil.soil_types.values()
 iterable = list(product(soiltypes, parameterrange))
 crs = fpcup.constants.WGS84
@@ -50,7 +51,7 @@ def run_pcse(soildata_and_depth: tuple[fpcup.soil.SoilType, int], *,
     soildata, depth = soildata_and_depth
 
     # Combine input data
-    run = fpcup.model.RunData(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, override={"RDMSOL": depth}, geometry=coordinates, crs=crs)
+    run = fpcup.model.RunData(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, override={parameter_name: depth}, geometry=coordinates, crs=crs)
     run.to_file(args.output_dir)
 
     # Run model

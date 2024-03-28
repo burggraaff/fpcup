@@ -23,13 +23,11 @@ cividis_discrete = colormaps["cividis"].resampled(10)
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
-from .aggregate import KEYS_AGGREGATE, parameters as agg_parameters
+from .aggregate import KEYS_AGGREGATE
 from .constants import CRS_AMERSFOORT, WGS84
-from .crop import parameters as crop_parameters
 from .geo import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3, entries_in_province
-from .model import Summary, parameters as model_parameters
-from .site import parameters as site_parameters
-from .soil import parameters as soil_parameters
+from .model import Summary
+from .parameters import all_parameters, pcse_inputs, pcse_outputs, pcse_summary_outputs
 from .tools import make_iterable
 
 # Constants
@@ -38,8 +36,6 @@ _RASTERIZE_LIMIT_GEO = 250  # Plot geo data in raster format if there are more t
 _RASTERIZE_GEO = lambda data: (len(data) > _RASTERIZE_LIMIT_GEO)
 
 KEYS_AGGREGATE_PLOT = ("n", "area", *KEYS_AGGREGATE)
-
-parameter_names = {**agg_parameters, **crop_parameters, **model_parameters, **site_parameters, **soil_parameters}
 
 def plot_outline(ax: plt.Axes, province: str="Netherlands", *,
                  coarse: bool=False, crs: str=CRS_AMERSFOORT, **kwargs) -> None:
@@ -248,7 +244,7 @@ def plot_wofost_ensemble_results(outputs: Iterable[pd.DataFrame], keys: Iterable
     for ax, key in zip(axs, keys):
         ax.set_ylabel(key)
         ax.set_ylim(ymin=0)
-        ax.text(1.00, 1.00, parameter_names[key], transform=ax.transAxes, horizontalalignment="right", verticalalignment="top", bbox={"boxstyle": "round", "facecolor": "white"})
+        ax.text(1.00, 1.00, pcse_outputs[key], transform=ax.transAxes, horizontalalignment="right", verticalalignment="top", bbox={"boxstyle": "round", "facecolor": "white"})
 
     fig.align_ylabels()
 
