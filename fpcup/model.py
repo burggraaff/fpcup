@@ -98,6 +98,14 @@ class RunData(tuple):
         return self[2].crop_variety
 
     @property
+    def latitude(self) -> float:
+        return self.geometry.centroid.y
+
+    @property
+    def longitude(self) -> float:
+        return self.geometry.centroid.x
+
+    @property
     def site_description(self) -> str:
         return f"Site: {self.parameters._sitedata.__class__.__name__}(WAV={self.parameters['WAV']})"
 
@@ -138,7 +146,7 @@ class RunData(tuple):
     @property
     def geometry_description(self) -> str:
         if isinstance(self.geometry, shapely.Geometry):
-            return f"{self.geometry.geom_type}, centroid ({self.geometry.centroid.x:.4f}, {self.geometry.centroid.y:.4f}) (CRS: {self.crs})"
+            return f"{self.geometry.geom_type}, centroid ({self.latitude:.4f}, {self.longitude:.4f}) (CRS: {self.crs})"
         else:
             return str(self.geometry)
 
@@ -159,7 +167,7 @@ class RunData(tuple):
         Basic run ID generation; this function should be overridden by inheriting classes.
         """
         sowdate = self.agromanagement.crop_start_date
-        return f"{self.crop_name}_{self.soiltype}_dos{sowdate:%Y%j}_lat{self.geometry.y:.7f}-lon{self.geometry.x:.7f}"
+        return f"{self.crop_name}_{self.soiltype}_dos{sowdate:%Y%j}_lat{self.latitude:.7f}-lon{self.longitude:.7f}"
 
     def generate_run_id(self) -> str:
         """
