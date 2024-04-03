@@ -20,7 +20,9 @@ from ._run_id import append_overrides, generate_run_id_base, generate_run_id_BRP
 from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr
 from .agro import AgromanagementData
 from .constants import CRS_AMERSFOORT
+from .crop import default as default_cropdata
 from .multiprocessing import multiprocess_file_io, multiprocess_pcse
+from .site import default as default_sitedata
 from .soil import SoilType
 from .tools import copy, indent2
 
@@ -38,17 +40,20 @@ class RunData(tuple):
     Primarily a tuple containing the parameters in the order PCSE expects them in, with some options for geometry and run_id generation.
     """
     ### OBJECT GENERATION AND INITIALISATION
-    def __new__(cls, sitedata: PCSESiteDataProvider, soildata: SoilType, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, **kwargs):
+    def __new__(cls, *, soildata: SoilType, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData,
+                sitedata: PCSESiteDataProvider=default_sitedata, cropdata: MultiCropDataProvider=default_cropdata, **kwargs):
         """
         Creates (but does not initialise) a new RunData object from the 5 PCSE inputs.
         The first three inputs (sitedata, soildata, cropdata) are wrapped into a PCSE ParameterProvider.
+        Default values can be used for sitedata and cropdata.
         The sitedata, soildata, and cropdata are shallow-copied to prevent edits in place.
         The weatherdata are not copied to conserve memory, and because these are treated as read-only in PCSE.
         """
         parameters = ParameterProvider(sitedata=copy(sitedata), soildata=copy(soildata), cropdata=copy(cropdata))
         return super().__new__(cls, (parameters, weatherdata, agromanagement))
 
-    def __init__(self, sitedata: PCSESiteDataProvider, soildata: SoilType, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, *,
+    def __init__(self, *, soildata: SoilType, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData,
+                sitedata: PCSESiteDataProvider=default_sitedata, cropdata: MultiCropDataProvider=default_cropdata,
                  override: Optional[dict]={},
                  run_id: Optional[str]=None, prefix: Optional[str]=None, suffix: Optional[str]=None,
                  geometry: Optional[shapely.Geometry | Coordinates]=None, crs=None):
@@ -225,7 +230,8 @@ class RunDataBRP(RunData):
     """
     Same as RunData but specific to the BRP.
     """
-    def __init__(self, sitedata: PCSESiteDataProvider, soildata: CABOFileReader, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, brpdata: pd.Series, brpyear: int, *,
+    def __init__(self, *, soildata: SoilType, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, brpdata: pd.Series, brpyear: int,
+                sitedata: PCSESiteDataProvider=default_sitedata, cropdata: MultiCropDataProvider=default_cropdata,
                  crs=CRS_AMERSFOORT, **kwargs):
         """
         Use a BRP data series to initialise the RunData object.
@@ -240,7 +246,7 @@ class RunDataBRP(RunData):
 
         self.brpyear = brpyear
 
-        super().__init__(sitedata, soildata, cropdata, weatherdata, agromanagement, geometry=brpdata["geometry"], crs=crs, **kwargs)
+        super().__init__(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=brpdata["geometry"], crs=crs, **kwargs)
 
     def _generate_run_id_base(self) -> str:
         return generate_run_id_BRP(brpyear=self.brpyear, plot_id=self.plot_id, crop_name=self.crop_name, sowdate=self.sowdate)

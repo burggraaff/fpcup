@@ -2,6 +2,7 @@
 Site-related stuff: load data etc
 """
 import random
+from copy import copy
 from itertools import product
 
 import numpy as np
@@ -17,12 +18,13 @@ from ._typing import Callable, Coordinates, Iterable, RealNumber
 from .constants import CRS_AMERSFOORT, WGS84
 from .parameters import site_parameters
 
+default = WOFOST72SiteDataProvider(WAV=10)
 
 def example(*args, **kwargs) -> PCSESiteDataProvider:
     """
     Just use the default value for now.
     """
-    sitedata = WOFOST72SiteDataProvider(WAV=10)
+    sitedata = copy(default)
     return sitedata
 
 

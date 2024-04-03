@@ -30,15 +30,14 @@ if args.output_dir is None:
 
 ### Load constants
 YEAR = 2022
-crs = fpcup.constants.WGS84
-cropdata = fpcup.crop.default
+CRS = fpcup.constants.WGS84
 agromanagement = args.crop.agromanagement_first_sowingdate(YEAR)
 soiltypes = list(fpcup.soil.soil_types.values())
 
 
 ### Worker function; this runs PCSE once for one site
 def run_pcse(overrides: fpcup._typing.Iterable[dict[str, fpcup._typing.Number]], *,
-             coordinates: fpcup._typing.Coordinates, sitedata: fpcup.site.PCSESiteDataProvider, weatherdata: fpcup.weather.WeatherDataProvider, soildata: fpcup.soil.SoilType) -> bool | fpcup.model.RunDataBRP:
+             coordinates: fpcup._typing.Coordinates, weatherdata: fpcup.weather.WeatherDataProvider, soildata: fpcup.soil.SoilType) -> bool | fpcup.model.RunDataBRP:
     """
     For a single dictionary of override values (e.g. RDMSOL and WAV), wrap the data into a RunData object, and run PCSE on it.
     The other kwargs (e.g. sitedata, weatherdata) must be provided beforehand through a `partial` object.
@@ -46,7 +45,7 @@ def run_pcse(overrides: fpcup._typing.Iterable[dict[str, fpcup._typing.Number]],
     Returns the corresponding RunData if a run failed.
     """
     # Combine input data
-    run = fpcup.model.RunData(override=overrides, sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=coordinates, crs=crs)
+    run = fpcup.model.RunData(override=overrides, soildata=soildata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=coordinates, crs=CRS)
     run.to_file(args.output_dir)
 
     # Run model
@@ -95,10 +94,10 @@ if __name__ == "__main__":
         print(f"Expected total runs: {len(iterable) * len(coords) * len(soiltypes)}")
     model_statuses_combined = []
     for c in tqdm(coords, desc="Sites", unit="site", leave=args.verbose):
+        ### Generate site-specific data
+        weatherdata = fpcup.weather.load_weather_data_NASAPower(c)
+
         for soildata in tqdm(soiltypes, desc="Soil types", unit="type", leave=False):
-            ### Generate site-specific data
-            sitedata = fpcup.site.example(c)
-            weatherdata = fpcup.weather.load_weather_data_NASAPower(c)
             run_pcse_site = partial(run_pcse, coordinates=c, sitedata=sitedata, weatherdata=weatherdata, soildata=soildata)
 
             ### Run the model

@@ -30,7 +30,6 @@ if args.output_dir is None:
 
 ### Load constants
 soildata = fpcup.soil.soil_types["ec1"]
-cropdata = fpcup.crop.default
 agromanagement = args.crop.agromanagement_first_sowingdate(args.YEAR)
 
 
@@ -51,14 +50,11 @@ def run_pcse(i_row: tuple[int, fpcup._typing.Series]) -> bool | fpcup.model.RunD
         if filename.exists():
             return False
 
-    # Get site data
-    sitedata = fpcup.site.example(coordinates)
-
     # Get weather data
     weatherdata = fpcup.weather.load_weather_data_NASAPower(coordinates)
 
     # Combine input data
-    run = fpcup.model.RunDataBRP(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, brpdata=row, brpyear=args.YEAR)
+    run = fpcup.model.RunDataBRP(soildata=soildata, weatherdata=weatherdata, agromanagement=agromanagement, brpdata=row, brpyear=args.YEAR)
     run.to_file(args.output_dir)
 
     # Run model
