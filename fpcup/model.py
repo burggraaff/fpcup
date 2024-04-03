@@ -16,9 +16,11 @@ from pcse.fileinput import CABOFileReader
 from pcse.models import Engine, Wofost72_WLP_FD
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
+from ._run_id import append_overrides, generate_run_id_base, generate_run_id_BRP
 from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr
 from .agro import AgromanagementData
 from .constants import CRS_AMERSFOORT
+from .crop import ABBREVIATION2CROP, CROP2ABBREVIATION
 from .multiprocessing import multiprocess_file_io, multiprocess_pcse
 from .soil import SoilType
 from .tools import copy, indent2
@@ -36,6 +38,7 @@ class RunData(tuple):
     Stores the data necessary to run a PCSE simulation.
     Primarily a tuple containing the parameters in the order PCSE expects them in, with some options for geometry and run_id generation.
     """
+    ### OBJECT GENERATION AND INITIALISATION
     def __new__(cls, sitedata: PCSESiteDataProvider, soildata: SoilType, cropdata: MultiCropDataProvider, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, **kwargs):
         """
         Creates (but does not initialise) a new RunData object from the 5 PCSE inputs.
@@ -89,6 +92,8 @@ class RunData(tuple):
         self.geometry = geometry
         self.crs = crs
 
+
+    ### SHORTCUTS TO PROPERTIES
     @property
     def crop_name(self) -> str:
         return self[2].crop_name
@@ -98,6 +103,10 @@ class RunData(tuple):
         return self[2].crop_variety
 
     @property
+    def sowdate(self) -> date:
+        return self[2].crop_start_date
+
+    @property
     def latitude(self) -> float:
         return self.geometry.centroid.y
 
@@ -105,6 +114,8 @@ class RunData(tuple):
     def longitude(self) -> float:
         return self.geometry.centroid.x
 
+
+    ### STRING REPRESENTATIONS
     @property
     def site_description(self) -> str:
         return f"Site: {self.parameters._sitedata.__class__.__name__}(WAV={self.parameters['WAV']})"
@@ -162,25 +173,24 @@ class RunData(tuple):
         return "\n".join([repr(self),
                           indent2(individual_descriptions)])
 
+
+    ### RUN ID GENERATION
     def _generate_run_id_base(self) -> str:
         """
         Basic run ID generation; this function should be overridden by inheriting classes.
         """
-        sowdate = self.agromanagement.crop_start_date
-        return f"{self.crop_name}_{self.soiltype}_dos{sowdate:%Y%j}_lat{self.latitude:.7f}-lon{self.longitude:.7f}"
+        return generate_run_id_base(crop_name=self.crop_name, soiltype=self.soiltype, sowdate=self.sowdate, latitude=self.latitude, longitude=self.longitude)
 
     def generate_run_id(self) -> str:
         """
         Generate a run ID from PCSE model inputs.
         """
         run_id = self._generate_run_id_base()
-
-        if len(self.overrides) > 0:
-            override_text = "_".join(f"{key}-{value}" for key, value in sorted(self.overrides.items()))
-            run_id = "_".join([run_id, override_text])
-
+        run_id = append_overrides(run_id, self.overrides)
         return run_id
 
+
+    ### FILE INPUT / OUTPUT
     def summary_dict(self) -> dict:
         """
         Return inputs that should be in the Summary; mostly used for inheritance.
@@ -212,14 +222,6 @@ class RunData(tuple):
         input_summary.to_file(filename, **kwargs)
 
 
-def run_id_BRP(brpyear: int | str, plot_id: int | str, crop: str, sowdate: date) -> str:
-    """
-    Generate a run ID from BRP data.
-    Separate from the RunDataBRP class so it can be called before initialising the weather data (which tends to be slow) when checking for duplicate files.
-    """
-    return f"brp{brpyear}-plot{plot_id}-{crop}-sown{sowdate:%Y%j}"
-
-
 class RunDataBRP(RunData):
     """
     Same as RunData but specific to the BRP.
@@ -235,21 +237,20 @@ class RunDataBRP(RunData):
         self.crop_species = brpdata["crop_species"]
         self.crop_code = brpdata["crop_code"]
         self.area = brpdata["area"]
-        self.province = brpdata["province"]
+        self.province_name = brpdata["province"]  # Abbreviation, not Province object
 
         self.brpyear = brpyear
 
         super().__init__(sitedata, soildata, cropdata, weatherdata, agromanagement, geometry=brpdata["geometry"], crs=crs, **kwargs)
 
     def _generate_run_id_base(self) -> str:
-        sowdate = self.agromanagement.crop_start_date
-        return run_id_BRP(self.brpyear, self.plot_id, self.crop_name, sowdate)
+        return generate_run_id_BRP(brpyear=self.brpyear, plot_id=self.plot_id, crop_name=self.crop_name, sowdate=self.sowdate)
 
     def summary_dict(self) -> dict:
         """
         Return those values required by a Summary object as a dictionary.
         """
-        return {"province": self.province,
+        return {"province": self.province_name,
                 "crop_species": self.crop_species,
                 "area": self.area,
                 "brpyear": self.brpyear,
@@ -260,7 +261,7 @@ class RunDataBRP(RunData):
         Return all inputs as a dictionary.
         """
         return {"plot_id": self.plot_id,
-                "province": self.province,
+                "province": self.province_name,
                 "crop_species": self.crop_species,
                 "crop_code": self.crop_code,
                 "area": self.area,

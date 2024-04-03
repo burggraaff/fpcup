@@ -47,7 +47,7 @@ def run_pcse(i_row: tuple[int, fpcup._typing.Series]) -> bool | fpcup.model.RunD
 
     # If desired, check if this run has been done already, and skip it if so
     if not args.force:
-        run_id = fpcup.model.run_id_BRP(args.YEAR, i, args.crop, sowdate)
+        run_id = fpcup.model.generate_run_id_BRP(brpyear=args.YEAR, plot_id=i, crop_name=args.crop, sowdate=sowdate)
         filename = args.output_dir / f"{run_id}.wout"
         if filename.exists():
             return False
