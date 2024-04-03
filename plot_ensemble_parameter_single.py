@@ -52,15 +52,17 @@ if __name__ == "__main__":
 
     # Determine number of runs
     n_crops = number_of_replicates(summary, "crop")
-    n_soiltypes = number_of_replicates(summary, "soiltype")
-    n_sites = number_of_replicates(summary, "geometry")
-    n_parameter_values = number_of_replicates(summary, args.PARAMETER_NAME)
 
 
     ### PLOTTING
     # Loop over the crops and generate a figure for each
     for (crop_name, summary_by_crop) in tqdm(summary.groupby("crop"), desc="Plotting figures", unit="crop", leave=args.verbose):
         crop_short = fpcup.crop.CROP2ABBREVIATION[crop_name]
+
+        # Determine number of runs
+        n_sites = number_of_replicates(summary_by_crop, "geometry")
+        n_soiltypes = number_of_replicates(summary_by_crop, "soiltype")
+        n_parameter_values = number_of_replicates(summary_by_crop, args.PARAMETER_NAME)
 
         # Setup
         fig, axs = plt.subplots(nrows=len(OUTPUT_PARAMETERS), ncols=n_soiltypes, sharex=True, sharey="row", figsize=(10, 10), squeeze=False)
