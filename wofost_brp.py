@@ -4,7 +4,7 @@ Plots for a user-provided crop (e.g. barley) are selected and only these are use
 Currently does not support using different variants/cultivars.
 
 Example:
-    python wofost_brp.py data/brp/brpgewaspercelen_definitief_2022-processed.gpkg -v -c barley -p zeeland -f
+    python wofost_brp.py data/brp/brpgewaspercelen_definitief_2022-processed.gpkg barley -v -p zeeland -f
 """
 import fpcup
 
@@ -12,7 +12,7 @@ import fpcup
 import argparse
 parser = argparse.ArgumentParser(description="Run PCSE for plots within the BRP.")
 parser.add_argument("brp_filename", help="file to load the BRP from", type=fpcup.io.Path)
-parser.add_argument("-c", "--crop", help="crop to run simulations on", default="barley", choices=("barley", "maize", "sorghum", "soy", "wheat"), type=str.lower)
+parser.add_argument("crop", help="crop to run simulations on", type=fpcup.crop.select_crop)
 parser.add_argument("-p", "--province", help="province to select plots from (or all)", default=fpcup.geo.NETHERLANDS, type=fpcup.geo.process_input_province)
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=fpcup.io.Path, default=None)
@@ -25,14 +25,13 @@ args.YEAR = int(args.brp_filename.stem.split("_")[-1].split("-")[0])  # Get the 
 
 # Set up a default output folder if a custom one was not provided
 if args.output_dir is None:
-    args.output_dir = fpcup.settings.DEFAULT_OUTPUT / f"brp{args.YEAR}-{args.crop}"
+    args.output_dir = fpcup.settings.DEFAULT_OUTPUT / f"brp{args.YEAR}-{args.crop.name}"
 
 
 ### Load constants
 soildata = fpcup.soil.soil_types["ec1"]
 cropdata = fpcup.crop.default
-sowdate = fpcup.agro.sowdate_range(args.crop, args.YEAR)[0]
-agromanagement = fpcup.agro.load_agrotemplate(args.crop, sowdate=sowdate)
+agromanagement = args.crop.agromanagement_first_sowingdate(args.YEAR)
 
 
 ### Worker function; this runs PCSE once for one site
@@ -47,7 +46,7 @@ def run_pcse(i_row: tuple[int, fpcup._typing.Series]) -> bool | fpcup.model.RunD
 
     # If desired, check if this run has been done already, and skip it if so
     if not args.force:
-        run_id = fpcup.model.generate_run_id_BRP(brpyear=args.YEAR, plot_id=i, crop_name=args.crop, sowdate=sowdate)
+        run_id = fpcup.model.generate_run_id_BRP(brpyear=args.YEAR, plot_id=i, crop_name=args.crop.name, sowdate=agromanagement.crop_start_date)
         filename = args.output_dir / f"{run_id}.wout"
         if filename.exists():
             return False
@@ -93,10 +92,10 @@ if __name__ == "__main__":
         print(f"Loaded BRP data from {args.brp_filename.absolute()} -- {len(brp)} sites")
 
     # Select only the lines from the BRP file corresponding to the desired crop
-    brp = brp.loc[brp["crop_species"] == args.crop]
+    brp = brp.loc[brp["crop_species"] == args.crop.name]
 
     if args.verbose:
-        print(f"Selected only plots growing {args.crop} -- {len(brp)} sites")
+        print(f"Selected only plots growing {args.crop.name} -- {len(brp)} sites")
         print("Loaded agro management data:")
         print(agromanagement)
 

@@ -17,7 +17,7 @@ import fpcup
 import argparse
 parser = argparse.ArgumentParser(description="Run a PCSE ensemble for different sowing dates for one crop.")
 parser.add_argument("parameter_names", help="parameter(s) to iterate over", type=str.upper, nargs="*")
-parser.add_argument("crop", help="crop to run simulations on", choices=("barley", "maize", "sorghum", "soy", "wheat"), type=str.lower)
+parser.add_argument("crop", help="crop to run simulations on", type=fpcup.crop.select_crop)
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to (default: generated from parameters)", type=fpcup.io.Path, default=None)
 parser.add_argument("-s", "--number_sites", help="number of sites; result may be lower due to rounding", type=int, default=16)
@@ -75,8 +75,7 @@ if __name__ == "__main__":
         print()
 
     # Generate the iterable
-    sowdates = fpcup.agro.sowdate_range(args.crop, YEAR)
-    iterable = fpcup.agro.load_agrotemplate_multi(args.crop, sowdate=sowdates)
+    iterable = args.crop.agromanagement_all_sowingdates(YEAR)
     if args.verbose:
         print(f"Length of iterator: {len(iterable)}")
 

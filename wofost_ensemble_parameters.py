@@ -19,7 +19,7 @@ parser.add_argument("parameter_names", help="parameter(s) to iterate over", type
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to (default: generated from parameters)", type=fpcup.io.Path, default=None)
 parser.add_argument("-n", "--number", help="number of values per parameter; note the exponential increase in runs when doing multiple parameters", type=int, default=100)
-parser.add_argument("-c", "--crop", help="crop to run simulations on", default="barley", choices=("barley", "maize", "sorghum", "soy", "wheat"), type=str.lower)
+parser.add_argument("-c", "--crop", help="crop to run simulations on", default="barley", type=fpcup.crop.select_crop)
 parser.add_argument("-s", "--number_sites", help="number of sites; result may be lower due to rounding", type=int, default=16)
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
@@ -32,8 +32,7 @@ if args.output_dir is None:
 YEAR = 2022
 crs = fpcup.constants.WGS84
 cropdata = fpcup.crop.default
-sowdate = fpcup.agro.sowdate_range(args.crop, YEAR)[0]
-agromanagement = fpcup.agro.load_agrotemplate(args.crop, sowdate=sowdate)
+agromanagement = args.crop.agromanagement_first_sowingdate(YEAR)
 soiltypes = list(fpcup.soil.soil_types.values())
 
 

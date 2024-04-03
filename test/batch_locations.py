@@ -20,10 +20,11 @@ args.SINGLE_PROVINCE = fpcup.geo.is_single_province(args.province)
 
 
 ### Load constants
+YEAR = 2022
 crs = fpcup.constants.WGS84
 soildata = fpcup.soil.soil_types["ec3"]
 cropdata = fpcup.crop.default
-agromanagement = fpcup.agro.agromanagement_example
+agromanagement = fpcup.crop.SpringBarley.agromanagement_first_sowingdate(YEAR)
 
 
 ### Worker function; this runs PCSE once for one site
