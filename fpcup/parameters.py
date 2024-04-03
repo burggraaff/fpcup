@@ -99,7 +99,7 @@ SOLNAM = PCSELabel(name="SOLNAM", description="Soil name")
 
 n = PCSENumericParameter(name="n", description="Number of sites")
 area = PCSENumericParameter(name="area", description="Total plot area", unit="ha")
-WAV = PCSENumericParameter(name="WAV", description="Initial amount of water in rootable zone in excess of wilting point", plotname="Initial amount of water", unit="cm", bounds=(0, 50), default=10)
+WAV = PCSENumericParameter(name="WAV", description="Initial amount of water in rootable zone in excess of wilting point", plotname="Initial excess water", unit="cm", bounds=(0, 50), default=10)
 NOTINF = PCSENumericParameter(name="NOTINF", description="Non-infiltrating fraction", bounds=(0, 1))
 SMLIM = PCSENumericParameter(name="SMLIM", description="Maximum initial soil moisture in rooted zone", plotname="Maximum initial soil moisture", unit="cm", bounds=(0, 10))
 SSI = PCSENumericParameter(name="SSI", description="Initial surface storage", unit="cm", bounds=(0, 2))
