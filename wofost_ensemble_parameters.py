@@ -66,7 +66,8 @@ def run_pcse(overrides: fpcup._typing.Iterable[dict[str, fpcup._typing.Number]],
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
-    ### Setup
+
+    ### SETUP
     # Make the output folder if it does not exist yet
     fpcup.io.makedirs(args.output_dir, exist_ok=True)
 
@@ -89,7 +90,8 @@ if __name__ == "__main__":
     if args.verbose:
         print(f"Generated {len(coords)} coordinates.")
 
-    ### Loop over sites (coordinates)
+
+    ### RUN PCSE
     if args.verbose:
         print(f"Expected total runs: {len(iterable) * len(coords) * len(soiltypes)}")
     model_statuses_combined = []

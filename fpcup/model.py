@@ -20,7 +20,6 @@ from ._run_id import append_overrides, generate_run_id_base, generate_run_id_BRP
 from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr
 from .agro import AgromanagementData
 from .constants import CRS_AMERSFOORT
-from .crop import ABBREVIATION2CROP, CROP2ABBREVIATION
 from .multiprocessing import multiprocess_file_io, multiprocess_pcse
 from .soil import SoilType
 from .tools import copy, indent2
