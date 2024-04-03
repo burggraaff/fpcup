@@ -42,3 +42,11 @@ def dict_product(d: dict) -> list[dict]:
     d_all_iterable = {key: make_iterable(value) for key, value in d.items()}
     d_product = [dict(zip(d_all_iterable.keys(), i)) for i in product(*d_all_iterable.values())]
     return d_product
+
+
+def invert_dict(d: dict) -> dict:
+    """
+    Return the inverse of a dictionary, i.e. go from {key: value} to {value: key}.
+    Does not check for uniqueness in values, so use with care.
+    """
+    return {value: key for key, value in d.items()}

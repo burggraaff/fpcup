@@ -5,6 +5,7 @@ import geopandas as gpd
 gpd.options.io_engine = "pyogrio"
 
 from .settings import DEFAULT_DATA
+from .tools import invert_dict
 
 ### NAMES AND LABELS
 # Constants
@@ -16,7 +17,7 @@ ALIASES = {"Friesland": "Fryslân", "Fryslan": "Fryslân",
            "the Netherlands": "Netherlands", "All": "Netherlands"}
 
 # Derived
-ABBREVIATION2NAME = {abb: name for name, abb in NAME2ABBREVIATION.items()}
+ABBREVIATION2NAME = invert_dict(NAME2ABBREVIATION)
 NAMES = PROVINCE_NAMES + (NETHERLANDS, )
 
 
