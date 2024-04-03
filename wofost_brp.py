@@ -13,14 +13,14 @@ import argparse
 parser = argparse.ArgumentParser(description="Run PCSE for plots within the BRP.")
 parser.add_argument("brp_filename", help="file to load the BRP from", type=fpcup.io.Path)
 parser.add_argument("-c", "--crop", help="crop to run simulations on", default="barley", choices=("barley", "maize", "sorghum", "soy", "wheat"), type=str.lower)
-parser.add_argument("-p", "--province", help="province to select plots from (or all)", default="Netherlands", choices=fpcup.geo.NAMES, type=fpcup.geo.process_input_province)
+parser.add_argument("-p", "--province", help="province to select plots from (or all)", default=fpcup.geo.NETHERLANDS, type=fpcup.geo.process_input_province)
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=fpcup.io.Path, default=None)
 parser.add_argument("-f", "--force", help="run all models even if the associated file already exists", action="store_true")
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
-args.SINGLE_PROVINCE = (args.province != "Netherlands")
+args.SINGLE_PROVINCE = fpcup.geo.is_single_province(args.province)
 args.YEAR = int(args.brp_filename.stem.split("_")[-1].split("-")[0])  # Get the year from the BRP filename
 
 # Set up a default output folder if a custom one was not provided
@@ -102,7 +102,7 @@ if __name__ == "__main__":
 
     # If we are only doing one province, select only the relevant lines from the BRP file
     if args.SINGLE_PROVINCE:
-        brp = fpcup.geo.entries_in_province(brp, args.province)
+        brp = args.province.select_entries_in_province(brp)
 
         if args.verbose:
             print(f"Selected only plots in {args.province} -- {len(brp)} sites")

@@ -11,13 +11,14 @@ import argparse
 parser = argparse.ArgumentParser("Load and plot the results from a previous PCSE ensemble run.")
 parser.add_argument("output_dir", help="folder to load PCSE outputs from", type=fpcup.io.Path)
 parser.add_argument("-r", "--results_dir", help="folder to save plots into", type=fpcup.io.Path, default=fpcup.DEFAULT_RESULTS)
-parser.add_argument("-p", "--province", help="province to select plots from (or all of the Netherlands)", default="Netherlands", choices=fpcup.geo.NAMES, type=fpcup.geo.process_input_province)
+parser.add_argument("-p", "--province", help="province to select plots from (or all)", default=fpcup.geo.NETHERLANDS, type=fpcup.geo.process_input_province)
 parser.add_argument("-y", "--replace_years", help="replace all years in the output with 2000", action="store_true")
 parser.add_argument("-s", "--sample", help="load only a subsample of the outputs, for testing", action="store_true")
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
-args.SINGLE_PROVINCE = (args.province != "Netherlands")
+args.SINGLE_PROVINCE = fpcup.geo.is_single_province(args.province)
+
 
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
@@ -43,8 +44,8 @@ if __name__ == "__main__":
 
     # If we are only doing one province, select only the relevant lines from the summary file
     if args.SINGLE_PROVINCE:
-        summary = fpcup.geo.entries_in_province(summary, args.province)
-        tag = f"{tag}-{args.province}"
+        summary = args.province.select_entries_in_province(summary)
+        tag = f"{tag}-{args.province.abbreviation}"
         if args.verbose:
             print(f"Selected only sites in {args.province} -- {len(summary)} rows")
 
@@ -76,8 +77,8 @@ if __name__ == "__main__":
         filename_province_plot = args.results_dir / f"WOFOST_{tag}-summary-byprovince.pdf"
 
         # Save values to a text file
-        summary_byprovince = fpcup.geo.aggregate_province(summary)
-        fpcup.geo.save_aggregate_province(summary_byprovince, filename_province_means)
+        summary_byprovince = fpcup.aggregate.aggregate_province(summary)
+        fpcup.aggregate.save_aggregate_province(summary_byprovince, filename_province_means)
         if args.verbose:
             print(f"Saved provincial aggregate columns to {filename_province_means.absolute()}")
 

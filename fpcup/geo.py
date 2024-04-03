@@ -3,7 +3,7 @@ Geography-related constants and methods.
 Includes polygons/outlines of the Netherlands and its provinces.
 """
 import random
-from functools import wraps
+from functools import partial, wraps
 
 import geopandas as gpd
 gpd.options.io_engine = "pyogrio"
@@ -13,191 +13,253 @@ from pandas import DataFrame, Series
 from shapely import Geometry, Point, Polygon
 from tqdm import tqdm
 
-from ._typing import Aggregator, AreaDict, BoundaryDict, Callable, Iterable, Optional, PathOrStr
-from .aggregate import default_aggregator, rename_after_aggregation
+from ._netherlands import ABBREVIATION2NAME, NAME2ABBREVIATION, ALIASES, NAMES, PROVINCE_NAMES, _basemaps, apply_aliases
+from ._netherlands import NETHERLANDS as NETHERLANDS_LABEL
+from ._typing import AreaDict, BoundaryDict, Callable, Coordinates, Iterable, Optional, PathOrStr
 from .constants import CRS_AMERSFOORT, WGS84
-from .settings import DEFAULT_DATA
-
-# Constants
-PROVINCE_NAMES = ("Fryslân", "Gelderland", "Noord-Brabant", "Noord-Holland", "Overijssel", "Zuid-Holland",  "Groningen", "Zeeland", "Drenthe", "Flevoland", "Limburg", "Utrecht")  # Sorted by area
-NETHERLANDS = "Netherlands"
-NAMES = PROVINCE_NAMES + (NETHERLANDS, )
-
-# For convenience: iterate over NAMES with tqdm
-iterate_netherlands = lambda disable=False, leave=True: tqdm(NAMES, desc="Looping over provinces", unit="province", disable=disable, leave=leave)
-
-# Load the Netherlands shapefile
-_netherlands = gpd.read_file(DEFAULT_DATA/"NL_borders.geojson")
-_area_netherlands = {NETHERLANDS: _netherlands.iloc[0].geometry}  # Polygon - to be used in comparisons
-_boundary_netherlands = {NETHERLANDS: _netherlands.boundary}  # GeoSeries - to be used with .plot()
-
-# Load the province shapefiles
-_provinces = gpd.read_file(DEFAULT_DATA/"NL_provinces.geojson")
-_provinces_coarse = gpd.read_file(DEFAULT_DATA/"NL_provinces_coarse.geojson")
-
-# Access individual provinces using a dictionary, e.g. area["Zuid-Holland"]
-# Note: these contain bare Polygon/MultiPolygon objects, with no CRS.
-area = {name: poly for name, poly in zip(_provinces["naamOfficieel"], _provinces["geometry"])}
-area = {**_area_netherlands, **area}
-
-area_coarse = {name: poly for name, poly in zip(_provinces_coarse["naamOfficieel"], _provinces_coarse["geometry"])}
-
-# Access individual provinces using a dictionary, e.g. boundary["Zuid-Holland"]
-# Note: these contain GeoSeries objects with 1 entry, with a CRS set.
-boundary = {name: gpd.GeoSeries(outline, crs=CRS_AMERSFOORT) for name, outline in zip(_provinces["naamOfficieel"], _provinces.boundary)}
-boundary = {**_boundary_netherlands, **boundary}
-
-boundary_coarse = {name: gpd.GeoSeries(poly.boundary, crs=CRS_AMERSFOORT) for name, poly in area_coarse.items()}
+from .multiprocessing import multiprocess_site_generation
 
 
-def transform_geometry(geometry: Geometry, crs_old: str, crs_new: str) -> Geometry:
+### PROVINCE CONVENIENCE CLASS
+class Province:
     """
-    Transform a bare Geometry object from one CRS to another.
+    Handles everything related to areas such as provinces, countries, etc.
     """
-    geometry_gpd = gpd.GeoSeries(geometry, crs=crs_old)
-    transformed_gpd = geometry_gpd.to_crs(crs_new)
-    geometry_new = transformed_gpd.iloc[0]
-    return geometry_new
+    ### CREATION AND INITIALISATION
+    def __init__(self, area: Geometry, *,
+                 area_coarse: Optional[Geometry]=None, crs: str=CRS_AMERSFOORT,
+                 name: Optional[str]=None, abbreviation: Optional[str]=None, level: Optional[str]="province"):
+        # Initialise geospatial parameters
+        self.area = area
+        self.area_coarse = area_coarse
+        self._crs = crs
+
+        # Initialise identifiers etc
+        self.name = name
+        if abbreviation is None and name is not None:
+            try:
+                abbreviation = NAME2ABBREVIATION[name]
+            except KeyError:
+                abbreviation = None
+        self.abbreviation = abbreviation
+        self.level = level
+
+    @classmethod
+    def from_dataframe(cls, name: str, data: gpd.GeoDataFrame=_basemaps, *,
+                       namecol: str="name", levelcol: str="level"):
+        """
+        For a given name, get the relevant data from a GeoDataFrame and create a Province object.
+        """
+        # Main data
+        mainrow = data.loc[data[namecol] == name].iloc[0]
+        area = mainrow.geometry
+        level = mainrow["level"]
+
+        # Coarse geometry (if available)
+        try:
+            coarserow = data.loc[data[namecol] == name+"_coarse"].iloc[0]
+        except IndexError:
+            area_coarse = None
+        else:
+            area_coarse = coarserow.geometry
+
+        return cls(area, name=name, area_coarse=area_coarse, crs=data.crs, level=level)
 
 
-def process_input_province(province: str) -> str:
-    """
-    Take an input province name and turn it into the standard format.
-    """
-    # Convert to title case, e.g. zuid-holland -> Zuid-Holland
-    province = province.title()
+    ### GEOSPATIAL PROPERTIES AND MANIPULATIONS
+    @property
+    def crs(self) -> str:
+        return self._crs
 
-    # Apply common alternatives
-    if province in ("Friesland", "Fryslan"):
-        province = "Fryslân"
-    elif province in ("the Netherlands", "NL", "All"):
-        province = "Netherlands"
+    def __repr__(self) -> str:
+        return f"{self.name} (crs={self.crs})"
 
-    return province
+    def __str__(self) -> str:
+        return self.name
 
+    @property
+    def boundary(self) -> Geometry:
+        """
+        Get the boundary of self.area; implemented as a property for ease in CRS conversions.
+        """
+        return self.area.boundary
 
-def is_in_province(_data: gpd.GeoDataFrame, province: str, *,
-                   province_data: AreaDict=area_coarse, use_centroid=True) -> Iterable[bool]:
-    """
-    For a series of geometries (e.g. BRP plots), determine if they are in the given province.
-    Enable `use_centroid` to see if the centre of each plot falls within the province rather than the entire plot - this is useful for plots that are split between provinces.
-    """
-    assert province in NAMES, f"Unknown province '{province}'."
+    @property
+    def boundary_coarse(self) -> Geometry | None:
+        if self.area_coarse is not None:
+            return self.area_coarse.boundary
+        else:
+            return None
 
-    area = province_data[province]
-    if use_centroid:
-        data = _data.centroid
-    else:
-        data = _data
+    @property
+    def centroid(self) -> Point:
+        return self.area.centroid
 
-    # Step 1: use the convex hull for a coarse selection
-    selection = data.within(area.convex_hull)
+    @property
+    def convex_hull(self) -> Geometry:
+        return self.area.convex_hull
 
-    # Step 2: use the real shape of the province
-    selection_fine = data.loc[selection].within(area)
+    def to_crs(self, crs_new: str):
+        """
+        Generate a new object in a given new CRS.
+        """
+        cls = self.__class__
+        transform = partial(transform_geometry, crs_old=self.crs, crs_new=crs_new)
 
-    # Update the selection with the new information
-    selection.loc[selection] = selection_fine
+        area = transform(self.area)
+        if self.area_coarse is not None:
+            area_coarse = transform(self.area_coarse)
+        else:
+            area_coarse = None
 
-    return selection
-
-
-def add_provinces(data: gpd.GeoDataFrame, *,
-                  new_column: str="province", province_data: AreaDict=area_coarse, remove_empty=True,
-                  progressbar=True, leave_progressbar=True, **kwargs) -> None:
-    """
-    Add a column with province names.
-    Note: can get very slow for long dataframes.
-    If `remove_empty`, entries that do not fall into any province are removed.
-    **kwargs are passed to is_in_province.
-    """
-    # Convert to the right CRS first
-    data_crs = data.to_crs(CRS_AMERSFOORT)
-
-    # Generate an empty Series which will be populated with time
-    province_list = Series(data=np.tile("", len(data_crs)),
-                           name="province", dtype=str, index=data_crs.index)
-
-    # Loop over the provinces, find the relevant entries, and fill in the list
-    for province_name in tqdm(province_data.keys(), desc="Assigning labels", unit="province", disable=not progressbar, leave=leave_progressbar):
-        # Find the plots that have not been assigned a province yet to prevent duplicates
-        where_empty = (province_list == "")
-        data_empty = data_crs.loc[where_empty]
-
-        # Find the items that are in this province
-        selection = is_in_province(data_empty, province_name, province_data=province_data, **kwargs)
-
-        # Set elements of where_empty to True if they are within this province
-        where_empty.loc[where_empty] = selection
-
-        # Assign the values
-        province_list.loc[where_empty] = province_name
-
-    # Add the series to the dataframe
-    data[new_column] = province_list
-
-    # Remove entries not in any province (e.g. from generating random coordinates)
-    if remove_empty:
-        index_remove = data.loc[data[new_column] == ""].index
-        data.drop(index=index_remove, inplace=True)
+        return cls(area, area_coarse=area_coarse, crs=crs_new, name=self.name, abbreviation=self.abbreviation)
 
 
-def add_province_geometry(data: DataFrame, which: str="area", *,
-                          column_name: Optional[str]=None) -> gpd.GeoDataFrame:
-    """
-    Add a column with province geometry to a DataFrame with a province name column/index.
-    """
-    # Remove entries that are not in the province list
-    pass
+    ### COMPLEX GEOSPATIAL FUNCTIONS
+    def contains(self, other: Geometry | gpd.GeoSeries | gpd.GeoDataFrame, *,
+                 use_coarse=False, use_centroid=True) -> bool | Iterable[bool]:
+        """
+        Check if a given geometry or series thereof are within the current province.
+        If `other` is a bare Geometry, it is assumed to be in the same CRS as the Province.
+        If `other` is a GeoSeries/GeoDataFrame, it is converted first.
+        """
+        # Set up data that will be checked
+        SINGLE_INPUT = isinstance(other, Geometry)
+        if SINGLE_INPUT:
+            data = gpd.GeoSeries(other, crs=self.crs)
+        else:
+            data = other.to_crs(self.crs)
 
-    # Use the index if no column was provided
-    if column_name is None:
-        column = data.index.to_series()
-    else:
-        column = data[column_name]
+        # Set up self
+        if use_coarse:
+            assert self.area_coarse is not None, f"Cannot use coarse area for {self} because it is not defined."
+            target = self.area_coarse
+        else:
+            target = self.area
 
-    # Apply the dictionary mapping
-    geometry = column.map(area)
-    data_new = gpd.GeoDataFrame(data, geometry=geometry, crs=CRS_AMERSFOORT)
+        # Perform the actual check
+        selection = is_in_geometry(data, target, use_centroid=use_centroid)
+        if SINGLE_INPUT:
+            selection = selection.iloc[0]
 
-    # Change to outline if desired
-    # (Doing this at the start gives an error)
-    if which.lower() == "area":
-        pass
-    elif which.lower() == "outline":
-        data_new["geometry"] = data_new.boundary
-    else:
-        raise ValueError(f"Cannot add geometries of type `{which}`")
+        return selection
 
-    return data_new
+    def select_entries_in_province(self, data: DataFrame) -> gpd.GeoDataFrame:
+        """
+        Return only those entries from `data` that fall within this Province.
+        Shorthand function that tries different approaches:
+            1. Check if `data` has a "province" column and use that (DataFrame or GeoDataFrame).
+            2. Filter based on the geometry in `data` using Province.contains (GeoDataFrame only).
+        """
+        # First: try the "province" column
+        if "province" in data.columns:
+            column = data["province"].replace(ABBREVIATION2NAME)
+            entries = (column == self.name)
+
+        # Second: Check the data manually
+        elif "geometry" in data.columns:
+            entries = self.contains(data)
+
+        # No other cases currently
+        else:
+            raise ValueError(f"Input does not have a 'province' column nor any geometry information.")
+
+        return data.loc[entries]
+
+    def clip_data(self, _data: gpd.GeoDataFrame, *, remove_empty=True) -> gpd.GeoDataFrame:
+        """
+        Given a GeoDataframe with geometries, return the intersection with this province.
+        Example use case: clipping H3 hexagons.
+        """
+        data = _data.to_crs(self.crs)
+        data["geometry"] = data.intersection(self.area)
+
+        if remove_empty:
+            data = data.loc[~data.is_empty]
+
+        return data
+
+    def _generate_random_point(self, *args) -> Point:
+        # *args do nothing but are necessary for multiprocessing to pass dummy arguments
+        return _generate_random_point_in_geometry(self.area)
+
+    def generate_random_points(self, n: int, *, as_coordinates=True,
+                               generate_crs: Optional[str]=None, output_crs: Optional[str]=WGS84,
+                               progressbar=True, leave_progressbar=True) -> list[Coordinates] | gpd.GeoSeries:
+        """
+        Generate n pairs of latitude/longitude coordinates that are (roughly) uniformly distributed over the given province.
+        `generate_crs` determines the CRS in which points are generated; this is the native CRS unless otherwise specified.
+        `output_crs` is used to transform the outputs; by default this is WGS84.
+        Points are generated in the native CRS unless otherwise specified; they may not be uniformly distributed in other CRSes.
+        The output is given as a list so it can be iterated over multiple times.
+        if `as_geometry` is True, the results are returned as Points; if False (default), as pairs of coordinates.
+        """
+        # Adjust to the generation CRS
+        if generate_crs is None:
+            generate_crs = self.crs
+            func = self._generate_random_point
+        else:
+            new_geo = self.to_crs(generate_crs)
+            func = new_geo._generate_random_point
+
+        # Generate points
+        points = multiprocess_site_generation(func, range(n), progressbar=progressbar, leave_progressbar=leave_progressbar)
+
+        # Convert output to the correct CRS
+        points = transform_geometry(points, generate_crs, output_crs)
+
+        # Return as points if desired
+        if as_coordinates:
+            points = points_to_coordinates(points)
+
+        return points
 
 
-def entries_in_province(data: gpd.GeoDataFrame, province: str) -> gpd.GeoDataFrame:
-    """
-    Return only those entries from `data` that are in the given `province`.
-    Shorthand function that tries different approaches:
-        1. Check if `data` has a "province" column and use that.
-        2. Filter based on the geometry in `data` using is_in_province.
-    """
-    assert province in PROVINCE_NAMES, f"Unknown province '{province}'."
+    ### PLOTTING
+    def _plot_geo(self, geo_property: Geometry, *args,
+                  crs: Optional[str]=None, **kwargs) -> None:
+        """
+        General method for plotting some geo property, e.g. area or boundary, by converting it to a GeoSeries first.
+        """
+        as_series = gpd.GeoSeries(geo_property, crs=self.crs)
+        if crs is not None:
+            as_series = as_series.to_crs(crs)
 
-    # First: try the "province" column
-    if "province" in data.columns:
-        entries = (data["province"] == province)
+        as_series.plot(*args, **kwargs)
 
-    # Second: Check the data manually
-    elif "geometry" in data.columns:
-        # Convert the data to the same CRS as the province data
-        data_crs = data.to_crs(CRS_AMERSFOORT)
-        entries = is_in_province(data_crs, province)
+    def plot_area(self, *args, use_coarse=False, **kwargs) -> None:
+        """
+        Plot the area (or coarse area) of this province.
+        """
+        geo = self.area_coarse if use_coarse else self.area
+        self._plot_geo(geo, *args, **kwargs)
 
-    # No other cases currently
-    else:
-        raise ValueError(f"Input does not have a 'province' column nor any geometry information.")
+    def plot_boundary(self, *args, use_coarse=False, **kwargs) -> None:
+        """
+        Plot the boundary (or coarse boundary) of this province.
+        """
+        geo = self.boundary_coarse if use_coarse else self.boundary
+        self._plot_geo(geo, *args, **kwargs)
 
-    return data.loc[entries]
+
+### PRE-MADE GEOMETRIES
+provinces = {name: Province.from_dataframe(name) for name in PROVINCE_NAMES}
+NETHERLANDS = Province.from_dataframe(NETHERLANDS_LABEL)
+locations_full = {NETHERLANDS_LABEL: NETHERLANDS, **provinces}
+_province_areas = {name: p.area for name, p in locations_full.items()}
+_province_areas_coarse = {name: p.area_coarse for name, p in locations_full.items()}
+
+# Template for easier looping with progressbar
+def tqdm_template(data: Iterable, *, label="province"):
+    return lambda disable=False, leave=True: tqdm(data, desc=f"Looping over {label}s", unit=label)
+
+iterate_over_provinces = tqdm_template(provinces.values())
+iterate_over_locations = tqdm_template(locations_full.values(), label="place")
+iterate_over_province_names = tqdm_template(provinces.keys())
 
 
+
+### GENERAL GEOSPATIAL FUNCTIONS
 def maintain_crs(func: Callable) -> Callable:
     """
     Decorator that ensures the output of an aggregation function is in the same CRS as the input, regardless of transformations that happen along the way.
@@ -212,90 +274,144 @@ def maintain_crs(func: Callable) -> Callable:
     return newfunc
 
 
-@maintain_crs
-def aggregate_province(_data: gpd.GeoDataFrame, *,
-                       aggregator: Optional[Aggregator]=None) -> gpd.GeoDataFrame:
+def points_to_coordinates(points: Iterable[Point]) -> list[Coordinates]:
     """
-    Aggregate data to the provinces.
-    `aggregator` is passed to DataFrame.agg; if none is specified, then means or weighted means (depending on availability of weights) are used.
+    Split shapely Points into (latitude, longitude) pairs.
     """
-    # Convert the input to CRS_AMERSFOORT for the aggregation and use the centroids
-    data = _data.copy()
-    data["geometry"] = data.to_crs(CRS_AMERSFOORT).centroid
-
-    # Add province information if not yet available
-    if "province" not in data.columns:
-        add_provinces(data, leave_progressbar=False)
-
-    # Aggregate the data
-    if aggregator is None:
-        aggregator = default_aggregator(data)
-    data_province = data.groupby("province").agg(aggregator).rename(columns=rename_after_aggregation)
-
-    # Add the province geometries
-    data_province = add_province_geometry(data_province)
-
-    return data_province
+    return [(p.y, p.x) for p in points]
 
 
-def save_aggregate_province(data: gpd.GeoDataFrame, saveto: PathOrStr, **kwargs) -> None:
+def coverage_of_bounding_box(geometry: Geometry) -> float:
     """
-    Save a provincial aggregate without the geometry information.
+    Calculate the fraction of its bounding box covered by a given geometry.
     """
-    data.drop("geometry", axis=1).to_csv(saveto)
+    min_x, min_y, max_x, max_y = geometry.bounds
+    area_box = (max_x - min_x) * (max_y - min_y)
+    return geometry.area / area_box
 
 
-def _default_h3_level(clipto: str) -> int:
+def transform_geometry(geometry: Geometry | Iterable[Geometry], crs_old: str, crs_new: str) -> Geometry | Iterable[Geometry]:
     """
-    Determine the default level for H3 aggregation.
-    Currently a simple choice between 7 (provinces) or 6 (Netherlands or unspecified).
-    Defined as a function rather than a dictionary to allow for future expansions, e.g. determining it by area coverage instead.
+    Transform a bare Geometry object, or iterable thereof, from one CRS to another.
     """
-    if clipto in PROVINCE_NAMES:
-        level = 7
+    SINGLE_GEOMETRY = isinstance(geometry, Geometry)
+
+    geometry_gpd = gpd.GeoSeries(geometry, crs=crs_old)
+    transformed_gpd = geometry_gpd.to_crs(crs_new)
+
+    geometry_new = transformed_gpd.iloc[0] if SINGLE_GEOMETRY else transformed_gpd
+    return geometry_new
+
+
+def is_in_geometry(_data: gpd.GeoDataFrame, target: Geometry, *,
+                   use_centroid=True) -> Iterable[bool]:
+    """
+    For a series of geometries (e.g. BRP plots), determine if they are in the given target geometry.
+    Enable `use_centroid` to see if the centre of each plot falls within the geometry rather than the entire plot - this is useful for plots that are split between provinces.
+    """
+    if use_centroid:
+        data = _data.centroid
     else:
-        level = 6
+        data = _data
 
-    return level
+    # Step 1: use the convex hull for a coarse selection
+    selection = data.within(target.convex_hull)
+
+    # Step 2: use the real shape of the province
+    selection_fine = data.loc[selection].within(target)
+
+    # Update the selection with the new information
+    selection.loc[selection] = selection_fine
+
+    return selection
 
 
-@maintain_crs
-def aggregate_h3(_data: gpd.GeoDataFrame, *,
-                 aggregator: Optional[Aggregator]=None, level: Optional[int]=None, clipto: Optional[str]="Netherlands", weightby: str="area") -> gpd.GeoDataFrame:
+### PROVINCE-RELATED FUNCTIONS
+def process_input_province(name: str) -> Province:
     """
-    Aggregate data to the H3 hexagonal grid.
-    `aggregator` is passed to DataFrame.agg; if none is specified, then means or weighted means (depending on availability of weights) are used.
-    `clipto` is used to get a geometry, e.g. the Netherlands or one province, to clip the results to. Set it to `None` to preserve the full grid.
+    Take an input province name, apply aliases, and return the Province object.
     """
-    # Filter the data to the desired province
-    if clipto != "Netherlands":
-        _data = entries_in_province(_data, clipto)
-
-    # Find the centroids in a projected CRS, then convert to WGS84 for aggregation
-    data = _data.copy()
-    if not data.crs.is_projected:
-        data.to_crs(CRS_AMERSFOORT, inplace=True)
-    data["geometry"] = data.centroid.to_crs(WGS84)
-
-    # Aggregate the data
-    if aggregator is None:
-        aggregator = default_aggregator(data, weightby=weightby)
-    if level is None:
-        level = _default_h3_level(clipto)
-    data_h3 = data.h3.geo_to_h3_aggregate(level, aggregator).rename(columns=rename_after_aggregation)
-
-    # Clip the data if desired
-    if clipto is not None:
-        assert clipto in area.keys(), f"Cannot clip the H3 grid to '{clipto}' - unknown name. Please provide a province name, 'Netherlands', or None."
-        clipto_geometry = area[clipto]
-
-        data_h3.to_crs(CRS_AMERSFOORT, inplace=True)
-        data_h3["geometry"] = data_h3.intersection(clipto_geometry)
-        data_h3 = data_h3.loc[~data_h3.is_empty]
-
-    return data_h3
+    name = apply_aliases(name)
+    return locations_full[name]
 
 
+def is_single_province(prov: Province) -> bool:
+    """
+    Helper function for parsing inputs; are we doing a single province or the whole country?
+    """
+    return (prov.level == "province")
+
+
+def add_provinces(data: gpd.GeoDataFrame, *,
+                  new_column: str="province", use_abbreviation=True, use_coarse=True, remove_empty=True,
+                  progressbar=True, leave_progressbar=True, **kwargs) -> None:
+    """
+    Add a column with province names/abbreviations.
+    Note: can get very slow for long dataframes.
+    If `remove_empty`, entries that do not fall into any province are removed.
+    **kwargs are passed to province.contains.
+    """
+    # Convert to the right CRS first
+    data_crs = data.to_crs(CRS_AMERSFOORT)
+
+    # Generate an empty Series which will be populated with time
+    province_list = Series(data=np.tile("", len(data_crs)),
+                           name="province", dtype=str, index=data_crs.index)
+
+    # Loop over the provinces, find the relevant entries, and fill in the list
+    for province in tqdm(provinces.values(), desc="Assigning labels", unit="province", disable=not progressbar, leave=leave_progressbar):
+        province_label = province.abbreviation if use_abbreviation else province.name
+
+        # Find the plots that have not been assigned a province yet to prevent duplicates
+        where_empty = (province_list == "")
+        data_empty = data_crs.loc[where_empty]
+
+        # Find the items that are in this province
+        selection = province.contains(data_empty, use_coarse=use_coarse, **kwargs)
+
+        # Set elements of where_empty to True if they are within this province
+        where_empty.loc[where_empty] = selection
+
+        # Assign the values
+        province_list.loc[where_empty] = province_label
+
+    # Add the series to the dataframe
+    data[new_column] = province_list
+
+    # Remove entries not in any province (e.g. from generating random coordinates)
+    if remove_empty:
+        index_remove = data.loc[data[new_column] == ""].index
+        data.drop(index=index_remove, inplace=True)
+
+
+def add_province_geometry(data: DataFrame, *,
+                          column_name: Optional[str]=None, use_coarse=False) -> gpd.GeoDataFrame:
+    """
+    Add a column with province geometry to a DataFrame with a province name column/index.
+    """
+    # Use the index if no column was provided
+    if column_name is None:
+        column_with_names = data.index.to_series()
+    else:
+        column_with_names = data[column_name]
+
+    # Check for aliases
+    names = column_with_names.apply(apply_aliases)
+
+    # Remove entries that are not in the province list
+    pass
+
+    # Select the correct mapping
+    mapping = _province_areas_coarse if use_coarse else _province_areas
+
+    # Apply the dictionary mapping
+    geometry = names.map(mapping)
+    data_new = gpd.GeoDataFrame(data, geometry=geometry, crs=CRS_AMERSFOORT)
+
+    return data_new
+
+
+### SITE GENERATION
 def _generate_random_point_within_bounds(min_lon, min_lat, max_lon, max_lat) -> Point:
     """
     Generate one random shapely Point within the given bounds.
@@ -318,24 +434,3 @@ def _generate_random_point_in_geometry(polygon: Geometry) -> Point:
         if polygon.contains(p):
             # Doing a first check with the convex hull does not help here
             return p
-
-
-def _generate_random_point_in_geometry_batch(geometry: Geometry, n: int, *,  crs=CRS_AMERSFOORT) -> gpd.GeoSeries:
-    """
-    Generate a batch of random points and return the ones that fall within the given geometry.
-    """
-    polygon = transform_geometry(geometry, crs, WGS84)  # Convert to WGS84 coordinates
-
-    points = gpd.GeoSeries((_generate_random_point_within_bounds(*polygon.bounds) for i in range(n)), crs=WGS84)
-    points_in_polygon = points.loc[points.within(polygon)]
-
-    return points_in_polygon
-
-
-def coverage_of_bounding_box(geometry: Geometry) -> float:
-    """
-    Calculate the fraction of its bounding box covered by a given geometry.
-    """
-    min_x, min_y, max_x, max_y = geometry.bounds
-    area_box = (max_x - min_x) * (max_y - min_y)
-    return geometry.area / area_box

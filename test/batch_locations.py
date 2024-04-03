@@ -12,11 +12,11 @@ parser = argparse.ArgumentParser(description="Run a PCSE ensemble for multiple l
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_OUTPUT / "locations")
 parser.add_argument("-n", "--number", help="number of locations; result may be lower due to rounding", type=int, default=400)
-parser.add_argument("-p", "--province", help="province to simulate plots in (or all)", default="Netherlands", choices=fpcup.geo.NAMES, type=fpcup.geo.process_input_province)
+parser.add_argument("-p", "--province", help="province to simulate plots in (or all)", default=fpcup.geo.NETHERLANDS, type=fpcup.geo.process_input_province)
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
-args.SINGLE_PROVINCE = (args.province != "Netherlands")
+args.SINGLE_PROVINCE = fpcup.geo.is_single_province(args.province)
 
 
 ### Load constants
@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     # Generate the coordinates
     if args.SINGLE_PROVINCE:
-        coords = fpcup.site.generate_sites_in_province(args.province, args.number, leave_progressbar=args.verbose)
+        coords = args.province.generate_random_points(args.number, leave_progressbar=args.verbose)
     else:
         coords = fpcup.site.generate_sites_space(latitude=(50.7, 53.6), longitude=(3.3, 7.3), n=args.number)
     if args.verbose:

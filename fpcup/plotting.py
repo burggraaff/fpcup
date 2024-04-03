@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from matplotlib import pyplot as plt, dates as mdates, patches as mpatches, ticker as mticker
 from matplotlib import colormaps, rcParams
+
 rcParams.update({"axes.grid": True,
                  "figure.dpi": 600, "savefig.dpi": 600,
                  "grid.linestyle": "--",
@@ -18,50 +19,45 @@ rcParams.update({"axes.grid": True,
                  "image.cmap": "cividis",
                  "legend.edgecolor": "black", "legend.framealpha": 1,
                  })
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-cividis_discrete = colormaps["cividis"].resampled(10)
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
-from .aggregate import KEYS_AGGREGATE
+from .aggregate import KEYS_AGGREGATE, aggregate_h3
 from .constants import CRS_AMERSFOORT, WGS84
-from .geo import PROVINCE_NAMES, area, area_coarse, boundary, boundary_coarse, aggregate_h3, entries_in_province
+from .geo import Province, NETHERLANDS, provinces
 from .model import Summary
 from .parameters import all_parameters, pcse_inputs, pcse_outputs, pcse_summary_outputs
 from .tools import make_iterable
 
-# Constants
+### CONSTANTS
+# Raster/Vector switches
 _RASTERIZE_LIMIT_LINES = 1000
 _RASTERIZE_LIMIT_GEO = 250  # Plot geo data in raster format if there are more than this number
 _RASTERIZE_GEO = lambda data: (len(data) > _RASTERIZE_LIMIT_GEO)
 
 KEYS_AGGREGATE_PLOT = ("n", "area", *KEYS_AGGREGATE)
 
-def plot_outline(ax: plt.Axes, province: str="Netherlands", *,
-                 coarse: bool=False, crs: str=CRS_AMERSFOORT, **kwargs) -> None:
-    """
-    Plot an outline of the Netherlands or a specific province (e.g. "Zuid-Holland").
-    """
-    if coarse:
-        line = boundary_coarse[province].to_crs(crs)
-    else:
-        line = boundary[province].to_crs(crs)
-
-    line_kw = {"color": "black", "lw": 0.5, **kwargs}
-    line.plot(ax=ax, **line_kw)
+# Graphical defaults
+cividis_discrete = colormaps["cividis"].resampled(10)
+default_outline = {"color": "black", "linewidth": 0.5}
 
 
-def _configure_map_panels(axs: plt.Axes | Iterable[plt.Axes], province: str | Iterable[str]="Netherlands", **kwargs) -> None:
+### PLOTTING FUNCTIONS
+def _configure_map_panels(axs: plt.Axes | Iterable[plt.Axes],
+                          province: Province | Iterable[Province]=NETHERLANDS, **kwargs) -> None:
     """
     Apply default settings to map panels.
-    **kwargs are passed to `plot_outline` - e.g. coarse, crs, ...
+    **kwargs are passed to `Province.plot_boundary` - e.g. coarse, crs, ...
     """
     axs = make_iterable(axs)
     provinces = make_iterable(province)
+    outline_kw = {**default_outline, **kwargs}
     for ax in axs:
         # Country/Province outline(s)
         for p in provinces:
-            plot_outline(ax, p, **kwargs)
+            p.plot_boundary(ax=ax, **outline_kw)
 
         # Axis settings
         ax.set_axis_off()
@@ -131,14 +127,16 @@ def brp_histogram(data: gpd.GeoDataFrame, column: str, *,
 
 
 def brp_map(data: gpd.GeoDataFrame, column: str, *,
-            province: str="Netherlands", figsize=(10, 10), title: Optional[str]=None, colour_dict: Optional[StringDict]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+            province: Province=NETHERLANDS, colour_dict: Optional[StringDict]=None,
+            figsize=(10, 10), title: Optional[str]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons in the given column.
     If `province` is provided, only data within that province will be plotted, with the corresponding outline.
     """
     # Select province data if desired
-    if province != "Netherlands":
-        data = entries_in_province(data, province)
+    SINGLE_PROVINCE = fpcup.geo.is_single_province(province)
+    if SINGLE_PROVINCE:
+        data = province.select_entries_in_province(data)
 
     # Create figure
     fig, ax = plt.subplots(1, 1, figsize=figsize)
@@ -169,14 +167,16 @@ def brp_map(data: gpd.GeoDataFrame, column: str, *,
 
 
 def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
-                       province: str="Netherlands", crops: Iterable[str]=brp_crops_colours.keys(), figsize=(14, 3.5), shape=(1, 5), title: Optional[str]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
+                       province: Province=NETHERLANDS, crops: Iterable[str]=brp_crops_colours.keys(),
+                       figsize=(14, 3.5), shape=(1, 5), title: Optional[str]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Create a map of BRP polygons, with one panel per crop species.
     Shape is (nrows, ncols).
     """
     # Select province data if desired
-    if province != "Netherlands":
-        data = entries_in_province(data, province)
+    SINGLE_PROVINCE = fpcup.geo.is_single_province(province)
+    if SINGLE_PROVINCE:
+        data = province.select_entries_in_province(data)
 
     # Create figure
     fig, axs = plt.subplots(*shape, figsize=figsize)
@@ -195,7 +195,7 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
         ax.set_title(f"{crop.title()} ({number_here})", color=colour)
 
     # Panel settings
-    _configure_map_panels(axs.ravel(), province, lw=0.2)
+    _configure_map_panels(axs.ravel(), province, linewidth=0.2)
     fig.suptitle(title)
 
     if saveto:
@@ -282,7 +282,8 @@ def _configure_histogram_datetime(ax: plt.Axes) -> None:
 
 
 def wofost_summary_histogram(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE, *,
-                             axs: Optional[Iterable[plt.Axes]]=None, weights: Optional[str | Iterable[RealNumber]]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
+                             weights: Optional[str | Iterable[RealNumber]]=None,
+                             axs: Optional[Iterable[plt.Axes]]=None, title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot histograms showing WOFOST run summaries.
     If `axs` is specified, use existing Axes and do not apply figure settings or save anything.
@@ -345,7 +346,7 @@ def _remove_key_from_keys(keys: Iterable[str], key_to_remove: str) -> tuple[str]
 
 def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGREGATE_PLOT, *,
                        axs: Optional[Iterable[plt.Axes]]=None, title: Optional[str]=None, rasterized: bool=True,
-                       province: Optional[str]="Netherlands", coarse: bool=False,
+                       province: Province=NETHERLANDS, use_coarse: bool=False,
                        saveto: Optional[PathOrStr]=None, **kwargs) -> None:
     """
     Plot geographical maps showing WOFOST run summaries.
@@ -380,7 +381,7 @@ def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGR
         im = data_geo.plot.geo(column, ax=ax, vmin=vmin, vmax=vmax, rasterized=rasterized, legend=True, cax=cax, cmap=cividis_discrete, legend_kwds={"location": "bottom", "label": key}, **kwargs)
 
     # Settings for map panels
-    _configure_map_panels(axs, province, coarse=coarse, crs=data_geo.crs)
+    _configure_map_panels(axs, province, use_coarse=use_coarse, crs=data_geo.crs)
 
     # Labels
     if NEW_FIGURE:
@@ -398,7 +399,7 @@ def wofost_summary_geo(data_geo: gpd.GeoDataFrame, keys: Iterable[str]=KEYS_AGGR
 
 def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLOT, *,
                                  aggregate: bool=True, aggregate_kwds: dict={}, weight_by_area: bool=True,
-                                 province: Optional[str]="Netherlands",
+                                 province: Province=NETHERLANDS,
                                  title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot histograms and (aggregate) maps showing WOFOST run summaries.
@@ -424,7 +425,7 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLO
     ### Second row: maps
     # Aggregate the data if desired
     if aggregate:
-        data_geo = aggregate_h3(summary, clipto=province, weightby=weights, **aggregate_kwds)
+        data_geo = aggregate_h3(summary, province=province, weightby=weights, **aggregate_kwds)
         rasterized = True
         dpi = rcParams["savefig.dpi"]
     else:
@@ -448,4 +449,4 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLO
     plt.close()
 
 
-plot_wofost_summary_byprovince = partial(wofost_summary_geo, rasterized=True, province=PROVINCE_NAMES, coarse=True)
+plot_wofost_summary_byprovince = partial(wofost_summary_geo, rasterized=True, province=provinces.values(), use_coarse=True)
