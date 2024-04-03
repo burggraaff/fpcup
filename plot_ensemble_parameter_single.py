@@ -17,10 +17,12 @@ parser.add_argument("-v", "--verbose", help="increase output verbosity", action=
 args = parser.parse_args()
 
 args.PARAMETER_NAME = args.output_dir.stem
+args.PARAMETER = fpcup.parameters.pcse_inputs[args.PARAMETER_NAME]
 
 
 ### CONSTANTS
-OUTPUTS_TO_PLOT = ("RD", "DOM", "LAIMAX", "TWSO")  # Parameters to plot
+OUTPUT_LABELS = ("RD", "DOM", "LAIMAX", "TWSO")  # Parameters to plot
+OUTPUT_PARAMETERS = [fpcup.parameters.pcse_summary_outputs[key] for key in OUTPUT_LABELS]
 
 
 ### HELPER FUNCTIONS
@@ -61,23 +63,27 @@ if __name__ == "__main__":
         crop_short = fpcup.crop.CROP2ABBREVIATION[crop_name]
 
         # Setup
-        fig, axs = plt.subplots(nrows=len(OUTPUTS_TO_PLOT), ncols=n_soiltypes, sharex=True, sharey="row", figsize=(10, 10), squeeze=False)
+        fig, axs = plt.subplots(nrows=len(OUTPUT_PARAMETERS), ncols=n_soiltypes, sharex=True, sharey="row", figsize=(10, 10), squeeze=False)
 
         # Loop over the columns (soil types) first
         for ax_col, (soiltype, summary_by_soiltype) in zip(axs.T, summary_by_crop.groupby("soiltype")):
             ax_col[0].set_title(f"Soil type: {soiltype}")
 
             # Loop over the rows (summary outputs) next
-            for ax, key in zip(ax_col, OUTPUTS_TO_PLOT):
+            for ax, output in zip(ax_col, OUTPUT_PARAMETERS):
                 # Plot a line for each site
-                summary_by_soiltype.groupby("geometry").plot.line(args.PARAMETER_NAME, key, ax=ax, alpha=0.5, legend=False)
+                summary_by_soiltype.groupby("geometry").plot.line(args.PARAMETER_NAME, output.name, ax=ax, alpha=0.5, legend=False)
+
+        # Add reference line for default value
+        for ax in axs.ravel():
+            ax.axvline(args.PARAMETER.default, color="black", linestyle="--", alpha=0.5)
 
         # Titles / labels
-        axs[0, 0].set_xlim(0, 150)
-        for ax, key in zip(axs[:, 0], OUTPUTS_TO_PLOT):
-            ax.set_ylabel(key)
+        axs[0, 0].set_xlim(*args.PARAMETER.bounds)
+        for ax, output in zip(axs[:, 0], OUTPUT_PARAMETERS):
+            ax.set_ylabel(output.name)
 
-        fig.suptitle(f"WOFOST sensitivity to {args.PARAMETER_NAME}: {crop_name} ({n_sites} sites, {n_parameter_values} values)")
+        fig.suptitle(f"WOFOST sensitivity to {args.PARAMETER_NAME}: {crop_name} ({n_sites} sites, {n_parameter_values} values)\n{args.PARAMETER}")
         fig.align_xlabels()
         fig.align_ylabels()
 

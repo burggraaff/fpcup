@@ -41,7 +41,8 @@ class PCSELabel(_PCSEParameterPlottable, _PCSEParameterBase):
 @dataclass
 class PCSENumericParameter(_PCSEParameterPlottable, _PCSEParameterBase):
     unit: Optional[str] = None
-    bounds: Iterable[RealNumber] = None
+    bounds: Optional[Iterable[RealNumber]] = None
+    default: Optional[RealNumber] = None
     dtype: type = float
 
     def __str__(self) -> str:
@@ -98,7 +99,7 @@ SOLNAM = PCSELabel(name="SOLNAM", description="Soil name")
 
 n = PCSENumericParameter(name="n", description="Number of sites")
 area = PCSENumericParameter(name="area", description="Total plot area", unit="ha")
-WAV = PCSENumericParameter(name="WAV", description="Initial amount of water in rootable zone in excess of wilting point", plotname="Initial amount of water", unit="cm", bounds=(0, 50))
+WAV = PCSENumericParameter(name="WAV", description="Initial amount of water in rootable zone in excess of wilting point", plotname="Initial amount of water", unit="cm", bounds=(0, 50), default=10)
 NOTINF = PCSENumericParameter(name="NOTINF", description="Non-infiltrating fraction", bounds=(0, 1))
 SMLIM = PCSENumericParameter(name="SMLIM", description="Maximum initial soil moisture in rooted zone", plotname="Maximum initial soil moisture", unit="cm", bounds=(0, 10))
 SSI = PCSENumericParameter(name="SSI", description="Initial surface storage", unit="cm", bounds=(0, 2))
@@ -107,7 +108,7 @@ CRAIRC = PCSENumericParameter(name="CRAIRC", description="Critical soil air cont
 SM0 = PCSENumericParameter(name="SM0", description="Soil moisture content of saturated soil", plotname="Saturated soil moisture content", unit=cm3percm3, bounds=(0.3, 0.9))
 SMFCF = PCSENumericParameter(name="SMFCF", description="Soil moisture content at field capacity", unit=cm3percm3, bounds=(0.05, 0.74))
 SMW = PCSENumericParameter(name="SMW", description="Soil moisture content at wilting point", unit=cm3percm3, bounds=(0.01, 0.35))
-RDMSOL = PCSENumericParameter(name="RDMSOL", description="Maximum rootable depth of soil", plotname="Maximum rootable depth", unit="cm", bounds=(10, 150))
+RDMSOL = PCSENumericParameter(name="RDMSOL", description="Maximum rootable depth of soil", plotname="Maximum rootable depth", unit="cm", bounds=(10, 150), default=120)
 K0 = PCSENumericParameter(name="K0", description="Hydraulic conductivity of saturated soil", unit=cmperday, bounds=(0.1, 14))
 KSUB = PCSENumericParameter(name="KSUB", description="Maximum percolation rate of water to subsoil", unit=cmperday, bounds=(0.1, 14))
 SOPE = PCSENumericParameter(name="SOPE", description="Maximum percolation rate of water through the root zone", unit=cmperday, bounds=(0, 10))
