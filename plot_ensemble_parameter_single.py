@@ -74,12 +74,18 @@ if __name__ == "__main__":
                 # Plot a line for each site
                 summary_by_soiltype.groupby("geometry").plot.line(args.PARAMETER_NAME, output.name, ax=ax, alpha=0.5, legend=False)
 
-        # Add reference line for default value
-        for ax in axs.ravel():
-            ax.axvline(args.PARAMETER.default, color="black", linestyle="--", alpha=0.5)
+        # Add reference line for default value, if available
+        if hasattr(args.PARAMETER, "default"):
+            for ax in axs.ravel():
+                ax.axvline(args.PARAMETER.default, color="black", linestyle="--", alpha=0.5)
 
         # Titles / labels
-        axs[0, 0].set_xlim(*args.PARAMETER.bounds)
+        try:
+            xlim = args.PARAMETER.bounds
+        except AttributeError:
+            xlim = summary_by_crop[args.PARAMETER_NAME].min(), summary_by_crop[args.PARAMETER_NAME].max()
+        axs[0, 0].set_xlim(*xlim)
+
         for ax, output in zip(axs[:, 0], OUTPUT_PARAMETERS):
             ax.set_ylabel(output.name)
 

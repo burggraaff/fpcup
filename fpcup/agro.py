@@ -80,7 +80,7 @@ def load_agrotemplate(crop: str, **kwargs) -> AgromanagementDataSingleCrop:
     agromanagement = AgromanagementDataSingleCrop.from_template(template, **kwargs)
     return agromanagement
 
-def load_agrotemplate_multi(crop: str, progressbar=True, leave_progressbar=False, **kwargs) -> list[AgromanagementDataSingleCrop]:
+def load_agrotemplate_multi(crop: str, *, progressbar=True, leave_progressbar=False, **kwargs) -> list[AgromanagementDataSingleCrop]:
     """
     Load an agromanagement template for a given crop, formatted with the provided kwargs.
     This will iterate over every iterable in kwargs; for example, you can provide multiple dates or multiple crops.

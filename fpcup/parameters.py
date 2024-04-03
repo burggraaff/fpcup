@@ -140,7 +140,6 @@ LAIMAX = PCSENumericParameter(name="LAIMAX", description="Maximum LAI reached du
 CTRAT = PCSENumericParameter(name="CTRAT", description="Cumulative crop transpiration", unit="cm", bounds=(0, 100))
 CEVST = PCSENumericParameter(name="CEVST", description="Cumulative soil transpiration", unit="cm")
 
-
 DOS = PCSEDateParameter(name="DOS", description="Date of sowing")
 DOE = PCSEDateParameter(name="DOE", description="Date of emergence")
 DOA = PCSEDateParameter(name="DOA", description="Date of anthesis")
@@ -161,7 +160,7 @@ def parameterdict(*params: Iterable[PCSEParameter]) -> dict[str, PCSEParameter]:
     """
     return {p.name: p for p in params}
 
-pcse_inputs = parameterdict(RDMSOL, WAV)
+pcse_inputs = parameterdict(RDMSOL, WAV, DOS)
 pcse_outputs = parameterdict(DVS, LAI, TAGP, TWSO, TWLV, TWST, TWRT, TRA, RD, SM, WWLOW)
 pcse_summary_outputs = parameterdict(LAIMAX, CTRAT, CEVST, TAGP, TWSO, TWLV, TWST, TWRT, RD, DOS, DOE, DOA, DOM, DOH, DOV)
 
