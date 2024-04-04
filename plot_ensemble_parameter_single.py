@@ -21,7 +21,7 @@ args.PARAMETER = fpcup.parameters.pcse_inputs[args.PARAMETER_NAME]
 
 
 ### CONSTANTS
-OUTPUT_LABELS = ("RD", "DOM", "LAIMAX", "TWSO")  # Parameters to plot
+OUTPUT_LABELS = ("RD", "DOM", "LAIMAX", "TAGP", "TWSO")  # Parameters to plot
 OUTPUT_PARAMETERS = [fpcup.parameters.pcse_summary_outputs[key] for key in OUTPUT_LABELS]
 
 
