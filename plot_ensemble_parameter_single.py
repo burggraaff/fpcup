@@ -17,7 +17,7 @@ parser.add_argument("-v", "--verbose", help="increase output verbosity", action=
 args = parser.parse_args()
 
 args.PARAMETER_NAME = args.output_dir.stem
-args.PARAMETER = fpcup.parameters.pcse_inputs[args.PARAMETER_NAME]
+args.PARAMETER = fpcup.parameters.all_parameters[args.PARAMETER_NAME]
 
 
 ### CONSTANTS
@@ -77,9 +77,11 @@ if __name__ == "__main__":
                 summary_by_soiltype.groupby("geometry").plot.line(args.PARAMETER_NAME, output.name, ax=ax, alpha=0.5, legend=False)
 
         # Add reference line for default value, if available
-        if hasattr(args.PARAMETER, "default"):
+        try:
             for ax in axs.ravel():
                 ax.axvline(args.PARAMETER.default, color="black", linestyle="--", alpha=0.5)
+        except (TypeError, AttributeError):
+            pass
 
         # Titles / labels
         try:
