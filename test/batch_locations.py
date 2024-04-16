@@ -22,8 +22,9 @@ args.SINGLE_PROVINCE = fpcup.geo.is_single_province(args.province)
 ### Load constants
 YEAR = 2022
 CRS = fpcup.constants.WGS84
-soildata = fpcup.soil.soil_types["ec3"]
-agromanagement = fpcup.crop.SpringBarley.agromanagement_first_sowingdate(YEAR)
+AGROMANAGEMENT = fpcup.crop.SpringBarley.agromanagement_first_sowingdate(YEAR)
+SOILDATA = fpcup.soil.soil_types["ec3"]
+CONSTANTS = {"agromanagement": AGROMANAGEMENT, "soildata": SOILDATA, "crs": CRS}
 
 
 ### Worker function; this runs PCSE once for one site
@@ -37,7 +38,7 @@ def run_pcse(coordinates: fpcup._typing.Coordinates) -> bool | fpcup.model.RunDa
     weatherdata = fpcup.weather.load_weather_data_NASAPower(coordinates)
 
     # Combine input data
-    run = fpcup.model.RunData(soildata=soildata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=coordinates, crs=CRS)
+    run = fpcup.model.RunData(soildata=SOILDATA, weatherdata=weatherdata, agromanagement=AGROMANAGEMENT, geometry=coordinates, crs=CRS)
     run.to_file(args.output_dir)
 
     # Run model
@@ -62,9 +63,10 @@ if __name__ == "__main__":
 
     # Feedback on constants
     if args.verbose:
-        print("Loaded soil data")
+        print("Loaded soil data:")
+        print(SOILDATA)
         print("Loaded agro management data:")
-        print(agromanagement)
+        print(AGROMANAGEMENT)
         print()
 
     # Generate the coordinates
