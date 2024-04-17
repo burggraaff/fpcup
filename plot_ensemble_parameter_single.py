@@ -22,7 +22,7 @@ args.PARAMETER = fpcup.parameters.all_parameters[args.PARAMETER_NAME]
 
 
 ### CONSTANTS
-OUTPUT_LABELS = ("RD", "DOM", "LAIMAX", "TAGP", "TWSO")  # Parameters to plot
+OUTPUT_LABELS = ("DOM", "RD", "LAIMAX", "TAGP", "TWSO")  # Parameters to plot
 OUTPUT_PARAMETERS = [fpcup.parameters.pcse_summary_outputs[key] for key in OUTPUT_LABELS]
 
 
@@ -90,6 +90,9 @@ if __name__ == "__main__":
         except AttributeError:
             xlim = summary_by_crop[args.PARAMETER_NAME].min(), summary_by_crop[args.PARAMETER_NAME].max()
         axs[0, 0].set_xlim(*xlim)
+
+        for ax in axs[1:, 0]:
+            ax.set_ylim(ymin=0)
 
         for ax, output in zip(axs[:, 0], OUTPUT_PARAMETERS):
             ax.set_ylabel(output.name)
