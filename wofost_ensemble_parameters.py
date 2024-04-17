@@ -52,14 +52,6 @@ if __name__ == "__main__":
 
 
     ### ITERABLE SETUP
-    # Get crop data
-    if args.crops is None:  # Default
-        args.crops = [fpcup.crop.crops["barley (spring)"], fpcup.crop.crops["maize (green)"], fpcup.crop.crops["wheat (winter)"]]
-    elif isinstance(args.crops, str):  # Single crop
-        args.crops = [fpcup.crop.select_crop(args.crops)]
-    else:
-        raise ValueError(f"Cannot determine target crop from input '{args.crops}'")
-
     # Generate the parameter iterable
     if args.parameter_names:
         combined_parameters = fpcup.parameters.generate_ensemble_space(*args.parameter_names, n=args.number)
@@ -67,6 +59,14 @@ if __name__ == "__main__":
 
         if args.verbose:
             print(f"Iterating over the following parameters: {args.parameter_names}")
+
+    # Get crop data
+    if args.crops is None:  # Default
+        args.crops = [fpcup.crop.crops["barley (spring)"], fpcup.crop.crops["maize (green)"], fpcup.crop.crops["wheat (winter)"]]
+    elif isinstance(args.crops, str):  # Single crop
+        args.crops = [fpcup.crop.select_crop(args.crops)]
+    else:
+        raise ValueError(f"Cannot determine target crop from input '{args.crops}'")
 
     # Mix in agromanagement
     if args.sowdates:  # Multiple sowing dates
@@ -100,6 +100,7 @@ if __name__ == "__main__":
               f" * {len(SOILTYPES)} soil types"
               f" * {len(coords)} sites"
               f" = {len(variables) * len(coords)} runs")
+
 
     ### RUN PCSE
     model_statuses = fpcup.model.run_pcse_site_ensemble(coords, variables, args.output_dir, run_data_constants=CONSTANTS, leave_progressbar=args.verbose)
