@@ -21,7 +21,7 @@ def flatten_list(x: Iterable[Iterable[object]]) -> list[object]:
     """
     Flatten a list of lists (or other iterables), using itertools.chain.
     """
-    return list(chain(x))
+    return list(chain.from_iterable(x))
 
 
 def make_iterable(x: object, exclude: Iterable[type]=[str]) -> Iterable:
