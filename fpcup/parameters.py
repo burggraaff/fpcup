@@ -86,7 +86,7 @@ class PCSETabularParameter(_PCSEParameterBase):
 PCSEParameter = PCSEFlag | PCSELabel | PCSENumericParameter | PCSETabularParameter
 
 ### Parameters
-# Parameter information from "A gentle introduction to WOFOST" (De Wit & Boogaard 2021), CABO file descriptions, YAML file descriptions
+# Parameter information from "A gentle introduction to WOFOST" (De Wit & Boogaard 2021), CABO file descriptions, YAML file descriptions, WOFOSTSiteProvider defaults
 C = "°C"
 Cday = f"{C} day"
 cm3percm3 = "cm^3 / cm^3"
@@ -100,10 +100,10 @@ SOLNAM = PCSELabel(name="SOLNAM", description="Soil name")
 n = PCSENumericParameter(name="n", description="Number of sites")
 area = PCSENumericParameter(name="area", description="Total plot area", unit="ha")
 WAV = PCSENumericParameter(name="WAV", description="Initial amount of water in rootable zone in excess of wilting point", plotname="Initial excess water", unit="cm", bounds=(0, 50), default=10)
-NOTINF = PCSENumericParameter(name="NOTINF", description="Non-infiltrating fraction", bounds=(0, 1))
-SMLIM = PCSENumericParameter(name="SMLIM", description="Maximum initial soil moisture in rooted zone", plotname="Maximum initial soil moisture", unit="cm", bounds=(0, 10))
-SSI = PCSENumericParameter(name="SSI", description="Initial surface storage", unit="cm", bounds=(0, 2))
-SSMAX = PCSENumericParameter(name="SSMAX", description="Maximum surface storage capacity", unit="cm", bounds=(0, 2))
+NOTINF = PCSENumericParameter(name="NOTINF", description="Non-infiltrating fraction", bounds=(0, 1), default=0)
+SMLIM = PCSENumericParameter(name="SMLIM", description="Maximum initial soil moisture in rooted zone", plotname="Maximum initial soil moisture", unit="cm", bounds=(0, 10), default=0.4)
+SSI = PCSENumericParameter(name="SSI", description="Initial surface storage", unit="cm", bounds=(0, 2), default=0)
+SSMAX = PCSENumericParameter(name="SSMAX", description="Maximum surface storage capacity", unit="cm", bounds=(0, 2), default=0)
 CRAIRC = PCSENumericParameter(name="CRAIRC", description="Critical soil air content for aeration (used when IOX = 1)", plotname="Critical soil air content for aeration", unit=cm3percm3, bounds=(0.04, 0.1))
 SM0 = PCSENumericParameter(name="SM0", description="Soil moisture content of saturated soil", plotname="Saturated soil moisture content", unit=cm3percm3, bounds=(0.3, 0.9))
 SMFCF = PCSENumericParameter(name="SMFCF", description="Soil moisture content at field capacity", unit=cm3percm3, bounds=(0.05, 0.74))

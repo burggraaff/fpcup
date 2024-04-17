@@ -3,7 +3,7 @@ Tools without a common theme.
 """
 from copy import copy
 from functools import partial
-from itertools import product
+from itertools import chain, product
 from textwrap import indent
 indent2 = partial(indent, prefix="  ")
 
@@ -15,6 +15,13 @@ except NameError:
     RUNNING_IN_IPYTHON = False
 else:
     RUNNING_IN_IPYTHON = True
+
+
+def flatten_list(x: Iterable[Iterable[object]]) -> list[object]:
+    """
+    Flatten a list of lists (or other iterables), using itertools.chain.
+    """
+    return list(chain(x))
 
 
 def make_iterable(x: object, exclude: Iterable[type]=[str]) -> Iterable:

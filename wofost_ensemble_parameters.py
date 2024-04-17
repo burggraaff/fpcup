@@ -2,9 +2,10 @@
 Run a PCSE ensemble for different values of input parameters to determine their effect.
 All available soil types are tested.
 A specified number of sites, roughly central to the Netherlands, are used.
+By default, three crops (spring barley, green maize, winter wheat) are used; a single crop can be specified with -c.
 
 Example:
-    python wofost_ensemble_parameters.py rdmsol wav -n 100 -v -c barley -s 16
+    python wofost_ensemble_parameters.py rdmsol wav -n 100 -v
 
 To simulate only multiple sowing dates, simply leave out the other parameters, e.g.:
     python wofost_ensemble_parameters.py -v -c barley -s 16 -d
@@ -17,7 +18,7 @@ parser = argparse.ArgumentParser(description="Run a PCSE ensemble for different 
 parser.add_argument("parameter_names", help="parameter(s) to iterate over", type=str.upper, nargs="*")
 parser.add_argument("-n", "--number", help="number of values per parameter; note the exponential increase in runs when doing multiple parameters", type=int, default=100)
 parser.add_argument("-d", "--sowdates", help="run the simulation for multiple sowing dates (based on the crop's range)", action="store_true")
-parser.add_argument("-c", "--crop", help="crop to run simulations on", default="barley", type=fpcup.crop.select_crop)
+parser.add_argument("-c", "--crops", help="crop(s) to run simulations on", default=None)
 parser.add_argument("-s", "--number_sites", help="number of sites; result may be lower due to rounding", type=int, default=16)
 parser.add_argument("--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("--output_dir", help="folder to save PCSE outputs to (default: generated from parameters)", type=fpcup.io.Path, default=None)
@@ -40,7 +41,7 @@ variables = {"soildata": SOILTYPES}
 if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
 
-    ### SETUP
+    ### GENERAL SETUP
     # Check that enough inputs were provided
     assert len(args.parameter_names) > 0 or args.sowdates, "Please provide parameters to iterate over and/or use the -d flag to iterate over sowing dates."
 
@@ -48,6 +49,16 @@ if __name__ == "__main__":
     fpcup.io.makedirs(args.output_dir, exist_ok=True)
     if args.verbose:
         print(f"Save folder: {args.output_dir.absolute()}")
+
+
+    ### ITERABLE SETUP
+    # Get crop data
+    if args.crops is None:  # Default
+        args.crops = [fpcup.crop.crops["barley (spring)"], fpcup.crop.crops["maize (green)"], fpcup.crop.crops["wheat (winter)"]]
+    elif isinstance(args.crops, str):  # Single crop
+        args.crops = [fpcup.crop.select_crop(args.crops)]
+    else:
+        raise ValueError(f"Cannot determine target crop from input '{args.crops}'")
 
     # Generate the parameter iterable
     if args.parameter_names:
@@ -57,22 +68,22 @@ if __name__ == "__main__":
         if args.verbose:
             print(f"Iterating over the following parameters: {args.parameter_names}")
 
-    # Mix in agromanagement data
-    # Generate one or multiple agromanagement calendars, corresponding to sowing dates
-    if args.sowdates:
-        agromanagements = args.crop.agromanagement_all_sowingdates(YEAR)
-        variables = {"agromanagement": agromanagements, **variables}
+    # Mix in agromanagement
+    if args.sowdates:  # Multiple sowing dates
+        agromanagements = fpcup.tools.flatten_list(c.agromanagement_all_sowingdates(YEAR) for c in args.crops)
+    else:  # Single sowing date
+        agromanagements = [c.agromanagement_first_sowingdate(YEAR) for c in args.crops]
 
-        first, last = agromanagements[0].crop_start_date, agromanagements[-1].crop_start_date
+    if len(agromanagements) == 1:  # Single crop, single sowing date
+        CONSTANTS = {"agromanagement": agromanagements[0], **CONSTANTS}
         if args.verbose:
-            print(f"Generated {len(agromanagements)} agromanagement calendars ({first} -- {last}).")
-    else:
-        agromanagements = args.crop.agromanagement_first_sowingdate(YEAR)
-        CONSTANTS = {"agromanagement": agromanagements, **CONSTANTS}
-        if args.verbose:
-            print("Loaded agro management data:")
-            print(agromanagements)
+            print("Generated 1 agromanagement calendar:")
+            print(agromanagements[0])
             print()
+    else:  # Multiple crops and/or multiple sowing dates
+        variables = {"agromanagement": agromanagements, **variables}
+        if args.verbose:
+            print(f"Generated {len(agromanagements)} agromanagement calendars for {len(args.crops)} crops.")
 
     # Generate the coordinates
     coords = fpcup.site.generate_sites_space(latitude=(51, 53), longitude=(4, 6), n=args.number_sites)
@@ -84,6 +95,7 @@ if __name__ == "__main__":
 
     if args.verbose:
         print(f"Expected total runs: {args.number}**{len(args.parameter_names)} parameter values"
+              f" * {len(args.crops)} crops"
               f" * {len(agromanagements) if args.sowdates else 1} sowing dates"
               f" * {len(SOILTYPES)} soil types"
               f" * {len(coords)} sites"
