@@ -99,11 +99,13 @@ SOLNAM = PCSELabel(name="SOLNAM", description="Soil name")
 
 n = PCSENumericParameter(name="n", description="Number of sites")
 area = PCSENumericParameter(name="area", description="Total plot area", unit="ha")
+
 WAV = PCSENumericParameter(name="WAV", description="Initial amount of water in rootable zone in excess of wilting point", plotname="Initial excess water", unit="cm", bounds=(0, 50), default=10)
 NOTINF = PCSENumericParameter(name="NOTINF", description="Non-infiltrating fraction", bounds=(0, 1), default=0)
 SMLIM = PCSENumericParameter(name="SMLIM", description="Maximum initial soil moisture in rooted zone", plotname="Maximum initial soil moisture", unit="cm", bounds=(0, 10), default=0.4)
 SSI = PCSENumericParameter(name="SSI", description="Initial surface storage", unit="cm", bounds=(0, 2), default=0)
 SSMAX = PCSENumericParameter(name="SSMAX", description="Maximum surface storage capacity", unit="cm", bounds=(0, 2), default=0)
+
 CRAIRC = PCSENumericParameter(name="CRAIRC", description="Critical soil air content for aeration (used when IOX = 1)", plotname="Critical soil air content for aeration", unit=cm3percm3, bounds=(0.04, 0.1))
 SM0 = PCSENumericParameter(name="SM0", description="Soil moisture content of saturated soil", plotname="Saturated soil moisture content", unit=cm3percm3, bounds=(0.3, 0.9))
 SMFCF = PCSENumericParameter(name="SMFCF", description="Soil moisture content at field capacity", unit=cm3percm3, bounds=(0.05, 0.74))
@@ -117,6 +119,7 @@ SPODS = PCSENumericParameter(name="SPODS", description="2nd topsoil seepage para
 SPASS = PCSENumericParameter(name="SPADS", description="1st topsoil seepage parameter shallow seedbed")
 SPOSS = PCSENumericParameter(name="SPADS", description="2nd topsoil seepage parameter shallow seedbed")
 DEFLIM = PCSENumericParameter(name="DEFLIM", description="Required moisture deficit deep seedbed")
+
 TSUMEM = PCSENumericParameter(name="TSUMEM", description="Temperature sum from sowing to emergence", unit=Cday, bounds=(0, 170))
 TSUM1 = PCSENumericParameter(name="TSUM1", description="Temperature sum from emergence to anthesis", unit=Cday, bounds=(150, 1050))
 TSUM2 = PCSENumericParameter(name="TSUM2", description="Temperature sum from anthesis to maturity", unit=Cday, bounds=(600, 1550))
@@ -125,6 +128,7 @@ TEFFMX = PCSENumericParameter(name="TEFFMX", description="Maximum effective temp
 RDI = PCSENumericParameter(name="RDI", description="Initial rooting depth", unit="cm", bounds=(10, 50))
 RRI = PCSENumericParameter(name="RRI", description="Maximum daily increase in rooting depth", unit="cm / day", bounds=(0, 3))
 RDMCR = PCSENumericParameter(name="RDMCR", description="Maximum rooting depth", unit="cm", bounds=(50, 400))
+
 DVS = PCSENumericParameter(name="DVS", description="Crop development state (-0.1 = sowing; 0 = emergence; 1 = flowering; 2 = maturity)", plotname="Crop development state", bounds=(-0.1, 2))
 LAI = PCSENumericParameter(name="LAI", description="Leaf area index", unit="ha / ha", bounds=(0, 12))
 TAGP = PCSENumericParameter(name="TAGP", description="Total above-ground production", unit=kgperha, bounds=(0, 150000))
