@@ -28,6 +28,7 @@ args = parser.parse_args()
 # Generate output folder name from parameters
 if args.output_dir is None:
     variable_names = args.parameter_names + ["DOS"] if args.sowdates else args.parameter_names
+    variable_names = sorted(variable_names)
     args.output_dir = fpcup.settings.DEFAULT_OUTPUT / "-".join(variable_names)
 
 ### Load constants
