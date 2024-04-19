@@ -25,9 +25,20 @@ args = parser.parse_args()
 ### Define constants
 CROP = "barley"
 VARIETY = "Spring_barley_301"
+SOILTYPE = "ec2"
 
 INPUTS = ["RDMSOL", "WAV"]
+# Preprocess:
+    # geometry -> latitude, longitude
+    # DOS -> year, doy
+
+    # soiltype -> ???
+    # crop -> ???
+    # variety -> ???
+
 OUTPUTS = ["DVS", "LAIMAX", "TAGP", "TWSO"]
+# Postprocess:
+    # DOM -> year, doy
 
 
 ### This gets executed only when the script is run normally; not by multiprocessing.
@@ -52,6 +63,12 @@ if __name__ == "__main__":
     summary.drop(columns=["crop", "variety"], inplace=True)
     if args.verbose:
         print(f"Selected runs for {CROP}/{VARIETY}")
+
+    # Select one soil type
+    summary = summary.loc[summary["soiltype"] == SOILTYPE]
+    summary.drop(columns=["soiltype"], inplace=True)
+    if args.verbose:
+        print(f"Selected runs for {SOILTYPE} soil")
 
     # Pre-process data
     summary.to_crs(fpcup.geo.WGS84, inplace=True)
