@@ -7,7 +7,9 @@ from pathlib import Path
 
 import geopandas as gpd
 gpd.options.io_engine = "pyogrio"
-from geopandas import GeoDataFrame, read_file as read_gpd
+from geopandas import GeoDataFrame
+
+from pyogrio import read_dataframe as read_geodataframe, write_dataframe as write_geodataframe
 from pyogrio.errors import DataSourceError
 
 from tqdm import tqdm

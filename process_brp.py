@@ -5,10 +5,6 @@ BRP files can be obtained from https://www.pdok.nl/atom-downloadservices/-/artic
 Example usage:
     %run process_brp.py data/brp/brpgewaspercelen_definitief_2022.gpkg -vp
 """
-import geopandas as gpd
-gpd.options.io_engine = "pyogrio"
-gpd.pd.options.mode.chained_assignment = None  # Prevents unneeded warnings
-
 import fpcup
 
 # Parse command line arguments
@@ -21,7 +17,7 @@ parser.add_argument("-v", "--verbose", help="increase output verbosity", action=
 args = parser.parse_args()
 
 # Load the file
-brp = gpd.read_file(args.filename)
+brp = fpcup.io.read_geodataframe(args.filename)
 filestem = args.filename.stem
 year = filestem.split("_")[-1]
 if args.verbose:
