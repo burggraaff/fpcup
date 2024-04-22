@@ -21,7 +21,7 @@ parser.add_argument("-v", "--verbose", help="increase output verbosity", action=
 args = parser.parse_args()
 
 args.SINGLE_PROVINCE = fpcup.geo.is_single_province(args.province)
-args.YEAR = int(args.brp_filename.stem.split("_")[-1].split("-")[0])  # Get the year from the BRP filename
+args.YEAR = int(args.brp_filename.stem[-4:]) # Get the year from the BRP filename
 
 # Set up a default output folder if a custom one was not provided
 if args.output_dir is None:
