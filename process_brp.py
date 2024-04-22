@@ -87,6 +87,6 @@ if args.verbose:
     print("Added WGS84 coordinates")
 
 # Save the processed dataframe to file
-brp_fpcup.to_file(f"{filestem}-processed.gpkg", driver="GPKG")
+brp_fpcup.to_file(f"brp{year}.gpkg", driver="GPKG")
 if args.verbose:
     print("Saved processed file")

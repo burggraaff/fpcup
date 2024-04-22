@@ -4,7 +4,7 @@ Plots for a user-provided crop (e.g. barley) are selected and only these are use
 Currently does not support using different variants/cultivars.
 
 Example:
-    python wofost_brp.py data/brp/brpgewaspercelen_definitief_2022-processed.gpkg barley -v -p zeeland -f
+    python wofost_brp.py data/brp/brp2022.gpkg barley -v -p zeeland -f
 """
 import fpcup
 
