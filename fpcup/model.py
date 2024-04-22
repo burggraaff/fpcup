@@ -193,16 +193,16 @@ class RunData(tuple):
 
     def to_file(self, output_directory: PathOrStr, **kwargs) -> None:
         """
-        Save to a GeoJSON (.wrun) file.
-        Essentially shorthand for creating an InputSummary object and saving that to file, with a filename based on the current run_id.
+        Save to a .wrun file, with a filename based on the current run_id.
         """
         # Set up filename
         output_directory = Path(output_directory)
         filename = output_directory / (self.run_id + _SUFFIX_RUNDATA)
 
         # Create dataframe and save
-        input_summary = InputSummary.from_rundata(self)
-        input_summary.to_file(filename, **kwargs)
+        df = pd.DataFrame(self.input_dict(), index=[self.run_id])
+        df["DOS"] = pd.to_datetime(df["DOS"])
+        df.to_csv(filename)
 
 
 class RunDataBRP(RunData):
