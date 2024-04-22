@@ -26,7 +26,7 @@ from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from ._typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
 from .aggregate import KEYS_AGGREGATE, aggregate_h3
 from .constants import CRS_AMERSFOORT, WGS84
-from .geo import Province, NETHERLANDS, provinces
+from .geo import Province, NETHERLANDS, is_single_province, provinces
 from .model import Summary
 from .parameters import all_parameters, pcse_inputs, pcse_outputs, pcse_summary_outputs
 from .tools import make_iterable
@@ -134,7 +134,7 @@ def brp_map(data: gpd.GeoDataFrame, column: str, *,
     If `province` is provided, only data within that province will be plotted, with the corresponding outline.
     """
     # Select province data if desired
-    SINGLE_PROVINCE = fpcup.geo.is_single_province(province)
+    SINGLE_PROVINCE = is_single_province(province)
     if SINGLE_PROVINCE:
         data = province.select_entries_in_province(data)
 
@@ -174,7 +174,7 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
     Shape is (nrows, ncols).
     """
     # Select province data if desired
-    SINGLE_PROVINCE = fpcup.geo.is_single_province(province)
+    SINGLE_PROVINCE = is_single_province(province)
     if SINGLE_PROVINCE:
         data = province.select_entries_in_province(data)
 
