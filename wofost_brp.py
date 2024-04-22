@@ -41,7 +41,7 @@ def run_pcse(i_row: tuple[int, fpcup._typing.Series]) -> bool | fpcup.model.RunD
     Returns the corresponding RunData if a run failed.
     """
     i, row = i_row  # Unpack index/data pair
-    coordinates = (row["latitude"], row["longitude"])
+    latitude, longitude = row["latitude"], row["longitude"]
 
     # If desired, check if this run has been done already, and skip it if so
     if not args.force:
@@ -51,7 +51,7 @@ def run_pcse(i_row: tuple[int, fpcup._typing.Series]) -> bool | fpcup.model.RunD
             return False
 
     # Get weather data
-    weatherdata = fpcup.weather.load_weather_data_NASAPower(coordinates)
+    weatherdata = fpcup.weather.load_weather_data_NASAPower((latitude, longitude))
 
     # Combine input data
     run = fpcup.model.RunDataBRP(soildata=soildata, weatherdata=weatherdata, agromanagement=agromanagement, brpdata=row, brpyear=args.YEAR)
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     fpcup.io.makedirs(args.output_dir, exist_ok=True)
 
     # Load the BRP file
-    brp = fpcup.io.read_gpd(args.brp_filename)
+    brp = fpcup.io.read_geodataframe(args.brp_filename)
     if args.verbose:
         print(f"Loaded BRP data from {args.brp_filename.absolute()} -- {len(brp)} sites")
 
@@ -104,6 +104,8 @@ if __name__ == "__main__":
 
     # Split out the rows
     brp_rows = list(brp.iterrows())
+
+    raise Exception
 
     ### Run the model
     model_statuses = fpcup.model.multiprocess_pcse(run_pcse, brp_rows, leave_progressbar=args.verbose)

@@ -19,24 +19,24 @@ from pcse.models import Engine, Wofost72_WLP_FD
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
 from ._run_id import append_overrides, generate_run_id_base, generate_run_id_BRP
-from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr
+from ._typing import Callable, Coordinates, Iterable, Optional, PathOrStr, RealNumber
 from .agro import AgromanagementData
-from .constants import CRS_AMERSFOORT
+from .constants import CRS_AMERSFOORT, WGS84
 from .crop import default as default_cropdata
+from .geo import format_coordinates
 from .multiprocessing import multiprocess_file_io, multiprocess_pcse
 from .site import default as default_sitedata
 from .soil import SoilType
 from .tools import copy, indent2
 from .weather import load_weather_data_NASAPower
 
-### Constants
+### CONSTANTS
 _SUFFIX_RUNDATA = ".wrun"
 _SUFFIX_OUTPUTS = ".wout"
 _SUFFIX_SUMMARY = ".wsum"
-_GEOMETRY_DEFAULT = (0, 0)
 
 
-### Classes to help store PCSE inputs and outputs
+### CLASSES THAT STORE PCSE INPUTS
 class RunData(tuple):
     """
     Stores the data necessary to run a PCSE simulation.
@@ -56,10 +56,10 @@ class RunData(tuple):
         return super().__new__(cls, (parameters, weatherdata, agromanagement))
 
     def __init__(self, *, soildata: SoilType, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData,
-                sitedata: PCSESiteDataProvider=default_sitedata, cropdata: MultiCropDataProvider=default_cropdata,
+                 latitude: RealNumber, longitude: RealNumber,
+                 sitedata: PCSESiteDataProvider=default_sitedata, cropdata: MultiCropDataProvider=default_cropdata,
                  override: Optional[dict]={},
-                 run_id: Optional[str]=None, prefix: Optional[str]=None, suffix: Optional[str]=None,
-                 geometry: Optional[shapely.Geometry | Coordinates]=None, crs=None):
+                 run_id: Optional[str]=None, prefix: Optional[str]=None, suffix: Optional[str]=None):
         """
         Initialises a newly created RunData object.
         """
@@ -73,31 +73,15 @@ class RunData(tuple):
         self.parameters.update(override)
         self.overrides = copy(self.parameters._override)
 
-        # Assign geometry parameters
-        self._initialise_geometry(geometry, crs)
+        # Assign latitude, longitude
+        self.latitude = latitude
+        self.longitude = longitude
 
         # Assign a run_id, either from user input or from the run parameters
         if run_id is None:
             run_id = self.generate_run_id()
             run_id = "_".join(s for s in (prefix, run_id, suffix) if s is not None)
         self.run_id = run_id
-
-    def _initialise_geometry(self, geometry: Optional[shapely.Geometry | Coordinates]=None, crs: Optional[str]=None) -> None:
-        """
-        Add geometry/CRS properties to self.
-        """
-        # Set up the shapely geometry object
-        if geometry is None:
-            print(f"Warning: no geometry data provided - defaulting to {_GEOMETRY_DEFAULT}.")
-            geometry = _GEOMETRY_DEFAULT
-
-        if isinstance(geometry, tuple):
-            # Pairs of coordinates - assume these are in (lat, lon) format
-            latitude, longitude = geometry
-            geometry = shapely.Point(longitude, latitude)
-
-        self.geometry = geometry
-        self.crs = crs
 
 
     ### SHORTCUTS TO PROPERTIES
@@ -112,14 +96,6 @@ class RunData(tuple):
     @property
     def sowdate(self) -> date:
         return self[2].crop_start_date
-
-    @property
-    def latitude(self) -> float:
-        return self.geometry.centroid.y
-
-    @property
-    def longitude(self) -> float:
-        return self.geometry.centroid.x
 
 
     ### STRING REPRESENTATIONS
@@ -155,7 +131,7 @@ class RunData(tuple):
 
     @property
     def weather_description(self) -> str:
-        return f"{type(self.weatherdata).__name__} at ({self.weatherdata.latitude:+.4f} N, {self.weatherdata.longitude:+.4f} E)"
+        return f"{type(self.weatherdata).__name__} at {format_coordinates(self.weatherdata.latitude, self.weatherdata.longitude)}"
 
     @property
     def agro_description(self) -> str:
@@ -163,10 +139,7 @@ class RunData(tuple):
 
     @property
     def geometry_description(self) -> str:
-        if isinstance(self.geometry, shapely.Geometry):
-            return f"{self.geometry.geom_type}, centroid ({self.latitude:.4f}, {self.longitude:.4f}) (CRS: {self.crs})"
-        else:
-            return str(self.geometry)
+        return f"Location: {format_coordinates(self.latitude, self.longitude)}"
 
     def __repr__(self) -> str:
         return f"Run '{self.run_id}'"
@@ -202,18 +175,21 @@ class RunData(tuple):
         """
         Return inputs that should be in the Summary; mostly used for inheritance.
         """
-        return {"geometry": self.geometry}
+        return {}
 
     def input_dict(self) -> dict:
         """
         Return all inputs as a dictionary.
         """
-        return {"WAV": self.parameters["WAV"],
+        return {"latitude": self.latitude,
+                "longitude": self.longitude,
                 "soiltype": self.soiltype,
                 "crop": self.crop_name,
                 "variety": self.crop_variety,
-                **self.overrides,
-                "geometry": self.geometry}
+                "WAV": self.parameters["WAV"],
+                "RDMSOL": self.parameters["RDMSOL"],
+                "DOS": self.sowdate,
+                **self.overrides}
 
     def to_file(self, output_directory: PathOrStr, **kwargs) -> None:
         """
@@ -233,9 +209,9 @@ class RunDataBRP(RunData):
     """
     Same as RunData but specific to the BRP.
     """
+    ### OBJECT GENERATION AND INITIALISATION
     def __init__(self, *, soildata: SoilType, weatherdata: WeatherDataProvider, agromanagement: AgromanagementData, brpdata: pd.Series, brpyear: int,
-                sitedata: PCSESiteDataProvider=default_sitedata, cropdata: MultiCropDataProvider=default_cropdata,
-                 crs=CRS_AMERSFOORT, **kwargs):
+                sitedata: PCSESiteDataProvider=default_sitedata, cropdata: MultiCropDataProvider=default_cropdata, **kwargs):
         """
         Use a BRP data series to initialise the RunData object.
         `brpyear` is the BRP year, not the weatherdata year, so that e.g. a plot from the 2021 BRP can be simulated in 2022.
@@ -249,34 +225,42 @@ class RunDataBRP(RunData):
 
         self.brpyear = brpyear
 
-        super().__init__(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, geometry=brpdata["geometry"], crs=crs, **kwargs)
+        super().__init__(sitedata=sitedata, soildata=soildata, cropdata=cropdata, weatherdata=weatherdata, agromanagement=agromanagement, latitude=brpdata["latitude"], longitude=brpdata["longitude"], **kwargs)
 
+
+    ### RUN ID GENERATION
     def _generate_run_id_base(self) -> str:
         return generate_run_id_BRP(brpyear=self.brpyear, plot_id=self.plot_id, crop_name=self.crop_name, sowdate=self.sowdate)
+
+
+    ### FILE INPUT / OUTPUT
+    def brp_dict(self) -> dict:
+        """
+        Return those values that are specific to BRP data.
+        """
+        return {"brpyear": self.brpyear,
+                "plot_id": self.plot_id,
+                "province": self.province_name,
+                "area": self.area,
+                "crop_code": self.crop_code}
+
 
     def summary_dict(self) -> dict:
         """
         Return those values required by a Summary object as a dictionary.
         """
-        return {"province": self.province_name,
-                "crop_species": self.crop_species,
-                "area": self.area,
-                "brpyear": self.brpyear,
+        return {**self.brp_dict(),
                 **super().summary_dict()}
 
     def input_dict(self) -> dict:
         """
         Return all inputs as a dictionary.
         """
-        return {"plot_id": self.plot_id,
-                "province": self.province_name,
-                "crop_species": self.crop_species,
-                "crop_code": self.crop_code,
-                "area": self.area,
-                "brpyear": self.brpyear,
+        return {**self.brp_dict(),
                 **super().input_dict()}
 
 
+### CLASSES THAT STORE PCSE OUTPUTS
 class GeneralSummary(gpd.GeoDataFrame):
     """
     General class for Summary-like objects.

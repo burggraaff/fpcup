@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from ._netherlands import ABBREVIATION2NAME, NAME2ABBREVIATION, ALIASES, NAMES, PROVINCE_NAMES, _basemaps, apply_aliases
 from ._netherlands import NETHERLANDS as NETHERLANDS_LABEL
-from ._typing import AreaDict, BoundaryDict, Callable, Coordinates, Iterable, Optional, PathOrStr
+from ._typing import AreaDict, BoundaryDict, Callable, Coordinates, Iterable, Optional, PathOrStr, RealNumber
 from .constants import CRS_AMERSFOORT, WGS84
 from .multiprocessing import multiprocess_site_generation
 
@@ -272,6 +272,15 @@ def maintain_crs(func: Callable) -> Callable:
         return data_new
 
     return newfunc
+
+
+def format_coordinates(latitude: RealNumber, longitude: RealNumber) -> str:
+    """
+    Format (lat, lon) coordinates clearly.
+    """
+    NS = "N" if latitude >= 0 else "S"
+    EW = "E" if longitude >= 0 else "W"
+    return f"({latitude:.4f}° {NS}, {longitude:.4f}° {EW})"
 
 
 def points_to_coordinates(points: Iterable[Point]) -> list[Coordinates]:

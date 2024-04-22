@@ -21,10 +21,9 @@ args.SINGLE_PROVINCE = fpcup.geo.is_single_province(args.province)
 
 ### Load constants
 YEAR = 2022
-CRS = fpcup.constants.WGS84
 AGROMANAGEMENT = fpcup.crop.SpringBarley.agromanagement_first_sowingdate(YEAR)
 SOILDATA = fpcup.soil.soil_types["ec3"]
-CONSTANTS = {"agromanagement": AGROMANAGEMENT, "soildata": SOILDATA, "crs": CRS}
+CONSTANTS = {"agromanagement": AGROMANAGEMENT, "soildata": SOILDATA}
 
 
 ### Worker function; this runs PCSE once for one site
@@ -38,7 +37,8 @@ def run_pcse(coordinates: fpcup._typing.Coordinates) -> bool | fpcup.model.RunDa
     weatherdata = fpcup.weather.load_weather_data_NASAPower(coordinates)
 
     # Combine input data
-    run = fpcup.model.RunData(soildata=SOILDATA, weatherdata=weatherdata, agromanagement=AGROMANAGEMENT, geometry=coordinates, crs=CRS)
+    latitude, longitude = coordinates
+    run = fpcup.model.RunData(latitude=latitude, longitude=longitude, weatherdata=weatherdata, **CONSTANTS)
     run.to_file(args.output_dir)
 
     # Run model
@@ -76,6 +76,8 @@ if __name__ == "__main__":
         coords = fpcup.site.generate_sites_space(latitude=(50.7, 53.6), longitude=(3.3, 7.3), n=args.number)
     if args.verbose:
         print(f"Generated {len(coords)} coordinates")
+
+    raise Exception
 
     ### Run the model
     model_statuses = fpcup.model.multiprocess_pcse(run_pcse, coords, leave_progressbar=args.verbose)
