@@ -7,10 +7,50 @@ Example:
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from torch import nn, optim
+from torch import nn, optim, tensor, Tensor
 from torch.utils.data import DataLoader, Dataset
 
 import fpcup
+from fpcup.io import Path
+from fpcup._typing import PathOrStr
+
+
+class PCSEEnsembleDataset(Dataset):
+    """
+    Handles the loading of PCSE ensemble input/output files in bulk.
+    Useful for datasets that are too big to load into memory at once.
+
+    Note: Current approach works for medium-sized data sets; bigger data sets will require larger changes in multiple places.
+
+    To do:
+        Use transforms for loading soil/crop data?
+        Multiple data directories?
+    """
+    def __init__(self, data_dir: PathOrStr, *, transform=None, target_transform=None):
+        # Basic setup
+        self.data_dir = data_dir
+        self.transform = transform
+        self.target_transform = target_transform
+
+        # Get summary filenames - makes sure only completed runs are loaded
+        self.summary_files = list(self.data_dir.glob("*.wsum"))
+        self.input_files = [f.with_suffix(".wrun") for f in self.summary_files]
+
+    def __len__(self):
+        return len(self.summary_files)
+
+    def __getitem__(self, i: int) -> tuple[Tensor, Tensor]:
+        # Load input data
+        input_filename = self.input_files[i]
+        input_data = fpcup.io.read_gpd(input_filename).iloc[0]
+        latitude, longitude = input_data["geometry"].y, input_data["geometry"].x
+        sowyear, sowdoy = 1
+
+        # Load summary data
+        summary_filename = self.summary_files[i]
+        summary_data = fpcup.io.read_gpd(summary_filename).iloc[0]
+
+        return input_data, summary_data
 
 
 ### Parse command line arguments
@@ -35,10 +75,14 @@ INPUTS = ["RDMSOL", "WAV"]
     # soiltype -> ???
     # crop -> ???
     # variety -> ???
+# Final order:
+    # [latitude, longitude, year, doy, rdmsol, wav]
 
 OUTPUTS = ["DVS", "LAIMAX", "TAGP", "TWSO"]
 # Postprocess:
     # DOM -> year, doy
+# Final order:
+    # [DVS, LAIMAX, TAGP, TWSO, DOM]
 
 
 ### This gets executed only when the script is run normally; not by multiprocessing.
@@ -46,6 +90,9 @@ if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
 
     ### SETUP
+    data = PCSEEnsembleDataset(args.output_dir)
+    raise Exception
+
     # Load the ensemble summary
     inputsummary, summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir)
     if args.verbose:
