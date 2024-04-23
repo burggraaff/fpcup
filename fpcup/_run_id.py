@@ -20,7 +20,7 @@ def _process_crop_name(crop_name: str) -> str:
 
 
 def _process_sowdate(sowdate: date) -> str:
-    return f"dos{sowdate:%y%j}"
+    return f"s{sowdate:%y%j}"
 
 
 def _process_coordinates(latitude: RealNumber, longitude: RealNumber) -> str:
