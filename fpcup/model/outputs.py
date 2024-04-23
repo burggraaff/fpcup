@@ -11,6 +11,7 @@ import pyogrio
 from pcse.models import Engine
 
 from .rundata import SUFFIX_RUNDATA, RunData
+from ..constants import CRS_AMERSFOORT, WGS84
 from ..multiprocessing import multiprocess_file_io
 from ..typing import Callable, Iterable, Optional, PathOrStr
 
@@ -127,14 +128,15 @@ class GeoSummary(_SummaryMixin, gpd.GeoDataFrame):
         """
         Generates a GeoDataFrame-like object from a DataFrame-like object with latitude/longitude columns.
         """
-        pass
+        gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df["longitude"], df["latitude"]), crs=WGS84)
+        return cls(gdf)
 
     @classmethod
     def from_brp(cls, df: pd.DataFrame, brpdata: gpd.GeoDataFrame):
         """
         Generate a GeoDataFrame-like object from a DataFrame-like object which refers to BRP plots, and the associated BRP data.
         """
-        pass
+        return NotImplemented
 
 
 # TIME SERIES CLASSES

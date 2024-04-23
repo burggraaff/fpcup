@@ -162,7 +162,8 @@ class RunData(tuple):
         """
         Return inputs that should be in the Summary; mostly used for inheritance.
         """
-        return {}
+        return {"latitude": self.latitude,
+                "longitude": self.longitude}
 
     def input_dict(self) -> dict:
         """
