@@ -5,8 +5,8 @@ from base64 import urlsafe_b64encode, urlsafe_b64decode
 from datetime import date
 from struct import pack, unpack
 
-from ._typing import Coordinates, RealNumber
-from .crop import CROP2ABBREVIATION
+from .._typing import Coordinates, RealNumber
+from ..crop import CROP2ABBREVIATION
 
 ### CONSTANTS
 _COORDINATE_FORMAT = "ff"  # Note f has 32-bit / up to 7 digit precision
