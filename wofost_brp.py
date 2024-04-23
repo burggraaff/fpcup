@@ -17,6 +17,7 @@ parser.add_argument("-p", "--province", help="province to select plots from (or 
 parser.add_argument("-d", "--data_dir", help="folder to load PCSE data from", type=fpcup.io.Path, default=fpcup.settings.DEFAULT_DATA)
 parser.add_argument("-o", "--output_dir", help="folder to save PCSE outputs to", type=fpcup.io.Path, default=None)
 parser.add_argument("-f", "--force", help="run all models even if the associated file already exists", action="store_true")
+parser.add_argument("-e", "--save_ensemble", help="save an ensemble summary at the end", action="store_true")
 parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
 args = parser.parse_args()
 
@@ -112,4 +113,5 @@ if __name__ == "__main__":
     failed_runs = fpcup.model.process_model_statuses(model_statuses, verbose=args.verbose)
 
     # Save an ensemble summary
-    fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose, use_existing=not args.force)
+    if args.save_ensemble:
+        fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose, use_existing=not args.force)

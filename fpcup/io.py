@@ -15,13 +15,13 @@ from pyogrio.errors import DataSourceError
 from tqdm import tqdm
 
 from .constants import CRS_AMERSFOORT
-from .model import InputSummary, GeoSummary, Summary, TimeSeries, SUFFIX_RUNDATA, SUFFIX_SUMMARY, SUFFIX_TIMESERIES
+from .model import InputSummary, Summary, TimeSeries
 from .multiprocessing import multiprocess_file_io
 from .typing import Iterable, Optional, PathOrStr
 
 # Constants
 _SAMPLE_LENGTH = 10
-
+_SUMMARY_TYPES = (InputSummary, Summary)
 
 def save_ensemble_summary(output_dir: PathOrStr, *,
                           use_existing=True, verbose=False) -> None:
@@ -36,55 +36,35 @@ def save_ensemble_summary(output_dir: PathOrStr, *,
     # Generate the ensemble summaries
     output_dir = Path(output_dir)
 
-    for summarytype, suffix in zip([InputSummary, Summary], [SUFFIX_RUNDATA, SUFFIX_SUMMARY]):
+    for summarytype in _SUMMARY_TYPES:
         # Load individual files
         summary = summarytype.from_folder(output_dir, use_existing=use_existing, leave_progressbar=verbose)
 
         # Save the modified ensemble summary to file
-        summary_filename = output_dir / ("ensemble" + suffix)
+        summary_filename = output_dir / ("ensemble" + summarytype.suffix)
         summary.to_file(summary_filename)
 
         print(f"Saved ensemble summary ({len(summary)} runs) to {summary_filename.absolute()}")
 
 
-def _load_ensemble_summary_from_folder_single(folder: PathOrStr, summarytype: type, suffix: str, *,
-                                      crs=CRS_AMERSFOORT, sample=False, save_if_generated=True, progressbar=True, leave_progressbar=True) -> Summary:
+def load_ensemble_summary_from_folder(folder: PathOrStr, *, sample=False, save_if_generated=True) -> tuple[InputSummary, Summary]:
     """
     For a given folder, try to load the ensemble input/output summary files.
     """
-    # Set up the folder and filename
-    folder = Path(folder)
-    ensemble_filename = folder / ("ensemble" + suffix)
+    # Load data
+    summaries = [summarytype.from_folder(folder) for summarytype in _SUMMARY_TYPES]
 
-    summary = summarytype.from_folder(folder)
-
-    # Save the ensemble to file if desired
-    if save_if_generated and not sample:
-        summary.to_file(ensemble_filename)
-
-    # Subsample if desired
+    # Adjust if desired
     if sample:
-        summary = summary.head(_SAMPLE_LENGTH)
+        summaries = [s.head(_SAMPLE_LENGTH) for s in summaries]
 
-    # Convert to the desired CRS
-    summary.to_crs(crs, inplace=True)
+    # Save to file if desired
+    if save_if_generated and not sample:
+        for s in summaries:
+            ensemble_filename = folder / ("ensemble" + s.suffix)
+            s.to_file(ensemble_filename)
 
-    # Sort by plot ID if available (BRP)
-    if "plot_id" in summary.columns:
-        summary.sort_values("plot_id", inplace=True)
-
-    return summary
-
-
-def load_ensemble_summary_from_folder(folder: PathOrStr, *,
-                                      sample=False, save_if_generated=True, **kwargs) -> Summary:
-    """
-    For a given folder, try to load the ensemble input/output summary files.
-    """
-    inputsummary = _load_ensemble_summary_from_folder_single(folder, InputSummary, SUFFIX_RUNDATA, sample=sample, save_if_generated=save_if_generated, **kwargs)
-    summary = _load_ensemble_summary_from_folder_single(folder, Summary, SUFFIX_SUMMARY, sample=sample, save_if_generated=save_if_generated, **kwargs)
-
-    return inputsummary, summary
+    return summaries
 
 
 _load_ensemble_result_simple = partial(TimeSeries.from_file, run_id=None, include_summary=False)

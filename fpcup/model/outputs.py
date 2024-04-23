@@ -25,7 +25,7 @@ class _SummaryMixin:
     """
     Mixin class to add read/write methods to DataFrame/GeoDataFrame-derived classes.
     """
-    _suffix: str = None
+    suffix: str = None
     _read: Callable = None
     _write: Callable = None
 
@@ -59,8 +59,8 @@ class _SummaryMixin:
         """
         # Find all summary files in the folder, except a previously existing ensemble one (if it exists)
         folder = Path(folder)
-        filenames = list(folder.glob("*" + cls._suffix))
-        assert len(filenames) > 0, f"No files with extension '{cls._suffix}' were found in folder {folder.absolute()}"
+        filenames = list(folder.glob("*" + cls.suffix))
+        assert len(filenames) > 0, f"No files with extension '{cls.suffix}' were found in folder {folder.absolute()}"
         filename_ensemble = filenames[0].with_stem("ensemble")
         ENSEMBLE_EXISTS = (filename_ensemble in filenames)
 
@@ -97,18 +97,26 @@ class InputSummary(_SummaryMixin, pd.DataFrame):
     """
     Stores a summary of the inputs to multiple PCSE ensemble runs.
     """
-    _suffix = SUFFIX_RUNDATA
+    suffix = SUFFIX_RUNDATA
     _read = pd.read_csv
     _write = pd.DataFrame.to_csv
+
+    @property
+    def _constructor(self):
+        return InputSummary
 
 
 class Summary(_SummaryMixin, pd.DataFrame):
     """
     Stores a summary of the results from a PCSE (ensemble) run.
     """
-    _suffix = SUFFIX_SUMMARY
+    suffix = SUFFIX_SUMMARY
     _read = pd.read_csv
     _write = pd.DataFrame.to_csv
+
+    @property
+    def _constructor(self):
+        return Summary
 
     @classmethod
     def from_model(cls, model: Engine, run_data: RunData, **kwargs):
