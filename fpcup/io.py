@@ -15,28 +15,12 @@ from pyogrio.errors import DataSourceError
 from tqdm import tqdm
 
 from .constants import CRS_AMERSFOORT
-from .model import InputSummary, Result, Summary, SUFFIX_RUNDATA, SUFFIX_OUTPUTS, SUFFIX_SUMMARY
+from .model import Summary, TimeSeries, SUFFIX_RUNDATA, SUFFIX_SUMMARY, SUFFIX_TIMESERIES
 from .multiprocessing import multiprocess_file_io
 from .typing import Iterable, Optional, PathOrStr
 
 # Constants
 _SAMPLE_LENGTH = 10
-
-def save_ensemble_results(results: Iterable[Result], savefolder: PathOrStr, *,
-                          progressbar=True, leave_progressbar=True) -> None:
-    """
-    Save all Result DataFrames in `results` to files in a given `savefolder`.
-    """
-    # Get the total number of outputs if possible, for the progress bar
-    # tqdm would normally do this internally, but we do it manually in case we want to use n somewhere else
-    try:
-        n = len(results)
-    except TypeError:  # e.g. if `outputs` is a generator
-        n = None
-
-    # Loop over the outputs and save them to file
-    for run in tqdm(results, total=n, desc="Saving output files", unit="files", disable=not progressbar, leave=leave_progressbar):
-        run.to_file(savefolder)
 
 
 def save_ensemble_summary(output_dir: PathOrStr, *,
@@ -64,7 +48,7 @@ def save_ensemble_summary(output_dir: PathOrStr, *,
 
 
 def _load_ensemble_summary_from_folder_single(folder: PathOrStr, summarytype: type, suffix: str, *,
-                                      crs=CRS_AMERSFOORT, sample=False, save_if_generated=True, progressbar=True, leave_progressbar=True) -> InputSummary | Summary:
+                                      crs=CRS_AMERSFOORT, sample=False, save_if_generated=True, progressbar=True, leave_progressbar=True) -> Summary:
     """
     For a given folder, try to load the ensemble input/output summary files.
     """
@@ -93,7 +77,7 @@ def _load_ensemble_summary_from_folder_single(folder: PathOrStr, summarytype: ty
 
 
 def load_ensemble_summary_from_folder(folder: PathOrStr, *,
-                                      sample=False, save_if_generated=True, **kwargs) -> tuple[InputSummary, Summary]:
+                                      sample=False, save_if_generated=True, **kwargs) -> Summary:
     """
     For a given folder, try to load the ensemble input/output summary files.
     """
@@ -103,10 +87,10 @@ def load_ensemble_summary_from_folder(folder: PathOrStr, *,
     return inputsummary, summary
 
 
-_load_ensemble_result_simple = partial(Result.from_file, run_id=None, include_summary=False)
+_load_ensemble_result_simple = partial(TimeSeries.from_file, run_id=None, include_summary=False)
 def load_ensemble_results_from_folder(folder: PathOrStr, run_ids: Optional[Iterable[PathOrStr]]=None, *,
                                       extension=".wout", sample=False,
-                                      progressbar=True, leave_progressbar=True) -> list[Result]:
+                                      progressbar=True, leave_progressbar=True) -> list[TimeSeries]:
     """
     Load the result files in a given folder.
     By default, load all files in the folder. If `run_ids` is specified, load only those files.

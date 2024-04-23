@@ -8,7 +8,7 @@ from tqdm import tqdm
 from pcse.exceptions import WeatherDataProviderError
 from pcse.models import Engine, Wofost72_WLP_FD
 
-from .outputs import Result, Summary
+from .outputs import Output
 from .rundata import RunData
 from ..multiprocessing import multiprocess_pcse
 from ..weather import load_weather_data_NASAPower
@@ -16,7 +16,7 @@ from ..typing import Callable, Coordinates, Iterable, Optional, PathOrStr
 
 
 ### Running PCSE
-def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD) -> Result | None:
+def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD) -> Output | None:
     """
     Start a new PCSE model with the given inputs and run it until it terminates.
     """
@@ -28,8 +28,8 @@ def run_pcse_single(run_data: RunData, *, model: Engine=Wofost72_WLP_FD) -> Resu
         # This is sometimes caused by missing weather data; currently ignored silently but with a None output
         output = None
     else:
-        # Convert individual output to a Result object (modified Pandas DataFrame)
-        output = Result.from_model(wofost, run_data=run_data)
+        # Convert outputs to dataframes
+        output = Output.from_model(wofost, run_data=run_data)
 
     return output
 

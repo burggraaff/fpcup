@@ -14,7 +14,7 @@ from ..multiprocessing import multiprocess_file_io
 from ..typing import Iterable, Optional, PathOrStr
 
 ### CONSTANTS
-SUFFIX_OUTPUTS = ".wout"
+SUFFIX_TIMESERIES = ".wout"
 SUFFIX_SUMMARY = ".wsum"
 
 
@@ -24,7 +24,7 @@ class GeneralSummary(gpd.GeoDataFrame):
     General class for Summary-like objects.
     Subclassed for inputs and outputs.
     """
-    _suffix_default = None
+    suffix_default = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -56,7 +56,7 @@ class GeneralSummary(gpd.GeoDataFrame):
         Load an ensemble of Summary objects from a folder and combine them.
         """
         if extension is None:
-            extension = "*" + cls._suffix_default
+            extension = "*" + cls.suffix_default
 
         # Find all summary files in the folder, except a previously existing ensemble one (if it exists)
         folder = Path(folder)
@@ -93,25 +93,11 @@ class GeneralSummary(gpd.GeoDataFrame):
         self.set_index("run_id", inplace=True)
 
 
-class InputSummary(GeneralSummary):
-    """
-    Store a summary of the inputs for a PCSE ensemble run.
-    """
-    _suffix_default = SUFFIX_RUNDATA
-
-    @classmethod
-    def from_rundata(cls, run_data: RunData):
-        """
-        Generate an Inputs objects from a RunData object.
-        """
-        return cls(index=[run_data.run_id], data=run_data.input_dict(), geometry=[run_data.geometry], crs=run_data.crs)
-
-
 class Summary(GeneralSummary):
     """
     Stores a summary of the results from a PCSE ensemble run.
     """
-    _suffix_default = SUFFIX_SUMMARY
+    suffix_default = SUFFIX_SUMMARY
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -119,8 +105,7 @@ class Summary(GeneralSummary):
         self.sort_index(inplace=True)
 
     @classmethod
-    def from_model(cls, model: Engine, run_data: RunData, *,
-                   crs: Optional[str]=None, **kwargs):
+    def from_model(cls, model: Engine, run_data: RunData, **kwargs):
         """
         Generate a summary from a finished model, inserting the run_id as an index.
         """
@@ -129,104 +114,80 @@ class Summary(GeneralSummary):
         # Get data from run_data
         data[0] = {**run_data.summary_dict(), **data[0]}
         index = [run_data.run_id]
-        if crs is None:
-            crs = run_data.crs
 
-        return cls(data, index=index, crs=crs, **kwargs)
+        return cls(data, index=index, **kwargs)
 
 
-# RESULT (TIME SERIES) CLASSES
-class Result(pd.DataFrame):
+# TIME SERIES CLASSES
+class TimeSeries(pd.DataFrame):
     """
-    Stores the results from a single PCSE run.
-    Essentially a DataFrame that is initialised from a PCSE model object and contains some useful additional variables.
+    Stores the results from a single PCSE run; essentially a DataFrame with some small additions.
     """
-    _internal_names = pd.DataFrame._internal_names + ["run_id", "summary"]
-    _internal_names_set = set(_internal_names)
-
-    def __init__(self, data: Iterable, *,
-                 run_id: str="", summary: Optional[Summary]=None, **kwargs):
+    def __init__(self, data: Iterable, **kwargs):
         # Initialise the main DataFrame from the model output
         super().__init__(data, **kwargs)
 
         # Sort the results by time
         self.set_index("day", inplace=True)
 
-        # Add the run ID and summary
-        self.run_id = run_id
-        self.summary = summary
-
-    def __repr__(self) -> str:
-        return ("-----\n"
-                f"Run ID: {self.run_id}\n\n"
-                f"Summary: {self.summary}\n\n"
-                f"Data:\n{super().__repr__()}"
-                "\n-----")
-
     @classmethod
-    def from_model(cls, model: Engine, run_data: RunData, **kwargs):
+    def from_model(cls, model: Engine, **kwargs):
         """
         Initialise the main DataFrame from a model output.
         """
         output = model.get_output()
-
-        # Get data from run_data if possible
-        run_id = run_data.run_id
-
-        # Save the summary output
-        try:
-            summary = Summary.from_model(model, run_data=run_data)
-        except IndexError:
-            summary = None
-
-        return cls(output, run_id=run_id, summary=summary, **kwargs)
+        return cls(output, **kwargs)
 
     @classmethod
-    def from_file(cls, filename: PathOrStr, *,
-                  run_id: Optional[str]=None, include_summary=False, **kwargs):
+    def from_file(cls, filename: PathOrStr, **kwargs):
         """
         Load an output file.
-        If a run_id is not provided, use the filename stem.
         """
-        filename = Path(filename)
-        if run_id is None:
-            run_id = filename.stem
-
-        # Load the main data file
         data = pd.read_csv(filename)
+        return cls(data, **kwargs)
 
-        # Try to load the associated summary file
-        if include_summary:
-            summary_filename = filename.with_suffix(SUFFIX_SUMMARY)
-            try:
-                summary = Summary.from_file(summary_filename)
-            except FileNotFoundError:
-                summary = None
-        else:
-            summary = None
-
-        return cls(data, run_id=run_id, summary=summary, **kwargs)
-
-    def to_file(self, output_directory: PathOrStr, *,
-                filename: Optional[PathOrStr]=None, **kwargs) -> None:
+    def to_file(self, *args, **kwargs) -> None:
         """
-        Save the results and summary to output files:
-            output_directory / filename.wout - full results, CSV
-            output_directory / filename.wsum - summary results, GeoJSON
-
-        If no filename is provided, default to using the run ID.
+        Save the time series to a CSV file.
         """
-        output_directory = Path(output_directory)
+        self.to_csv(*args, **kwargs)
 
-        # Generate the output filenames from the user input (`filename`) or from the run id (default)
-        # The suffix step cannot be done with just .with_suffix(".wout") in case the filename contains .
-        if filename is not None:
-            filename_base = output_directory / filename
-        else:
-            filename_base = output_directory / self.run_id
-        filename_results = filename_base.with_suffix(filename_base.suffix + SUFFIX_OUTPUTS)
-        filename_summary = filename_base.with_suffix(filename_base.suffix + SUFFIX_SUMMARY)
 
-        # Save the outputs
-        self.to_csv(filename_results, **kwargs)
-        self.summary.to_file(filename_summary, **kwargs)
+### COMBINED OUTPUT CLASS
+class Output:
+    """
+    Simple class that holds the TimeSeries and Summary for a PCSE run.
+    Ensures that files get saved together.
+    """
+    ### OBJECT GENERATION AND INITIALISATION
+    def __init__(self, run_id: str, summary: Summary, timeseries: TimeSeries):
+        self.run_id = run_id
+        self.summary = summary
+        self.timeseries = timeseries
+
+    @classmethod
+    def from_model(cls, model: Engine, run_data: RunData):
+        run_id = run_data.run_id
+        summary = Summary.from_model(model, run_data=run_data)
+        timeseries = TimeSeries.from_model(model)
+        return cls(run_id, summary, timeseries)
+
+
+    ### STRING REPRESENTATIONS
+    def __repr__(self) -> str:
+        return f"Finished run '{self.run_id}'"
+
+    def __str__(self) -> str:
+        return "\n".join([repr(self), str(self.summary), str(self.timeseries)])
+
+
+    ### FILE INPUT / OUTPUT
+    def to_file(self, output_dir: PathOrStr) -> None:
+        # Generate the output filename
+        output_dir = Path(output_dir)
+        filename_summary = output_dir / (self.run_id + SUFFIX_SUMMARY)
+        filename_timeseries = output_dir / (self.run_id + SUFFIX_TIMESERIES)
+
+        # Write to file
+        self.summary.to_file(filename_summary)
+        self.timeseries.to_file(filename_timeseries)

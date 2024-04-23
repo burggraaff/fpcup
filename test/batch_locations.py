@@ -77,11 +77,9 @@ if __name__ == "__main__":
     if args.verbose:
         print(f"Generated {len(coords)} coordinates")
 
-    raise Exception
-
     ### Run the model
     model_statuses = fpcup.model.multiprocess_pcse(run_pcse, coords, leave_progressbar=args.verbose)
     failed_runs = fpcup.model.process_model_statuses(model_statuses, verbose=args.verbose)
 
     # Save an ensemble summary
-    fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose)
+    # fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose)
