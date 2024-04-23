@@ -124,14 +124,10 @@ class Summary(_SummaryMixin, pd.DataFrame):
         return cls(data, index=index, **kwargs)
 
 
-class GeoSummary(_SummaryMixin, gpd.GeoDataFrame):
+class GeoSummary(gpd.GeoDataFrame):
     """
     Stores a summary of the results from a PCSE ensemble run, with geometry attached.
     """
-    _suffix = SUFFIX_SUMMARY
-    _read = pyogrio.read_dataframe
-    _write = pyogrio.write_dataframe
-
     @classmethod
     def from_summary(cls, df: pd.DataFrame):
         """
@@ -145,6 +141,14 @@ class GeoSummary(_SummaryMixin, gpd.GeoDataFrame):
         Generate a GeoDataFrame-like object from a DataFrame-like object which refers to BRP plots, and the associated BRP data.
         """
         return NotImplemented
+
+    @classmethod
+    def from_file(cls, filename: PathOrStr, *, source_cls: type=Summary):
+        """
+        Generate a GeoDataFrame-like object from a file.
+        """
+        s = source_cls.from_file(filename)
+        return cls.from_summary(s)
 
 
 # TIME SERIES CLASSES
