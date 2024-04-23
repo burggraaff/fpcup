@@ -188,6 +188,7 @@ class RunData(tuple):
 
         # Create dataframe and save
         df = pd.DataFrame(self.input_dict(), index=[self.run_id])
+        df.index.name = "run_id"
         df["DOS"] = pd.to_datetime(df["DOS"])
         df.to_csv(filename)
 
