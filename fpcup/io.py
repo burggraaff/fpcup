@@ -15,7 +15,7 @@ from pyogrio.errors import DataSourceError
 from tqdm import tqdm
 
 from .constants import CRS_AMERSFOORT
-from .model import Summary, TimeSeries, SUFFIX_RUNDATA, SUFFIX_SUMMARY, SUFFIX_TIMESERIES
+from .model import InputSummary, GeoSummary, Summary, TimeSeries, SUFFIX_RUNDATA, SUFFIX_SUMMARY, SUFFIX_TIMESERIES
 from .multiprocessing import multiprocess_file_io
 from .typing import Iterable, Optional, PathOrStr
 

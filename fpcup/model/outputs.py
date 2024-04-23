@@ -59,7 +59,7 @@ class _SummaryMixin:
         """
         # Find all summary files in the folder, except a previously existing ensemble one (if it exists)
         folder = Path(folder)
-        filenames = list(folder.glob(cls._suffix))
+        filenames = list(folder.glob("*" + cls._suffix))
         assert len(filenames) > 0, f"No files with extension '{cls._suffix}' were found in folder {folder.absolute()}"
         filename_ensemble = filenames[0].with_stem("ensemble")
         ENSEMBLE_EXISTS = (filename_ensemble in filenames)
@@ -93,9 +93,18 @@ class _SummaryMixin:
         # self.set_index("run_id", inplace=True)
 
 
+class InputSummary(_SummaryMixin, pd.DataFrame):
+    """
+    Stores a summary of the inputs to multiple PCSE ensemble runs.
+    """
+    _suffix = SUFFIX_RUNDATA
+    _read = pd.read_csv
+    _write = pd.DataFrame.to_csv
+
+
 class Summary(_SummaryMixin, pd.DataFrame):
     """
-    Stores a summary of the results from a PCSE ensemble run.
+    Stores a summary of the results from a PCSE (ensemble) run.
     """
     _suffix = SUFFIX_SUMMARY
     _read = pd.read_csv
