@@ -1,17 +1,18 @@
 """
 Everything related to Summary/Result classes that encapsulate WOFOST/PCSE output data.
 """
+from functools import partial
 from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-from pyogrio import read_dataframe as read_geodataframe, write_dataframe as write_geodataframe
+import pyogrio
 
 from pcse.models import Engine
 
 from .rundata import SUFFIX_RUNDATA, RunData
 from ..multiprocessing import multiprocess_file_io
-from ..typing import Iterable, Optional, PathOrStr
+from ..typing import Callable, Iterable, Optional, PathOrStr
 
 ### CONSTANTS
 SUFFIX_TIMESERIES = ".wout"
@@ -19,12 +20,13 @@ SUFFIX_SUMMARY = ".wsum"
 
 
 ### SUMMARY CLASSES
-class GeneralSummary(gpd.GeoDataFrame):
+class _SummaryMixin:
     """
-    General class for Summary-like objects.
-    Subclassed for inputs and outputs.
+    Mixin class to add read/write methods to DataFrame/GeoDataFrame-derived classes.
     """
-    suffix_default = None
+    _suffix: str = None
+    _read: Callable = None
+    _write: Callable = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,9 +36,9 @@ class GeneralSummary(gpd.GeoDataFrame):
     @classmethod
     def from_file(cls, filename: PathOrStr):
         """
-        Load a summary from a GeoJSON (.wrun / .wsum) file.
+        Load a summary from a (.wrun / .wsum) file.
         """
-        data = read_geodataframe(filename)
+        data = cls._read(filename)
         data.set_index("run_id", inplace=True)
         return cls(data)
 
@@ -45,23 +47,19 @@ class GeneralSummary(gpd.GeoDataFrame):
         """
         Combine many Summary objects into one through concatenation.
         """
-        # Uses the regular Pandas concat function; when the outputs are GeoDataFrames (or Summaries), the result is a GeoDataFrame
         data = pd.concat(summaries_individual)
         return cls(data)
 
     @classmethod
-    def from_folder(cls, folder: PathOrStr, extension: Optional[str]=None, *,
+    def from_folder(cls, folder: PathOrStr, *,
                     use_existing=True, progressbar=True, leave_progressbar=True):
         """
         Load an ensemble of Summary objects from a folder and combine them.
         """
-        if extension is None:
-            extension = "*" + cls.suffix_default
-
         # Find all summary files in the folder, except a previously existing ensemble one (if it exists)
         folder = Path(folder)
-        filenames = list(folder.glob(extension))
-        assert len(filenames) > 0, f"No files with extension '{extension}' were found in folder {folder.absolute()}"
+        filenames = list(folder.glob(cls._suffix))
+        assert len(filenames) > 0, f"No files with extension '{cls._suffix}' were found in folder {folder.absolute()}"
         filename_ensemble = filenames[0].with_stem("ensemble")
         ENSEMBLE_EXISTS = (filename_ensemble in filenames)
 
@@ -85,24 +83,22 @@ class GeneralSummary(gpd.GeoDataFrame):
 
     def to_file(self, filename: PathOrStr, **kwargs) -> None:
         """
-        Save to a GeoJSON file.
+        Save to a file.
         The index has to be reset first to ensure it is written to file (annoying 'feature' of the GeoJSON driver).
         """
-        self.reset_index(inplace=True)
-        write_geodataframe(self, filename, driver="GeoJSON", **kwargs)
-        self.set_index("run_id", inplace=True)
+        self._write(filename, **kwargs)
+        # self.reset_index(inplace=True)
+        # write_geodataframe(self, filename, driver="GeoJSON", **kwargs)
+        # self.set_index("run_id", inplace=True)
 
 
-class Summary(GeneralSummary):
+class Summary(_SummaryMixin, pd.DataFrame):
     """
     Stores a summary of the results from a PCSE ensemble run.
     """
-    suffix_default = SUFFIX_SUMMARY
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.index.set_names("run_id", inplace=True)
-        self.sort_index(inplace=True)
+    _suffix = SUFFIX_SUMMARY
+    _read = pd.read_csv
+    _write = pd.DataFrame.to_csv
 
     @classmethod
     def from_model(cls, model: Engine, run_data: RunData, **kwargs):
@@ -116,6 +112,29 @@ class Summary(GeneralSummary):
         index = [run_data.run_id]
 
         return cls(data, index=index, **kwargs)
+
+
+class GeoSummary(_SummaryMixin, gpd.GeoDataFrame):
+    """
+    Stores a summary of the results from a PCSE ensemble run, with geometry attached.
+    """
+    _suffix = SUFFIX_SUMMARY
+    _read = pyogrio.read_dataframe
+    _write = pyogrio.write_dataframe
+
+    @classmethod
+    def from_summary(cls, df: pd.DataFrame):
+        """
+        Generates a GeoDataFrame-like object from a DataFrame-like object with latitude/longitude columns.
+        """
+        pass
+
+    @classmethod
+    def from_brp(cls, df: pd.DataFrame, brpdata: gpd.GeoDataFrame):
+        """
+        Generate a GeoDataFrame-like object from a DataFrame-like object which refers to BRP plots, and the associated BRP data.
+        """
+        pass
 
 
 # TIME SERIES CLASSES
