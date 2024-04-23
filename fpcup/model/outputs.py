@@ -128,8 +128,7 @@ class GeoSummary(_SummaryMixin, gpd.GeoDataFrame):
         """
         Generates a GeoDataFrame-like object from a DataFrame-like object with latitude/longitude columns.
         """
-        gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df["longitude"], df["latitude"]), crs=WGS84)
-        return cls(gdf)
+        return cls(df, geometry=gpd.points_from_xy(df["longitude"], df["latitude"]), crs=WGS84)
 
     @classmethod
     def from_brp(cls, df: pd.DataFrame, brpdata: gpd.GeoDataFrame):
