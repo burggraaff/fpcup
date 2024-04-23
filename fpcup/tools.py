@@ -7,7 +7,7 @@ from itertools import chain, product
 from textwrap import indent
 indent2 = partial(indent, prefix="  ")
 
-from ._typing import Iterable
+from .typing import Iterable
 
 try:
     get_ipython()

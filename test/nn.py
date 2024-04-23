@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, Dataset
 
 import fpcup
 from fpcup.io import Path
-from fpcup._typing import PathOrStr
+from fpcup.typing import PathOrStr
 
 
 class PCSEEnsembleDataset(Dataset):

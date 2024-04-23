@@ -9,10 +9,10 @@ import geopandas as gpd
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
-from ._typing import Aggregator, Callable, FuncDict, Iterable, Optional, PathOrStr
 from .constants import CRS_AMERSFOORT, WGS84
 from .geo import NETHERLANDS, Province, add_provinces, add_province_geometry, is_single_province, maintain_crs
 from .parameters import aggregate_parameters
+from .typing import Aggregator, Callable, FuncDict, Iterable, Optional, PathOrStr
 
 ### CONSTANTS AND SETTINGS
 H3_AGGREGATION_LEVELS = {"country": 6, "province": 7}

@@ -9,10 +9,10 @@ from tqdm import tqdm
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
 
 from ._brp_dictionary import brp_crops_NL2EN
-from ._typing import Iterable
 from .agro import AgromanagementDataSingleCrop, template, multiyear_template
 from .parameters import crop_parameters
 from .tools import invert_dict, make_iterable
+from .typing import Iterable
 
 default = YAMLCropDataProvider()
 

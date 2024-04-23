@@ -8,8 +8,8 @@ import yaml
 
 from tqdm import tqdm
 
-from ._typing import Callable
 from .tools import indent2
+from .typing import Callable
 
 
 ### CONVENIENCE CLASSES FOR AGROMANAGEMENT CALENDARS

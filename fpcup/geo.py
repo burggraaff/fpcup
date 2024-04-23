@@ -15,9 +15,9 @@ from tqdm import tqdm
 
 from ._netherlands import ABBREVIATION2NAME, NAME2ABBREVIATION, ALIASES, NAMES, PROVINCE_NAMES, _basemaps, apply_aliases
 from ._netherlands import NETHERLANDS as NETHERLANDS_LABEL
-from ._typing import AreaDict, BoundaryDict, Callable, Coordinates, Iterable, Optional, PathOrStr, RealNumber
 from .constants import CRS_AMERSFOORT, WGS84
 from .multiprocessing import multiprocess_site_generation
+from .typing import AreaDict, BoundaryDict, Callable, Coordinates, Iterable, Optional, PathOrStr, RealNumber
 
 
 ### PROVINCE CONVENIENCE CLASS

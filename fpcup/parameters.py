@@ -7,8 +7,8 @@ from itertools import product
 
 import numpy as np
 
-from ._typing import Iterable, Optional, RealNumber
 from .tools import dict_product
+from .typing import Iterable, Optional, RealNumber
 
 ### Classes for dealing with parameters
 @dataclass

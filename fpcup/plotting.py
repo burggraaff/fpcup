@@ -23,13 +23,13 @@ rcParams.update({"axes.grid": True,
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from ._brp_dictionary import brp_categories_colours, brp_crops_colours
-from ._typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
 from .aggregate import KEYS_AGGREGATE, aggregate_h3
 from .constants import CRS_AMERSFOORT, WGS84
 from .geo import Province, NETHERLANDS, is_single_province, provinces
 from .model import Summary
 from .parameters import all_parameters, pcse_inputs, pcse_outputs, pcse_summary_outputs
 from .tools import make_iterable
+from .typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
 
 ### CONSTANTS
 # Raster/Vector switches

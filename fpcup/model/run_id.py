@@ -5,7 +5,7 @@ from base64 import urlsafe_b64encode, urlsafe_b64decode
 from datetime import date
 from struct import pack, unpack
 
-from .._typing import Coordinates, RealNumber
+from ..typing import Coordinates, RealNumber
 from ..crop import CROP2ABBREVIATION
 
 ### CONSTANTS

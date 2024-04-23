@@ -27,7 +27,7 @@ CONSTANTS = {"agromanagement": AGROMANAGEMENT, "soildata": SOILDATA}
 
 
 ### Worker function; this runs PCSE once for one site
-def run_pcse(coordinates: fpcup._typing.Coordinates) -> bool | fpcup.model.RunData:
+def run_pcse(coordinates: fpcup.typing.Coordinates) -> bool | fpcup.model.RunData:
     """
     For a single site, get the site-dependent data, wrap it into a RunData object, and run PCSE on it.
     Returns True if the results were succesfully written to file.

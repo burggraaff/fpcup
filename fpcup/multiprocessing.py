@@ -7,7 +7,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 from tqdm import tqdm
 
-from ._typing import Callable, Iterable, Optional
+from .typing import Callable, Iterable, Optional
 
 ### Thresholds - use multiprocessing when n > threshold
 # File i/o

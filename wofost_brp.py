@@ -34,7 +34,7 @@ agromanagement = args.crop.agromanagement_first_sowingdate(args.YEAR)
 
 
 ### Worker function; this runs PCSE once for one site
-def run_pcse(i_row: tuple[int, fpcup._typing.Series]) -> bool | fpcup.model.RunDataBRP:
+def run_pcse(i_row: tuple[int, fpcup.typing.Series]) -> bool | fpcup.model.RunDataBRP:
     """
     For a single BRP site, get the site-dependent data, wrap it into a RunData object, and run PCSE on it.
     Returns True if the results were succesfully written to file.

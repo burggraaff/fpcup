@@ -14,7 +14,7 @@ from pcse.util import WOFOST72SiteDataProvider, WOFOST80SiteDataProvider
 from pcse.util import _GenericSiteDataProvider as PCSESiteDataProvider
 
 from ._brp_dictionary import brp_categories_NL2EN
-from ._typing import Callable, Coordinates, Iterable, RealNumber
+from .typing import Callable, Coordinates, Iterable, RealNumber
 from .constants import CRS_AMERSFOORT, WGS84
 from .parameters import site_parameters
 

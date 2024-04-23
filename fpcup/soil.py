@@ -6,7 +6,7 @@ from pathlib import Path
 from pcse.fileinput import CABOFileReader
 from pcse.util import DummySoilDataProvider
 
-from ._typing import PathOrStr
+from .typing import PathOrStr
 from .parameters import soil_parameters
 from .settings import DEFAULT_DATA
 

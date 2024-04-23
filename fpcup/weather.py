@@ -15,7 +15,7 @@ from pcse import settings as pcse_settings
 PCSE_METEO_CACHE_DIR = Path(pcse_settings.METEO_CACHE_DIR)
 
 from .settings import DEFAULT_DATA
-from ._typing import Coordinates, Iterable
+from .typing import Coordinates, Iterable
 
 def load_example_Excel(filename=DEFAULT_DATA/"meteo"/"nl1.xlsx") -> ExcelWeatherDataProvider:
     """

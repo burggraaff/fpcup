@@ -14,10 +14,10 @@ from pyogrio.errors import DataSourceError
 
 from tqdm import tqdm
 
-from ._typing import Iterable, Optional, PathOrStr
 from .constants import CRS_AMERSFOORT
-from .model import InputSummary, Result, Summary, _SUFFIX_RUNDATA, _SUFFIX_OUTPUTS, _SUFFIX_SUMMARY
+from .model import InputSummary, Result, Summary, SUFFIX_RUNDATA, SUFFIX_OUTPUTS, SUFFIX_SUMMARY
 from .multiprocessing import multiprocess_file_io
+from .typing import Iterable, Optional, PathOrStr
 
 # Constants
 _SAMPLE_LENGTH = 10
@@ -52,7 +52,7 @@ def save_ensemble_summary(output_dir: PathOrStr, *,
     # Generate the ensemble summaries
     output_dir = Path(output_dir)
 
-    for summarytype, suffix in zip([InputSummary, Summary], [_SUFFIX_RUNDATA, _SUFFIX_SUMMARY]):
+    for summarytype, suffix in zip([InputSummary, Summary], [SUFFIX_RUNDATA, SUFFIX_SUMMARY]):
         # Load individual files
         summary = summarytype.from_folder(output_dir, use_existing=use_existing, leave_progressbar=verbose)
 
@@ -97,8 +97,8 @@ def load_ensemble_summary_from_folder(folder: PathOrStr, *,
     """
     For a given folder, try to load the ensemble input/output summary files.
     """
-    inputsummary = _load_ensemble_summary_from_folder_single(folder, InputSummary, _SUFFIX_RUNDATA, sample=sample, save_if_generated=save_if_generated, **kwargs)
-    summary = _load_ensemble_summary_from_folder_single(folder, Summary, _SUFFIX_SUMMARY, sample=sample, save_if_generated=save_if_generated, **kwargs)
+    inputsummary = _load_ensemble_summary_from_folder_single(folder, InputSummary, SUFFIX_RUNDATA, sample=sample, save_if_generated=save_if_generated, **kwargs)
+    summary = _load_ensemble_summary_from_folder_single(folder, Summary, SUFFIX_SUMMARY, sample=sample, save_if_generated=save_if_generated, **kwargs)
 
     return inputsummary, summary
 
