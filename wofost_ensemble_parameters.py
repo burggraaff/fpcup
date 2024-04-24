@@ -34,9 +34,8 @@ if args.output_dir is None:
 
 ### Load constants
 YEAR = 2022
-CRS = fpcup.constants.WGS84
 SOILTYPES = fpcup.soil.soil_types.values()
-CONSTANTS = {"crs": CRS}
+CONSTANTS = {}
 variables = {"soildata": SOILTYPES}
 
 ### This gets executed only when the script is run normally; not by multiprocessing.
@@ -97,8 +96,7 @@ if __name__ == "__main__":
 
     if args.verbose:
         print(f"Expected total runs: {args.number}**{len(args.parameter_names)} parameter values"
-              f" * {len(args.crops)} crops"
-              f" * {len(agromanagements) if args.sowdates else 1} sowing dates"
+              f" * {len(agromanagements)} calendars"
               f" * {len(SOILTYPES)} soil types"
               f" * {len(coords)} sites"
               f" = {len(variables) * len(coords)} runs")

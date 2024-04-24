@@ -100,7 +100,10 @@ def run_pcse_site_ensemble(coordinates: Iterable[Coordinates], run_data_variable
     for c in tqdm(coordinates, desc="Sites", unit="site", leave=leave_progressbar):
         # Generate site-specific data
         weatherdata = weather_data_provider(c)
-        site_constants = {"geometry": c, "weatherdata": weatherdata}
+        latitude, longitude = c
+
+        # Bundle parameters
+        site_constants = {"latitude": latitude, "longitude": longitude, "weatherdata": weatherdata}
         run_constants = {**run_data_constants, **site_constants}
 
         ### Run the model
