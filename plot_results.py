@@ -2,7 +2,7 @@
 Load and plot the results from a previous PCSE ensemble run.
 
 Example:
-    python plot_results.py outputs/locations/ -v
+    python plot_results.py outputs/sites/ -v
 """
 import fpcup
 
@@ -41,6 +41,9 @@ if __name__ == "__main__":
     inputsummary, summary = fpcup.io.load_ensemble_summary_from_folder(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
     if args.verbose:
         print(f"Loaded summary file -- {len(summary)} rows")
+
+    # Convert to GeoSummary
+    summary = fpcup.model.GeoSummary.from_summary(summary)
 
     # If we are only doing one province, select only the relevant lines from the summary file
     if args.SINGLE_PROVINCE:
@@ -91,15 +94,15 @@ if __name__ == "__main__":
     if args.verbose:
         print()
 
-    ### Results (time series)
-    # If only one province is being done, load only the relevant files
-    run_ids = summary.index if args.SINGLE_PROVINCE else None
+    # ### Results (time series)
+    # # If only one province is being done, load only the relevant files
+    # run_ids = summary.index if args.SINGLE_PROVINCE else None
 
-    # Load the individual run results
-    results = fpcup.io.load_ensemble_results_from_folder(args.output_dir, run_ids=run_ids, sample=args.sample, leave_progressbar=args.verbose)
+    # # Load the individual run results
+    # results = fpcup.io.load_ensemble_results_from_folder(args.output_dir, run_ids=run_ids, sample=args.sample, leave_progressbar=args.verbose)
 
-    # Plot the individual runs
-    filename_results = args.results_dir / f"WOFOST_{tag}-results.xxx"  # pdf or png
-    fpcup.plotting.plot_wofost_ensemble_results(results, saveto=filename_results, replace_years=args.replace_years, title=f"Growth curves from {len(results)} WOFOST runs\n{tag}", leave_progressbar=args.verbose)
-    if args.verbose:
-        print(f"Saved batch results plot to {filename_results.absolute()}")
+    # # Plot the individual runs
+    # filename_results = args.results_dir / f"WOFOST_{tag}-results.xxx"  # pdf or png
+    # fpcup.plotting.plot_wofost_ensemble_results(results, saveto=filename_results, replace_years=args.replace_years, title=f"Growth curves from {len(results)} WOFOST runs\n{tag}", leave_progressbar=args.verbose)
+    # if args.verbose:
+    #     print(f"Saved batch results plot to {filename_results.absolute()}")

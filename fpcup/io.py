@@ -47,12 +47,12 @@ def save_ensemble_summary(output_dir: PathOrStr, *,
         print(f"Saved ensemble summary ({len(summary)} runs) to {summary_filename.absolute()}")
 
 
-def load_ensemble_summary_from_folder(folder: PathOrStr, *, sample=False, save_if_generated=True) -> tuple[InputSummary, Summary]:
+def load_ensemble_summary_from_folder(folder: PathOrStr, *, sample=False, save_if_generated=True, **kwargs) -> tuple[InputSummary, Summary]:
     """
     For a given folder, try to load the ensemble input/output summary files.
     """
     # Load data
-    summaries = [summarytype.from_folder(folder) for summarytype in _SUMMARY_TYPES]
+    summaries = [summarytype.from_folder(folder, **kwargs) for summarytype in _SUMMARY_TYPES]
 
     # Adjust if desired
     if sample:

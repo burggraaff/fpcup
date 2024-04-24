@@ -164,6 +164,8 @@ def parameterdict(*params: Iterable[PCSEParameter]) -> dict[str, PCSEParameter]:
     """
     return {p.name: p for p in params}
 
+date_parameters = parameterdict(DOS, DOE, DOA, DOM, DOH, DOV)
+
 pcse_inputs = parameterdict(RDMSOL, WAV, DOS)
 pcse_outputs = parameterdict(DVS, LAI, TAGP, TWSO, TWLV, TWST, TWRT, TRA, RD, SM, WWLOW)
 pcse_summary_outputs = parameterdict(LAIMAX, CTRAT, CEVST, TAGP, TWSO, TWLV, TWST, TWRT, RD, DOS, DOE, DOA, DOM, DOH, DOV)

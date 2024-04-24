@@ -13,6 +13,7 @@ from pcse.models import Engine
 from .rundata import SUFFIX_RUNDATA, RunData
 from ..constants import CRS_AMERSFOORT, WGS84
 from ..multiprocessing import multiprocess_file_io
+from ..parameters import date_parameters
 from ..typing import Callable, Iterable, Optional, PathOrStr
 
 ### CONSTANTS
@@ -30,9 +31,17 @@ class _SummaryMixin:
     _write: Callable = None
 
     def __init__(self, *args, **kwargs):
+        # Basic initialisation
         super().__init__(*args, **kwargs)
+
+        # Set the index
         self.index.set_names("run_id", inplace=True)
         self.sort_index(inplace=True)
+
+        # Ensure dates are datetime objects
+        for key in date_parameters:
+            if key in self.columns:
+                self[key] = pd.to_datetime(self[key])
 
     @classmethod
     def from_file(cls, filename: PathOrStr):
