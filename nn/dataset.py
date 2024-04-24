@@ -8,6 +8,32 @@ import fpcup
 from fpcup.typing import PathOrStr
 
 
+### DEFINE CONSTANTS
+# Temporary: keep it simple
+CROP = "barley"
+VARIETY = "Spring_barley_301"
+SOILTYPE = "ec2"
+pattern = "*_ec2_B*.wsum"
+
+INPUTS = ["RDMSOL", "WAV"]
+# Preprocess:
+    # geometry -> latitude, longitude
+    # DOS -> year, doy
+
+    # soiltype -> ???
+    # crop -> ???
+    # variety -> ???
+# Final order:
+    # [latitude, longitude, year, doy, rdmsol, wav]
+
+OUTPUTS = ["DVS", "LAIMAX", "TAGP", "TWSO"]
+# Postprocess:
+    # DOM -> year, doy
+# Final order:
+    # [DVS, LAIMAX, TAGP, TWSO, DOM]
+
+
+### DATASET CLASSES
 class PCSEEnsembleDataset(Dataset):
     """
     Handles the loading of PCSE ensemble input/output files in bulk.
@@ -26,7 +52,7 @@ class PCSEEnsembleDataset(Dataset):
         self.target_transform = target_transform
 
         # Get summary filenames - makes sure only completed runs are loaded
-        self.summary_files = list(self.data_dir.glob("*.wsum"))
+        self.summary_files = list(self.data_dir.glob(pattern))
         self.input_files = [f.with_suffix(".wrun") for f in self.summary_files]
 
     def __len__(self):

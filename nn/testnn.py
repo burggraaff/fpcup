@@ -24,29 +24,6 @@ parser.add_argument("-v", "--verbose", help="increase output verbosity", action=
 args = parser.parse_args()
 
 
-### Define constants
-CROP = "barley"
-VARIETY = "Spring_barley_301"
-SOILTYPE = "ec2"
-
-INPUTS = ["RDMSOL", "WAV"]
-# Preprocess:
-    # geometry -> latitude, longitude
-    # DOS -> year, doy
-
-    # soiltype -> ???
-    # crop -> ???
-    # variety -> ???
-# Final order:
-    # [latitude, longitude, year, doy, rdmsol, wav]
-
-OUTPUTS = ["DVS", "LAIMAX", "TAGP", "TWSO"]
-# Postprocess:
-    # DOM -> year, doy
-# Final order:
-    # [DVS, LAIMAX, TAGP, TWSO, DOM]
-
-
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
