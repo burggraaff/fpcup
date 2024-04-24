@@ -106,8 +106,6 @@ if __name__ == "__main__":
     # Split out the rows
     brp_rows = list(brp.iterrows())
 
-    raise Exception
-
     ### Run the model
     model_statuses = fpcup.model.multiprocess_pcse(run_pcse, brp_rows, leave_progressbar=args.verbose)
     failed_runs = fpcup.model.process_model_statuses(model_statuses, verbose=args.verbose)
