@@ -6,6 +6,7 @@ from torch import Tensor, tensor
 from torch.utils.data import DataLoader, Dataset
 
 import fpcup
+from fpcup.io import load_combined_ensemble_summary
 from fpcup.typing import PathOrStr
 
 
@@ -35,6 +36,31 @@ OUTPUTS = ["DVS", "LAIMAX", "TAGP", "TWSO"]
 
 
 ### DATASET CLASSES
+class PCSEEnsembleDatasetSmall(Dataset):
+    """
+    Handles the loading of PCSE ensemble input/output files that fit into a single file each.
+    Useful for relatively small datasets.
+    """
+    ### Mandatory functions
+    def __init__(self, data_dir: PathOrStr, *, transform=None, target_transform=None):
+        # Basic setup
+        self.data_dir = data_dir
+        self.transform = transform
+        self.target_transform = target_transform
+
+        # Load data
+        # NB change to allow custom pattern
+        summary = load_combined_ensemble_summary(data_dir, save_if_generated=False)
+
+    def __len__(self):
+        return len(self.summary)
+
+    def __getitem__(self, i: int) -> tuple[Tensor, Tensor]:
+        return 1, 1
+
+
+
+
 class PCSEEnsembleDataset(Dataset):
     """
     Handles the loading of PCSE ensemble input/output files in bulk.
