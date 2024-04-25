@@ -14,6 +14,7 @@ import fpcup
 from fpcup.typing import PathOrStr
 
 from dataset import PCSEEnsembleDataset
+from network import PCSEEmulator, device, train
 
 ### Parse command line arguments
 import argparse
@@ -24,9 +25,35 @@ parser.add_argument("-v", "--verbose", help="increase output verbosity", action=
 args = parser.parse_args()
 
 
+### Constants
+lossfunc = nn.L1Loss()
+
+
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
 
     ### SETUP
+    # Data
     data = PCSEEnsembleDataset(args.output_dir)
+    dataloader = DataLoader(data, batch_size=64, shuffle=True)
+
+    # Network
+    model = PCSEEmulator().to(device)
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
+    # Train
+    losses = train(model, dataloader, lossfunc, optimizer, n_epochs=10)
+
+    # Plot losses
+    plt.plot(losses)
+
+    plt.xlim(0, len(losses)+1)
+    plt.ylim(ymin=0)
+
+    plt.xlabel("Batch")
+    plt.ylabel("Loss")
+    plt.grid(True, ls="--")
+
+    plt.savefig("nn_loss.pdf")
+    plt.close()

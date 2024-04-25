@@ -1,6 +1,7 @@
 """
 Data loaders for PCSE inputs and outputs.
 """
+import torch
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader, Dataset
 
@@ -45,6 +46,7 @@ class PCSEEnsembleDataset(Dataset):
         Use transforms for loading soil/crop data?
         Multiple data directories?
     """
+    ### Mandatory functions
     def __init__(self, data_dir: PathOrStr, *, transform=None, target_transform=None):
         # Basic setup
         self.data_dir = data_dir
@@ -76,4 +78,10 @@ class PCSEEnsembleDataset(Dataset):
 
         summary_data = summary_data[["DVS", "LAIMAX", "TAGP", "TWSO"]].to_list() + [matyear, matdoy]
 
-        return tensor(input_data), tensor(summary_data)
+        return tensor(input_data, dtype=torch.float32), tensor(summary_data, dtype=torch.float32)
+
+
+    ### Output
+    def __repr__(self) -> str:
+        example_input, example_output = self[0]
+        return f"Dataset: length {len(self)}, input length {len(example_input)}, output length {len(example_output)}"
