@@ -48,32 +48,45 @@ if __name__ == "__main__":
     model = PCSEEmulator().to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-    # Train
+
+    ### TRAINING
     losses_train, losses_test = train(model, dataloader, lossfunc, optimizer, n_epochs=args.number_epochs)
 
-    # Plot losses
+
+    ### PLOT
+    # Constants
     epochs = np.arange(args.number_epochs) + 1
     n_batches = losses_train.shape[1]
     batches = np.arange(losses_train.size) + 1
 
+    # Colours and labels
+    batchcolour = "C2"
+    epochcolour = "black"
+
+    # Variables for limits etc.
     maxloss = max(losses_train.max(), losses_test.max())
 
+    # Plot loss per batch
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 5), layout="constrained")
-    ax.plot(epochs, losses_train[:, -1])
+    ax.plot(batches, losses_train.ravel(), color=batchcolour)
 
-    ax.set_xlim(0, args.number_epochs)
-    ax.set_ylim(0, maxloss*1.05)
-
-    ax.set_xlabel("Epoch")
+    ax.set_xlim(0, len(batches))
+    ax.set_xlabel("Batch", color=batchcolour)
     ax.set_ylabel("Loss")
-    ax.grid(True, ls="--")
+    ax.grid(True, axis="y", ls="--")
 
+    # Plot loss per epoch
     ax2 = ax.twiny()
-    ax2.plot(batches, losses_train.ravel(), color="C1")
-    ax2.set_xlabel("Batch")
-    ax2.set_xlim(0, len(batches))
+    ax2.plot(epochs, losses_train[:, -1], color=epochcolour)
 
+    ax2.set_xlim(0, args.number_epochs)
+    ax2.set_ylim(0, maxloss*1.05)
+    ax2.set_xlabel("Epoch", color=epochcolour)
+    ax2.grid(True, ls="--")
+
+    # Final settings
     fig.suptitle(tag)
 
+    # Save and close
     plt.savefig(f"nn_loss_{tag}.pdf", bbox_inches="tight")
     plt.close()
