@@ -15,7 +15,8 @@ from fpcup.typing import PathOrStr
 CROP = "barley"
 VARIETY = "Spring_barley_301"
 SOILTYPE = "ec2"
-pattern = "*_ec2_B*.wsum"
+pattern = "*_ec2_B*"
+pattern_suffix = pattern + ".wsum"
 
 INPUTS = ["RDMSOL", "WAV"]
 # Preprocess:
@@ -49,10 +50,9 @@ class PCSEEnsembleDatasetSmall(Dataset):
         self.target_transform = target_transform
 
         # Load data
-        # NB change to allow custom pattern
-        summary = load_combined_ensemble_summary(data_dir, save_if_generated=False)
+        summary = load_combined_ensemble_summary(data_dir, pattern=pattern, save_if_generated=False)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.summary)
 
     def __getitem__(self, i: int) -> tuple[Tensor, Tensor]:
@@ -80,10 +80,10 @@ class PCSEEnsembleDataset(Dataset):
         self.target_transform = target_transform
 
         # Get summary filenames - makes sure only completed runs are loaded
-        self.summary_files = list(self.data_dir.glob(pattern))
+        self.summary_files = list(self.data_dir.glob(pattern_suffix))
         self.input_files = [f.with_suffix(".wrun") for f in self.summary_files]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.summary_files)
 
     def __getitem__(self, i: int) -> tuple[Tensor, Tensor]:

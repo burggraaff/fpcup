@@ -61,15 +61,16 @@ class _SummaryMixin:
         return cls(data)
 
     @classmethod
-    def from_folder(cls, folder: PathOrStr, *,
+    def from_folder(cls, folder: PathOrStr, pattern: str="*", *,
                     use_existing=True, progressbar=True, leave_progressbar=True):
         """
         Load an ensemble of Summary objects from a folder and combine them.
         """
         # Find all summary files in the folder, except a previously existing ensemble one (if it exists)
         folder = Path(folder)
-        filenames = list(folder.glob("*" + cls.suffix))
-        assert len(filenames) > 0, f"No files with extension '{cls.suffix}' were found in folder {folder.absolute()}"
+        pattern_suffix = pattern + cls.suffix
+        filenames = list(folder.glob(pattern_suffix))
+        assert len(filenames) > 0, f"No files matching '{pattern_suffix}' were found in folder {folder.absolute()}"
         filename_ensemble = filenames[0].with_stem("ensemble")
         ENSEMBLE_EXISTS = (filename_ensemble in filenames)
 
