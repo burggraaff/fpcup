@@ -63,11 +63,10 @@ def train_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callabl
     One epoch.
     """
     # Setup
-    size = len(dataloader.dataset)
     model.train()  # Set to training mode
 
     # Loop over batches
-    loss_per_batch = [train_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm(dataloader, desc="Training", unit="batch", disable=RUNNING_IN_IPYTHON)]
+    loss_per_batch = [train_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm(dataloader, desc="Training", unit="data", unit_scale=dataloader.batch_size, disable=RUNNING_IN_IPYTHON, leave=False)]
 
     return loss_per_batch
 
