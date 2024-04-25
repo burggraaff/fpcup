@@ -4,6 +4,7 @@ Train a neural network on PCSE inputs/outputs.
 Example:
     %run nn/testnn.py outputs/RDMSOL -v
 """
+import numpy as np
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
@@ -28,6 +29,7 @@ args = parser.parse_args()
 
 
 ### Constants
+tag = args.output_dir.stem
 lossfunc = nn.L1Loss()
 
 
@@ -47,17 +49,31 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     # Train
-    losses = train(model, dataloader, lossfunc, optimizer, n_epochs=args.number_epochs)
+    losses_train, losses_test = train(model, dataloader, lossfunc, optimizer, n_epochs=args.number_epochs)
 
     # Plot losses
-    plt.plot(losses)
+    epochs = np.arange(args.number_epochs) + 1
+    n_batches = losses_train.shape[1]
+    batches = np.arange(losses_train.size) + 1
 
-    plt.xlim(0, len(losses)-1)
-    plt.ylim(ymin=0)
+    maxloss = max(losses_train.max(), losses_test.max())
 
-    plt.xlabel("Batch")
-    plt.ylabel("Loss")
-    plt.grid(True, ls="--")
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 5), layout="constrained")
+    ax.plot(epochs, losses_train[:, -1])
 
-    plt.savefig("nn_loss.pdf")
+    ax.set_xlim(0, args.number_epochs)
+    ax.set_ylim(0, maxloss*1.05)
+
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.grid(True, ls="--")
+
+    ax2 = ax.twiny()
+    ax2.plot(batches, losses_train.ravel(), color="C1")
+    ax2.set_xlabel("Batch")
+    ax2.set_xlim(0, len(batches))
+
+    fig.suptitle(tag)
+
+    plt.savefig(f"nn_loss_{tag}.pdf", bbox_inches="tight")
     plt.close()

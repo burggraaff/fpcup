@@ -1,6 +1,7 @@
 """
 Neural networks.
 """
+import numpy as np
 from tqdm import tqdm, trange
 
 import torch
@@ -67,6 +68,7 @@ def train_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callabl
 
     # Loop over batches
     loss_per_batch = [train_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm(dataloader, desc="Training", unit="data", unit_scale=dataloader.batch_size, disable=RUNNING_IN_IPYTHON, leave=False)]
+    loss_per_batch = np.array(loss_per_batch)
 
     return loss_per_batch
 
@@ -76,10 +78,19 @@ def train(model: nn.Module, dataloader: DataLoader, loss_function: Callable, opt
     Train a given neural network `model` on data.
     n_epochs epochs (default: 10).
     """
-    losses = []
+    loss_train_epoch = []
+    loss_test_epoch = []
 
     for i in trange(n_epochs, desc="Training", unit="epoch"):
-        loss = train_epoch(model, dataloader, loss_function, optimizer)
-        losses.extend(loss)
+        # Train
+        loss_train = train_epoch(model, dataloader, loss_function, optimizer)
+        loss_train_epoch.append(loss_train)
 
-    return losses
+        # Test
+        loss_test = np.ones_like(loss_train)
+        loss_test_epoch.append(loss_test)
+
+    loss_train_epoch = np.array(loss_train_epoch)
+    loss_test_epoch = np.array(loss_test_epoch)
+
+    return loss_train_epoch, loss_test_epoch
