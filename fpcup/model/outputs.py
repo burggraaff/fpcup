@@ -145,12 +145,12 @@ class GeoSummary(gpd.GeoDataFrame):
     """
     Stores a summary of the results from a PCSE ensemble run, with geometry attached.
     """
-    @classmethod
-    def from_summary(cls, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, *, crs=WGS84, **kwargs):
         """
         Generates a GeoDataFrame-like object from a DataFrame-like object with latitude/longitude columns.
         """
-        return cls(df, geometry=gpd.points_from_xy(df["longitude"], df["latitude"]), crs=WGS84)
+        geometry = gpd.points_from_xy(df["longitude"], df["latitude"])
+        super().__init__(data=df, geometry=geometry, crs=crs, **kwargs)
 
     @classmethod
     def from_brp(cls, df: pd.DataFrame, brpdata: gpd.GeoDataFrame):

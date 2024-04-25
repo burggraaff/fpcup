@@ -67,6 +67,20 @@ def load_ensemble_summary_from_folder(folder: PathOrStr, *, sample=False, save_i
     return summaries
 
 
+def load_combined_ensemble_summary(folder: PathOrStr, *, sample=False, **kwargs) -> Summary:
+    """
+    For a given folder, load the ensemble input/output summary files and join them.
+    """
+    # Load data
+    inputsummary, summary = load_ensemble_summary_from_folder(folder, sample=sample, **kwargs)
+
+    # Drop known duplicate columns
+    summary.drop(columns=["latitude", "longitude", "DOS"], inplace=True)
+    summary = inputsummary.join(summary)
+
+    return summary
+
+
 _load_ensemble_result_simple = partial(TimeSeries.from_file, run_id=None, include_summary=False)
 def load_ensemble_results_from_folder(folder: PathOrStr, run_ids: Optional[Iterable[PathOrStr]]=None, *,
                                       extension=".wout", sample=False,
