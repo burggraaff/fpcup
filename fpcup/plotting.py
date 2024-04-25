@@ -26,7 +26,7 @@ from ._brp_dictionary import brp_categories_colours, brp_crops_colours
 from .aggregate import KEYS_AGGREGATE, aggregate_h3
 from .constants import CRS_AMERSFOORT, WGS84
 from .geo import Province, NETHERLANDS, is_single_province, provinces
-from .model import Summary
+from .model import InputSummary, Summary, TimeSeries
 from .parameters import all_parameters, pcse_inputs, pcse_outputs, pcse_summary_outputs
 from .tools import make_iterable
 from .typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
@@ -198,6 +198,30 @@ def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
     _configure_map_panels(axs.ravel(), province, linewidth=0.2)
     fig.suptitle(title)
 
+    if saveto:
+        plt.savefig(saveto, bbox_inches="tight")
+    else:
+        plt.show()
+    plt.close()
+
+
+def plot_wofost_input_summary(summary: InputSummary | Summary, *,
+                              title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
+    """
+    Plot WOFOST input statistics for an ensemble summary.
+    """
+    # Setup
+    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(5, 5), squeeze=False, layout="constrained")
+
+    # Site / soil properties
+    summary.plot.hexbin("RDMSOL", "WAV", mincnt=1, gridsize=10, cmap=cividis_discrete, ax=axs[0, 0])
+    axs[0, 0].set_xlabel("RDMSOL")
+    axs[0, 0].set_ylabel("WAV")
+
+    # Labels
+    fig.suptitle(title)
+
+    # Save / close
     if saveto:
         plt.savefig(saveto, bbox_inches="tight")
     else:

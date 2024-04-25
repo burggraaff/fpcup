@@ -23,7 +23,7 @@ args.SINGLE_PROVINCE = fpcup.geo.is_single_province(args.province)
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
-    ### Setup
+    ### SETUP
     # Set up the input/output directories
     tag = args.output_dir.stem
     if args.verbose:
@@ -36,7 +36,8 @@ if __name__ == "__main__":
     if args.verbose:
         print()
 
-    ### Summary
+
+    ### LOADING DATA
     # Load the combined input/output summary
     summary = fpcup.io.load_combined_ensemble_summary(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
     if args.verbose:
@@ -44,6 +45,7 @@ if __name__ == "__main__":
 
     # Convert to GeoSummary
     summary = fpcup.model.GeoSummary(summary)
+    summary.to_crs(fpcup.geo.CRS_AMERSFOORT, inplace=True)
 
     # If we are only doing one province, select only the relevant lines from the summary file
     if args.SINGLE_PROVINCE:
@@ -68,11 +70,20 @@ if __name__ == "__main__":
     if args.verbose:
         print(f"Figures will be saved as <name>-{tag}")
 
+
+    ### INPUT SUMMARY
+    filename_inputsummary = args.results_dir / f"WOFOST_{tag}-inputs.pdf"
+    fpcup.plotting.plot_wofost_input_summary(summary, saveto=filename_inputsummary, title=f"Input summary of {len(summary)} WOFOST runs: {tag}")
+    if args.verbose:
+        print(f"Saved input summary plot to {filename_inputsummary.absolute()}")
+
+
+    ### OUTPUT SUMMARY
     # Plot summary results
     filename_summary = args.results_dir / f"WOFOST_{tag}-summary.pdf"
     fpcup.plotting.plot_wofost_summary(summary, weight_by_area=AREA_AVAILABLE, saveto=filename_summary, title=f"Summary of {len(summary)} WOFOST runs: {tag}", province=args.province)
     if args.verbose:
-        print(f"Saved batch results plot to {filename_summary.absolute()}")
+        print(f"Saved output summary plot to {filename_summary.absolute()}")
 
     # Calculate the mean per province of several variables, weighted by plot area if possible
     if not args.SINGLE_PROVINCE:
