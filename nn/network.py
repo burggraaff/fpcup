@@ -67,7 +67,7 @@ def train_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callabl
     model.train()  # Set to training mode
 
     # Loop over batches
-    loss_per_batch = [train_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm(dataloader, desc="Training", unit="data", disable=RUNNING_IN_IPYTHON)]
+    loss_per_batch = [train_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm(dataloader, desc="Training", unit="batch", disable=RUNNING_IN_IPYTHON)]
 
     return loss_per_batch
 
