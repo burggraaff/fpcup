@@ -87,7 +87,7 @@ if __name__ == "__main__":
             print(f"Generated {len(agromanagements)} agromanagement calendars for {len(args.crops)} crops.")
 
     # Generate the coordinates
-    coords = fpcup.site.generate_sites_space(latitude=(51, 53), longitude=(4, 6), n=args.number_sites)
+    coords = fpcup.site.generate_sites_space(latitude=(50.7, 53.6), longitude=(3.3, 7.3), n=args.number_sites)
     if args.verbose:
         print(f"Generated {len(coords)} coordinates.")
 
