@@ -1,8 +1,8 @@
 """
-Load and plot the results from a previous PCSE ensemble run.
+Load and plot the summary results from a previous PCSE ensemble run.
 
 Example:
-    python plot_results.py outputs/sites/ -v
+    python analyse_summary.py outputs/sites/ -v
 """
 import fpcup
 
@@ -93,16 +93,3 @@ if __name__ == "__main__":
     # Space between summary and outputs sections
     if args.verbose:
         print()
-
-    # ### Results (time series)
-    # # If only one province is being done, load only the relevant files
-    # run_ids = summary.index if args.SINGLE_PROVINCE else None
-
-    # # Load the individual run results
-    # results = fpcup.io.load_ensemble_results_from_folder(args.output_dir, run_ids=run_ids, sample=args.sample, leave_progressbar=args.verbose)
-
-    # # Plot the individual runs
-    # filename_results = args.results_dir / f"WOFOST_{tag}-results.xxx"  # pdf or png
-    # fpcup.plotting.plot_wofost_ensemble_results(results, saveto=filename_results, replace_years=args.replace_years, title=f"Growth curves from {len(results)} WOFOST runs\n{tag}", leave_progressbar=args.verbose)
-    # if args.verbose:
-    #     print(f"Saved batch results plot to {filename_results.absolute()}")
