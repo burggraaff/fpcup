@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     ### SETUP
     # Data
-    data = PCSEEnsembleDataset(args.output_dir)
+    data = PCSEEnsembleDatasetSmall(args.output_dir)
     dataloader = DataLoader(data, batch_size=args.batch_size, shuffle=True)
     if args.verbose:
         print(data)
@@ -55,39 +55,4 @@ if __name__ == "__main__":
 
 
     ### PLOT
-    # Constants
-    epochs = np.arange(args.number_epochs) + 1
-    n_batches = losses_train.shape[1]
-    batches = np.arange(losses_train.size) + 1
-
-    # Colours and labels
-    batchcolour = "C2"
-    epochcolour = "black"
-
-    # Variables for limits etc.
-    maxloss = max(losses_train.max(), losses_test.max())
-
-    # Plot loss per batch
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 5), layout="constrained")
-    ax.plot(batches, losses_train.ravel(), color=batchcolour)
-
-    ax.set_xlim(0, len(batches))
-    ax.set_xlabel("Batch", color=batchcolour)
-    ax.set_ylabel("Loss")
-    ax.grid(True, axis="y", ls="--")
-
-    # Plot loss per epoch
-    ax2 = ax.twiny()
-    ax2.plot(epochs, losses_train[:, -1], color=epochcolour)
-
-    ax2.set_xlim(0, args.number_epochs)
-    ax2.set_ylim(0, maxloss*1.05)
-    ax2.set_xlabel("Epoch", color=epochcolour)
-    ax2.grid(True, ls="--")
-
-    # Final settings
-    fig.suptitle(tag)
-
-    # Save and close
-    plt.savefig(f"nn_loss_{tag}.pdf", bbox_inches="tight")
-    plt.close()
+    fpcup.plotting.plot_loss_curve(losses_train, title=tag, saveto=f"nn_loss_{tag}.pdf")

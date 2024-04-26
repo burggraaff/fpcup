@@ -5,6 +5,7 @@ import datetime as dt
 from functools import partial
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from tqdm import tqdm
@@ -474,3 +475,58 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLO
 
 
 plot_wofost_summary_byprovince = partial(wofost_summary_geo, rasterized=True, province=provinces.values(), use_coarse=True)
+
+
+def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarray]=None,
+                    title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
+    """
+    Plot the loss curve per batch and per epoch.
+    """
+    # Colours and labels
+    batchcolour = "C2"
+    epochcolour = "black"
+
+    # Constants
+    n_epochs, n_batches = losses_train.shape
+    epochs = np.arange(n_epochs + 1)
+    batches = np.arange(losses_train.size) + 1
+
+    # Pull out data
+    loss_initial = [losses_train[0, 0]]
+    losses_train_epoch = losses_train[:, -1]
+    losses_train_epoch = np.concatenate([loss_initial, losses_train_epoch])
+
+    losses_train_batch = losses_train.ravel()
+
+    # Variables for limits etc.
+    try:
+        maxloss = max(losses_train.max(), losses_test.max())
+    except AttributeError:  # is no test losses were provided
+        maxloss = losses_train.max()
+
+    # Plot loss per batch
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 5), layout="constrained")
+    ax.plot(batches, losses_train_batch, color=batchcolour)
+
+    ax.set_xlim(0, len(batches))
+    ax.set_xlabel("Batch", color=batchcolour)
+    ax.set_ylabel("Loss")
+    ax.grid(True, axis="y", ls="--")
+    ax.grid(False, axis="x")
+
+    # Plot loss per epoch
+    ax2 = ax.twiny()
+    ax2.plot(epochs, losses_train_epoch, color=epochcolour)
+
+    ax2.set_xlim(0, n_epochs)
+    ax2.set_ylim(0, maxloss*1.05)
+    ax2.set_xlabel("Epoch", color=epochcolour)
+    ax2.grid(True, ls="--")
+
+    # Final settings
+    fig.suptitle(title)
+
+    # Save and close
+    if saveto is not None:
+        plt.savefig(saveto, bbox_inches="tight")
+    plt.close()
