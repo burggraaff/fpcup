@@ -58,6 +58,14 @@ def train_batch(model: nn.Module, loss_function: Callable, optimizer: torch.opti
     return loss.item()
 
 
+def test_batch(model: nn.Module, loss_function: Callable, optimizer: torch.optim.Optimizer, X: Tensor, y: Tensor) -> float:
+    """
+    Test a given neural network `model` on data.
+    One batch.
+    """
+    pass
+
+
 def train_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callable, optimizer: torch.optim.Optimizer) -> list[float]:
     """
     Train a given neural network `model` on data.
