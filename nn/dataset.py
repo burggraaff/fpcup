@@ -1,6 +1,8 @@
 """
 Data loaders for PCSE inputs and outputs.
 """
+import pandas as pd
+
 import torch
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader, Dataset
@@ -10,7 +12,7 @@ from fpcup.io import load_combined_ensemble_summary
 from fpcup.typing import PathOrStr
 
 
-### DEFINE CONSTANTS
+### CONSTANTS
 # Temporary: keep it simple
 CROP = "barley"
 VARIETY = "Spring_barley_301"
@@ -18,22 +20,39 @@ SOILTYPE = "ec2"
 pattern = "*_ec2_B*"
 pattern_suffix = pattern + ".wsum"
 
-INPUTS = ["RDMSOL", "WAV"]
+
+### TRANSFORM PCSE INPUTS/OUTPUTS TO NN SPECIFICATIONS
+INPUTS = ["latitude", "longitude", "WAV", "RDMSOL", "sowyear", "sowdoy"]
+OUTPUTS = ["DVS", "LAIMAX", "TAGP", "TWSO", "matyear", "matdoy"]
 # Preprocess:
-    # geometry -> latitude, longitude
     # DOS -> year, doy
 
     # soiltype -> ???
     # crop -> ???
     # variety -> ???
-# Final order:
-    # [latitude, longitude, year, doy, rdmsol, wav]
 
-OUTPUTS = ["DVS", "LAIMAX", "TAGP", "TWSO"]
+def get_year(date) -> int:
+    return date.year
+
+def get_doy(date) -> int:
+    return date.day_of_year
+
+def add_input_columns(summary: pd.DataFrame) -> None:
+    """
+    Convert PCSE inputs (from rundata) to neural network variables.
+    """
+    summary["sowyear"] = summary["DOS"].apply(get_year)
+    summary["sowdoy"] = summary["DOS"].apply(get_doy)
+
 # Postprocess:
-    # DOM -> year, doy
-# Final order:
-    # [DVS, LAIMAX, TAGP, TWSO, DOM]
+    # DOM -> lifetime
+
+def add_output_columns(summary: pd.DataFrame) -> None:
+    """
+    Convert PCSE outputs (from summary) to neural network variables.
+    """
+    summary["matyear"] = summary["DOM"].apply(get_year)
+    summary["matdoy"] = summary["DOM"].apply(get_doy)
 
 
 ### DATASET CLASSES
@@ -43,22 +62,33 @@ class PCSEEnsembleDatasetSmall(Dataset):
     Useful for relatively small datasets.
     """
     ### Mandatory functions
-    def __init__(self, data_dir: PathOrStr, *, transform=None, target_transform=None):
+    def __init__(self, data_dir: PathOrStr, *, transform=None, target_transform=None, **kwargs):
         # Basic setup
         self.data_dir = data_dir
         self.transform = transform
         self.target_transform = target_transform
 
         # Load data
-        summary = load_combined_ensemble_summary(data_dir, pattern=pattern, save_if_generated=False)
+        self.summary = load_combined_ensemble_summary(data_dir, pattern=pattern, save_if_generated=False, **kwargs)
+        add_input_columns(self.summary)
+        add_output_columns(self.summary)
+        self.summary = self.summary[INPUTS + OUTPUTS]
 
     def __len__(self) -> int:
         return len(self.summary)
 
     def __getitem__(self, i: int) -> tuple[Tensor, Tensor]:
-        return 1, 1
+        row = self.summary.iloc[i]
+        input_data = row[INPUTS].to_list()
+        summary_data = row[OUTPUTS].to_list()
+
+        return tensor(input_data, dtype=torch.float32), tensor(summary_data, dtype=torch.float32)
 
 
+    ### Output
+    def __repr__(self) -> str:
+        example_input, example_output = self[0]
+        return f"{self.__class__.__name__}: length {len(self)}, input length {len(example_input)}, output length {len(example_output)}"
 
 
 class PCSEEnsembleDataset(Dataset):
@@ -90,8 +120,8 @@ class PCSEEnsembleDataset(Dataset):
         # Load input data
         input_filename = self.input_files[i]
         input_data = fpcup.model.InputSummary.from_file(input_filename).iloc[0]
-        sowyear = input_data["DOS"].year
-        sowdoy = input_data["DOS"].day_of_year
+        sowyear = get_year(input_data["DOS"])
+        sowdoy = get_doy(input_data["DOS"])
 
         input_data = input_data[["latitude", "longitude", "WAV", "RDMSOL"]].to_list() + [sowyear, sowdoy]
 
@@ -99,8 +129,8 @@ class PCSEEnsembleDataset(Dataset):
         summary_filename = self.summary_files[i]
         summary_data = fpcup.model.Summary.from_file(summary_filename).iloc[0]
 
-        matyear = summary_data["DOM"].year
-        matdoy = summary_data["DOM"].day_of_year
+        matyear = get_year(summary_data["DOM"])
+        matdoy = get_doy(summary_data["DOM"])
 
         summary_data = summary_data[["DVS", "LAIMAX", "TAGP", "TWSO"]].to_list() + [matyear, matdoy]
 
@@ -110,4 +140,4 @@ class PCSEEnsembleDataset(Dataset):
     ### Output
     def __repr__(self) -> str:
         example_input, example_output = self[0]
-        return f"Dataset: length {len(self)}, input length {len(example_input)}, output length {len(example_output)}"
+        return f"{self.__class__.__name__}: length {len(self)}, input length {len(example_input)}, output length {len(example_output)}"

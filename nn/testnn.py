@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, Dataset
 import fpcup
 from fpcup.typing import PathOrStr
 
-from dataset import PCSEEnsembleDataset
+from dataset import PCSEEnsembleDataset, PCSEEnsembleDatasetSmall
 from network import PCSEEmulator, device, train
 
 ### Parse command line arguments
@@ -42,7 +42,8 @@ if __name__ == "__main__":
     data = PCSEEnsembleDataset(args.output_dir)
     dataloader = DataLoader(data, batch_size=args.batch_size, shuffle=True)
     if args.verbose:
-        print(f"Loaded data: {data} ; batch size {dataloader.batch_size}")
+        print(data)
+        print(f"Batch size: {dataloader.batch_size}")
 
     # Network
     model = PCSEEmulator().to(device)
