@@ -26,9 +26,13 @@ class PCSEEmulator(nn.Module):
 
         # Network definition
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(6, 16),
+            nn.Linear(6, 36),
             nn.ReLU(),
-            nn.Linear(16, 16),
+            nn.Linear(36, 36),
+            nn.ReLU(),
+            nn.Linear(36, 36),
+            nn.ReLU(),
+            nn.Linear(36, 16),
             nn.ReLU(),
             nn.Linear(16, 6),
         )

@@ -3,6 +3,8 @@ Data loaders for PCSE inputs and outputs.
 """
 import pandas as pd
 
+from sklearn.preprocessing import MinMaxScaler
+
 import torch
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader, Dataset

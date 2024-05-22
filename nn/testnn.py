@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, Dataset, random_split
 import fpcup
 from fpcup.typing import PathOrStr
 
-from dataset import PCSEEnsembleDataset, PCSEEnsembleDatasetSmall
+from dataset import PCSEEnsembleDataset, PCSEEnsembleDatasetSmall, MinMaxScaler
 from network import PCSEEmulator, device, train
 
 ### Parse command line arguments
@@ -63,5 +63,8 @@ if __name__ == "__main__":
     losses_train, losses_test = train(model, training_data, lossfunc, optimizer, testing_data=testing_data, n_epochs=args.number_epochs)
 
 
-    ### PLOT
+    ### PLOT LOSS CURVES
     fpcup.plotting.plot_loss_curve(losses_train, losses_test=losses_test, title=tag, saveto=f"nn_loss_{tag}.pdf")
+
+
+    ### PERFORMANCE ASSESSMENT
