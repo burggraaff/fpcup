@@ -76,6 +76,10 @@ def load_combined_ensemble_summary(folder: PathOrStr, *, sample=False, **kwargs)
 
     # Drop known duplicate columns
     summary.drop(columns=["latitude", "longitude", "DOS"], inplace=True)
+
+    # Join matching rows
+    combined_index = inputsummary.index.intersection(summary.index)
+    inputsummary, summary = inputsummary.loc[combined_index], summary.loc[combined_index]
     summary = inputsummary.join(summary)
 
     return summary
