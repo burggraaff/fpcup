@@ -553,6 +553,12 @@ def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarra
     ax2.grid(True, ls="--")
     ax2.legend(loc="best")
 
+    # Switch x axes
+    ax.xaxis.set_ticks_position("top")
+    ax.xaxis.set_label_position("top")
+    ax2.xaxis.set_ticks_position("bottom")
+    ax2.xaxis.set_label_position("bottom")
+
     # Final settings
     fig.suptitle(title)
 
