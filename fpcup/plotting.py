@@ -10,7 +10,7 @@ import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from tqdm import tqdm
 
-from matplotlib import pyplot as plt, dates as mdates, patches as mpatches, ticker as mticker
+from matplotlib import pyplot as plt, dates as mdates, patches as mpatches, patheffects as mpe, ticker as mticker
 from matplotlib import colormaps, rcParams
 
 rcParams.update({"axes.grid": True,
@@ -500,51 +500,58 @@ def weighted_mean_loss(loss_per_batch: np.ndarray) -> np.ndarray:
     return loss_per_epoch
 
 
+c_train = "#4477AA"
+c_test = "#EE6677"
+pe_epoch = [mpe.Stroke(linewidth=4, foreground="black"),
+            mpe.Normal()]
 def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarray]=None,
                     title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
     Plot the loss curve per batch and per epoch.
     """
-    # Colours and labels
-    batchcolour = "C2"
-    epochcolour = "black"
-
     # Constants
     n_epochs, n_batches = losses_train.shape
     epochs = np.arange(n_epochs + 1)
     batches = np.arange(losses_train.size) + 1
 
-    # Pull out data
+    # Training data: get loss per batch and per epoch
     loss_initial = [losses_train[0, 0]]
     losses_train_epoch = weighted_mean_loss(losses_train)
     losses_train_epoch = np.concatenate([loss_initial, losses_train_epoch])
 
     losses_train_batch = losses_train.ravel()
 
+    # Testing data: dummy loss at epoch 0
+    losses_test = np.insert(losses_test, 0, np.nan)
+
     # Variables for limits etc.
     try:
-        maxloss = np.nanmax(losses_train.max(), losses_test.max())
+        maxloss = np.nanmax([np.nanmax(losses_train), np.nanmax(losses_test)])
     except AttributeError:  # is no test losses were provided
         maxloss = losses_train.max()
 
-    # Plot loss per batch
+    # Figure setup
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 5), layout="constrained")
-    ax.plot(batches, losses_train_batch, color=batchcolour)
+
+    # Plot training loss per batch
+    ax.plot(batches, losses_train_batch, color=c_train, zorder=0)
 
     ax.set_xlim(0, len(batches))
-    ax.set_xlabel("Batch", color=batchcolour)
+    ax.set_xlabel("Batch", color=c_train)
     ax.set_ylabel("Loss")
     ax.grid(True, axis="y", ls="--")
     ax.grid(False, axis="x")
 
-    # Plot loss per epoch
+    # Plot training/testing loss per epoch
     ax2 = ax.twiny()
-    ax2.plot(epochs, losses_train_epoch, color=epochcolour)
+    ax2.plot(epochs, losses_train_epoch, color=c_train, path_effects=pe_epoch, label="Train", zorder=1)
+    ax2.plot(epochs, losses_test, color=c_test, path_effects=pe_epoch, label="Test", zorder=1)
 
     ax2.set_xlim(0, n_epochs)
     ax2.set_ylim(0, maxloss*1.05)
-    ax2.set_xlabel("Epoch", color=epochcolour)
+    ax2.set_xlabel("Epoch")
     ax2.grid(True, ls="--")
+    ax2.legend(loc="best")
 
     # Final settings
     fig.suptitle(title)

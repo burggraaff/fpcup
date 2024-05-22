@@ -9,7 +9,7 @@ from torch import nn, Tensor, tensor
 from torch.utils.data import DataLoader, Dataset
 
 from fpcup.tools import RUNNING_IN_IPYTHON
-from fpcup.typing import Callable
+from fpcup.typing import Callable, Optional
 
 ### DEFINE CONSTANTS
 
@@ -63,7 +63,13 @@ def test_batch(model: nn.Module, loss_function: Callable, optimizer: torch.optim
     Test a given neural network `model` on data.
     One batch.
     """
-    pass
+    X, y = X.to(device), y.to(device)
+
+    # Compute prediction error
+    pred = model(X)
+    loss = loss_function(pred, y)
+
+    return loss.item()
 
 
 def train_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callable, optimizer: torch.optim.Optimizer) -> list[float]:
@@ -81,7 +87,23 @@ def train_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callabl
     return loss_per_batch
 
 
-def train(model: nn.Module, dataloader: DataLoader, loss_function: Callable, optimizer: torch.optim.Optimizer, n_epochs: int=10) -> list[float]:
+def test_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callable, optimizer: torch.optim.Optimizer) -> list[float]:
+    """
+    Train a given neural network `model` on data.
+    One epoch.
+    """
+    # Setup
+    model.eval()  # Set to training mode
+
+    # Loop over batches
+    loss_per_batch = [test_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm(dataloader, desc="Testing", unit="data", unit_scale=dataloader.batch_size, disable=RUNNING_IN_IPYTHON, leave=False)]
+    loss = np.mean(loss_per_batch)
+
+    return loss
+
+
+def train(model: nn.Module, training_data: DataLoader, loss_function: Callable, optimizer: torch.optim.Optimizer, *,
+          testing_data: Optional[DataLoader]=None, n_epochs: int=10) -> list[float]:
     """
     Train a given neural network `model` on data.
     n_epochs epochs (default: 10).
@@ -91,11 +113,14 @@ def train(model: nn.Module, dataloader: DataLoader, loss_function: Callable, opt
 
     for i in trange(n_epochs, desc="Training", unit="epoch"):
         # Train
-        loss_train = train_epoch(model, dataloader, loss_function, optimizer)
+        loss_train = train_epoch(model, training_data, loss_function, optimizer)
         loss_train_epoch.append(loss_train)
 
         # Test
-        loss_test = np.ones_like(loss_train)
+        if testing_data is not None:
+            loss_test = test_epoch(model, testing_data, loss_function, optimizer)
+        else:
+            loss_test = np.nan
         loss_test_epoch.append(loss_test)
 
     loss_train_epoch = np.array(loss_train_epoch)

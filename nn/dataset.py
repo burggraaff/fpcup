@@ -16,8 +16,8 @@ from fpcup.typing import PathOrStr
 # Temporary: keep it simple
 CROP = "barley"
 VARIETY = "Spring_barley_301"
-SOILTYPE = "ec2"
-pattern = "*_ec2_B*"
+SOILTYPE = "ec3"
+pattern = f"*_{SOILTYPE}_B*"
 pattern_suffix = pattern + ".wsum"
 
 
