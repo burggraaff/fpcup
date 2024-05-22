@@ -501,7 +501,7 @@ def weighted_mean_loss(loss_per_batch: np.ndarray) -> np.ndarray:
 
 
 c_train = "#4477AA"
-c_test = "#EE6677"
+c_test = "#CCBB44"
 pe_epoch = [mpe.Stroke(linewidth=4, foreground="black"),
             mpe.Normal()]
 def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarray]=None,
