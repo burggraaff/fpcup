@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, Dataset, random_split
 import fpcup
 from fpcup.typing import PathOrStr
 
-from dataset import PCSEEnsembleDataset, PCSEEnsembleDatasetSmall, MinMaxScaler
+from dataset import load_pcse_dataset
 from network import PCSEEmulator, device, train
 
 ### Parse command line arguments
@@ -40,18 +40,12 @@ if __name__ == "__main__":
 
     ### SETUP
     # Load data
-    dataset = PCSEEnsembleDatasetSmall(args.output_dir)
-    if args.verbose:
-        print("Loaded data set:")
-        print(dataset)
-
-    # Training / Testing data split
-    fractions = [1-args.test_fraction, args.test_fraction]
-    training_dataset, testing_dataset = random_split(dataset, fractions)
+    training_dataset, testing_dataset, X_scaler, y_scaler = load_pcse_dataset(args.output_dir, frac_test=args.test_fraction)
     training_data = DataLoader(training_dataset, batch_size=args.batch_size, shuffle=True)
     testing_data = DataLoader(testing_dataset, batch_size=args.batch_size, shuffle=False)
+
     if args.verbose:
-        print(f"Split data into training ({fractions[0]:.0%}) and testing ({fractions[1]:.0%}).")
+        print(f"Split data into training ({1 - args.test_fraction:.0%}) and testing ({args.test_fraction:.0%}).")
         print(f"Batch size: {args.batch_size}")
 
     # Network

@@ -1,13 +1,14 @@
 """
 Data loaders for PCSE inputs and outputs.
 """
+import numpy as np
 import pandas as pd
 
 from sklearn.preprocessing import MinMaxScaler
 
 import torch
 from torch import Tensor, tensor
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 import fpcup
 from fpcup.io import load_combined_ensemble_summary
@@ -55,6 +56,21 @@ def add_output_columns(summary: pd.DataFrame) -> None:
     """
     summary["matyear"] = summary["DOM"].apply(get_year)
     summary["matdoy"] = summary["DOM"].apply(get_doy)
+
+
+### SAMPLING FUNCTIONS
+def mcar(X: pd.DataFrame, y: pd.DataFrame, *,
+         frac_test: float=0.5) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Missing Completely At Random.
+    Temporarily copied over from imputation project.
+    """
+    X_train = X.sample(frac=1-frac_test)
+    X_test = X.drop(index=X_train.index)
+    y_train = y.loc[X_train.index]
+    y_test = y.loc[X_test.index]
+
+    return X_train, X_test, y_train, y_test
 
 
 ### DATASET CLASSES
@@ -143,3 +159,42 @@ class PCSEEnsembleDataset(Dataset):
     def __repr__(self) -> str:
         example_input, example_output = self[0]
         return f"{self.__class__.__name__}: length {len(self)}, input length {len(example_input)}, output length {len(example_output)}"
+
+
+### DATA I/O
+def load_pcse_dataset(data_dir: PathOrStr, *,
+                      frac_test: float=0.2,
+                      **kwargs) -> tuple[DataLoader, DataLoader]:
+    """
+    From a given folder, load all PCSE input and output files, collate them, pre-process them, split them into training and testing, and re-scale them.
+    """
+    # Load data
+    summary = load_combined_ensemble_summary(data_dir, pattern=pattern, save_if_generated=False, **kwargs)
+
+    # Add columns
+    add_input_columns(summary)
+    add_output_columns(summary)
+
+    # Split into inputs / outputs
+    X, y = summary[INPUTS], summary[OUTPUTS]
+
+    # Split into train/test
+    X_train, X_test, y_train, y_test = mcar(X, y, frac_test=frac_test)
+
+    # Convert to numpy float32
+    X_train, X_test, y_train, y_test = [df.to_numpy(dtype=np.float32) for df in (X_train, X_test, y_train, y_test)]
+
+    # Train and apply scalers
+    X_scaler = MinMaxScaler()
+    X_train = X_scaler.fit_transform(X_train)
+    X_test = X_scaler.transform(X_test)
+
+    y_scaler = MinMaxScaler()
+    y_train = y_scaler.fit_transform(y_train)
+    y_test = y_scaler.transform(y_test)
+
+    # Combine into Datasets
+    data_train = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train))
+    data_test = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(y_test))
+
+    return data_train, data_test, X_scaler, y_scaler

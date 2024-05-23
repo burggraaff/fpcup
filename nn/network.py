@@ -4,6 +4,8 @@ Neural networks.
 import numpy as np
 from tqdm import tqdm, trange
 
+from sklearn.preprocessing import MinMaxScaler
+
 import torch
 from torch import nn, Tensor, tensor
 from torch.utils.data import DataLoader, Dataset
@@ -131,3 +133,28 @@ def train(model: nn.Module, training_data: DataLoader, loss_function: Callable, 
     loss_test_epoch = np.array(loss_test_epoch)
 
     return loss_train_epoch, loss_test_epoch
+
+
+def predict(model: nn.Module, X: np.ndarray, *,
+            X_scaler: Optional[MinMaxScaler]=None, y_scaler: Optional[MinMaxScaler]=None) -> Tensor:
+    """
+    Use an existing model to predict y values for X values.
+    """
+    # Setup
+    model.eval()  # Set to training mode
+
+    # Rescale X if desired
+    if X_scaler is not None:
+        X = X_scaler.transform(X)
+
+    X = tensor(X, device=device)
+
+    # Predict
+    with torch.no_grad():
+        y = model(X)
+
+    # Rescale y if desired
+    if y_scaler is not None:
+        y = y_scaler.inverse_transform(y)
+
+    return y
