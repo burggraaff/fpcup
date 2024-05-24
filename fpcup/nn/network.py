@@ -8,11 +8,13 @@ import torch
 from torch import nn, Tensor
 from torch.utils.data import DataLoader
 
+from .dataset import INPUTS, OUTPUTS
 from ..tools import RUNNING_IN_IPYTHON
 from ..typing import Callable, Optional
 
 ### DEFINE CONSTANTS
-
+N_in = len(INPUTS)
+N_out = len(OUTPUTS)
 
 ### SETUP
 device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
@@ -30,7 +32,7 @@ class PCSEEmulator(nn.Module):
 
         # Network definition
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(6, 36),
+            nn.Linear(N_in, 36),
             nn.ReLU(),
             nn.Linear(36, 36),
             nn.ReLU(),
@@ -38,7 +40,7 @@ class PCSEEmulator(nn.Module):
             nn.ReLU(),
             nn.Linear(36, 16),
             nn.ReLU(),
-            nn.Linear(16, 6),
+            nn.Linear(16, N_out),
         )
 
     def forward(self, x: Tensor) -> Tensor:

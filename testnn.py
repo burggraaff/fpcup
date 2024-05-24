@@ -47,6 +47,9 @@ if __name__ == "__main__":
     # Network
     model = fpcup.nn.network.PCSEEmulator().to(fpcup.nn.network.device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    if args.verbose:
+        print("Created model:")
+        print(model)
 
 
     ### TRAINING

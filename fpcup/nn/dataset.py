@@ -26,7 +26,7 @@ pattern_suffix = pattern + ".wsum"
 
 ### TRANSFORM PCSE INPUTS/OUTPUTS TO NN SPECIFICATIONS
 INPUTS = ["latitude", "longitude", "WAV", "RDMSOL", "sowyear", "sowdoy"]
-OUTPUTS = ["DVS", "LAIMAX", "TAGP", "TWSO", "matyear", "matdoy"]
+OUTPUTS = ["LAIMAX", "TAGP", "TWSO", "matdoy"]
 # Preprocess:
     # DOS -> year, doy
 
