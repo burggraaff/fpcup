@@ -20,6 +20,10 @@ from fpcup.typing import Callable, Optional
 device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 
+### HELPER FUNCTIONS
+tqdm_batch = lambda dataloader, desc: tqdm(dataloader, desc=desc, unit="data", unit_scale=dataloader.batch_size, disable=RUNNING_IN_IPYTHON, leave=False)
+
+
 ### NEURAL NETWORK CLASSES
 class PCSEEmulator(nn.Module):
     def __init__(self):
@@ -87,7 +91,7 @@ def train_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callabl
     model.train()  # Set to training mode
 
     # Loop over batches
-    loss_per_batch = [train_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm(dataloader, desc="Training", unit="data", unit_scale=dataloader.batch_size, disable=RUNNING_IN_IPYTHON, leave=False)]
+    loss_per_batch = [train_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm_batch(dataloader, "Training")]
     loss_per_batch = np.array(loss_per_batch)
 
     return loss_per_batch
@@ -102,7 +106,7 @@ def test_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callable
     model.eval()  # Set to training mode
 
     # Loop over batches
-    loss_per_batch = [test_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm(dataloader, desc="Testing", unit="data", unit_scale=dataloader.batch_size, disable=RUNNING_IN_IPYTHON, leave=False)]
+    loss_per_batch = [test_batch(model, loss_function, optimizer, X, y) for (X, y) in tqdm_batch(dataloader, "Testing")]
     loss = np.mean(loss_per_batch)
 
     return loss
