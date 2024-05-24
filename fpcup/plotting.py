@@ -525,10 +525,12 @@ def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarra
     losses_test = np.insert(losses_test, 0, np.nan)
 
     # Variables for limits etc.
-    try:
+    if losses_test is not None:
         maxloss = np.nanmax([np.nanmax(losses_train), np.nanmax(losses_test)])
-    except AttributeError:  # is no test losses were provided
-        maxloss = losses_train.max()
+        minloss = np.nanmin([np.nanmin(losses_train), np.nanmin(losses_test)])
+    else:
+        maxloss = np.nanmax(losses_train)
+        minloss = np.nanmin(losses_train)
 
     # Figure setup
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 5), layout="constrained")
@@ -539,6 +541,8 @@ def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarra
     ax.set_xlim(0, len(batches))
     ax.set_xlabel("Batch", color=c_train)
     ax.set_ylabel("Loss")
+    ax.set_yscale("log")
+    ax.set_ylim(minloss/1.05, maxloss*1.05)
     ax.grid(True, axis="y", ls="--")
     ax.grid(False, axis="x")
 
@@ -548,7 +552,6 @@ def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarra
     ax2.plot(epochs, losses_test, color=c_test, path_effects=pe_epoch, label="Test", zorder=1)
 
     ax2.set_xlim(0, n_epochs)
-    ax2.set_ylim(0, maxloss*1.05)
     ax2.set_xlabel("Epoch")
     ax2.grid(True, ls="--")
     ax2.legend(loc="best")
