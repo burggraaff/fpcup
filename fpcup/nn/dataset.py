@@ -10,9 +10,9 @@ import torch
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 
-import fpcup
-from fpcup.io import load_combined_ensemble_summary
-from fpcup.typing import PathOrStr
+from ..io import load_combined_ensemble_summary
+from ..model import InputSummary, Summary
+from ..typing import Optional, PathOrStr
 
 
 ### CONSTANTS
@@ -137,7 +137,7 @@ class PCSEEnsembleDataset(Dataset):
     def __getitem__(self, i: int) -> tuple[Tensor, Tensor]:
         # Load input data
         input_filename = self.input_files[i]
-        input_data = fpcup.model.InputSummary.from_file(input_filename).iloc[0]
+        input_data = InputSummary.from_file(input_filename).iloc[0]
         sowyear = get_year(input_data["DOS"])
         sowdoy = get_doy(input_data["DOS"])
 
@@ -145,7 +145,7 @@ class PCSEEnsembleDataset(Dataset):
 
         # Load summary data
         summary_filename = self.summary_files[i]
-        summary_data = fpcup.model.Summary.from_file(summary_filename).iloc[0]
+        summary_data = Summary.from_file(summary_filename).iloc[0]
 
         matyear = get_year(summary_data["DOM"])
         matdoy = get_doy(summary_data["DOM"])
@@ -198,3 +198,21 @@ def load_pcse_dataset(data_dir: PathOrStr, *,
     data_test = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(y_test))
 
     return data_train, data_test, X_scaler, y_scaler
+
+
+def outputs_to_dataframe(y: np.ndarray | Tensor, *, y_scaler: Optional[MinMaxScaler]=None) -> pd.DataFrame:
+    """
+    Take a tensor/array of outputs `y`, optionally rescale it, and convert it to a pandas DataFrame.
+    """
+    # Convert to numpy
+    if isinstance(y, Tensor):
+        y = y.numpy()
+
+    # Rescale y if desired
+    if y_scaler is not None:
+        y = y_scaler.inverse_transform(y)
+
+    # Add to a dataframe
+    y = pd.DataFrame(data=y, columns=OUTPUTS)
+
+    return y

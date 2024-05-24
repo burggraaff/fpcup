@@ -477,6 +477,7 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLO
 plot_wofost_summary_byprovince = partial(wofost_summary_geo, rasterized=True, province=provinces.values(), use_coarse=True)
 
 
+### NEURAL NETWORKS
 def weighted_mean_loss(loss_per_batch: np.ndarray) -> np.ndarray:
     """
     Return the weighted mean loss per epoch, weighted with a sawtooth.
@@ -568,4 +569,40 @@ def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarra
     # Save and close
     if saveto is not None:
         plt.savefig(saveto, bbox_inches="tight")
+    plt.close()
+
+
+def nn_scatter(y: pd.DataFrame, pred: pd.DataFrame, *,
+               title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
+    """
+    Generate scatter plots of NN outputs vs the true values.
+    """
+    # Setup
+    fig, axs = plt.subplots(nrows=1, ncols=len(y.columns), figsize=(15, 5), layout="constrained")
+
+    # Plot individual parameters
+    for ax, col in zip(axs, y.columns):
+        ax.scatter(y[col], pred[col], color="0.5", alpha=0.5, rasterized=True)
+
+    # Grid
+    for ax in axs:
+        ax.axline((0, 0), slope=1, color="black")
+        ax.grid(True, color="0.5", linestyle="--")
+
+    # Labels, lims
+    for ax, col in zip(axs, y.columns):
+        ax.set_title(col)
+
+        vmin = np.nanmin([y[col].min(), pred[col].min()])
+        vmax = np.nanmax([y[col].max(), pred[col].max()])
+        ax.set_xlim(vmin, vmax)
+        ax.set_ylim(vmin, vmax)
+
+    fig.supxlabel("WOFOST value", fontweight="bold")
+    fig.supylabel("NN prediction", fontweight="bold")
+    fig.suptitle(title)
+
+    # Save and close
+    if saveto is not None:
+        plt.savefig(saveto)
     plt.close()

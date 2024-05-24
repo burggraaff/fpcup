@@ -4,14 +4,12 @@ Neural networks.
 import numpy as np
 from tqdm import tqdm, trange
 
-from sklearn.preprocessing import MinMaxScaler
-
 import torch
-from torch import nn, Tensor, tensor
-from torch.utils.data import DataLoader, Dataset
+from torch import nn, Tensor
+from torch.utils.data import DataLoader
 
-from fpcup.tools import RUNNING_IN_IPYTHON
-from fpcup.typing import Callable, Optional
+from ..tools import RUNNING_IN_IPYTHON
+from ..typing import Callable, Optional
 
 ### DEFINE CONSTANTS
 
@@ -82,6 +80,25 @@ def test_batch(model: nn.Module, loss_function: Callable, optimizer: torch.optim
     return loss.item()
 
 
+def predict_batch(model: nn.Module, X: Tensor) -> np.ndarray:
+    """
+    Use an existing model to predict y values for X values.
+    One batch.
+    """
+    # Setup
+    X = X.to(device)
+    model.eval()  # Set to testing mode
+
+    # Predict
+    with torch.no_grad():
+        pred = model(X)
+
+    # Convert to Numpy
+    pred = pred.numpy()
+
+    return pred
+
+
 def train_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callable, optimizer: torch.optim.Optimizer) -> list[float]:
     """
     Train a given neural network `model` on data.
@@ -139,26 +156,13 @@ def train(model: nn.Module, training_data: DataLoader, loss_function: Callable, 
     return loss_train_epoch, loss_test_epoch
 
 
-def predict(model: nn.Module, X: np.ndarray, *,
-            X_scaler: Optional[MinMaxScaler]=None, y_scaler: Optional[MinMaxScaler]=None) -> Tensor:
+def predict(model: nn.Module, dataloader: DataLoader) -> np.ndarray:
     """
     Use an existing model to predict y values for X values.
+    Goes through the full dataloader.
     """
-    # Setup
-    model.eval()  # Set to training mode
+    # Loop over batches
+    pred = [predict_batch(model, X) for (X, y) in tqdm_batch(dataloader, "Predicting")]
+    pred = np.concatenate(pred)
 
-    # Rescale X if desired
-    if X_scaler is not None:
-        X = X_scaler.transform(X)
-
-    X = tensor(X, device=device)
-
-    # Predict
-    with torch.no_grad():
-        y = model(X)
-
-    # Rescale y if desired
-    if y_scaler is not None:
-        y = y_scaler.inverse_transform(y)
-
-    return y
+    return pred
