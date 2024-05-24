@@ -18,6 +18,7 @@ N_out = len(OUTPUTS)
 
 ### SETUP
 device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+default_lossfunction = nn.L1Loss()
 
 
 ### HELPER FUNCTIONS
@@ -131,12 +132,17 @@ def test_epoch(model: nn.Module, dataloader: DataLoader, loss_function: Callable
     return loss
 
 
-def train(model: nn.Module, training_data: DataLoader, loss_function: Callable, optimizer: torch.optim.Optimizer, *,
+def train(model: nn.Module, training_data: DataLoader, *,
+          loss_function: Callable=default_lossfunction, optimizer: Optional[torch.optim.Optimizer]=None,
           testing_data: Optional[DataLoader]=None, n_epochs: int=10) -> list[float]:
     """
     Train a given neural network `model` on data.
     n_epochs epochs (default: 10).
     """
+    # Set up optimizer
+    if optimizer is None:
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+
     loss_train_epoch = []
     loss_test_epoch = []
 

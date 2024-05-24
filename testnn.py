@@ -27,8 +27,6 @@ args = parser.parse_args()
 
 ### Constants
 tag = args.output_dir.stem
-lossfunc = nn.L1Loss()
-
 
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
@@ -46,14 +44,13 @@ if __name__ == "__main__":
 
     # Network
     model = fpcup.nn.network.PCSEEmulator().to(fpcup.nn.network.device)
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
     if args.verbose:
         print("Created model:")
         print(model)
 
 
     ### TRAINING
-    losses_train, losses_test = fpcup.nn.network.train(model, training_data, lossfunc, optimizer, testing_data=testing_data, n_epochs=args.number_epochs)
+    losses_train, losses_test = fpcup.nn.network.train(model, training_data, testing_data=testing_data, n_epochs=args.number_epochs)
 
 
     ### PLOT LOSS CURVES
