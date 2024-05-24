@@ -12,10 +12,6 @@ from torch import nn, optim, tensor, Tensor
 from torch.utils.data import DataLoader, Dataset, random_split
 
 import fpcup
-from fpcup.typing import PathOrStr
-
-from dataset import load_pcse_dataset
-from network import PCSEEmulator, device, train
 
 ### Parse command line arguments
 import argparse
@@ -40,7 +36,7 @@ if __name__ == "__main__":
 
     ### SETUP
     # Load data
-    training_dataset, testing_dataset, X_scaler, y_scaler = load_pcse_dataset(args.output_dir, frac_test=args.test_fraction)
+    training_dataset, testing_dataset, X_scaler, y_scaler = fpcup.nn.dataset.load_pcse_dataset(args.output_dir, frac_test=args.test_fraction)
     training_data = DataLoader(training_dataset, batch_size=args.batch_size, shuffle=True)
     testing_data = DataLoader(testing_dataset, batch_size=args.batch_size, shuffle=False)
 
@@ -49,12 +45,12 @@ if __name__ == "__main__":
         print(f"Batch size: {args.batch_size}")
 
     # Network
-    model = PCSEEmulator().to(device)
+    model = fpcup.nn.network.PCSEEmulator().to(fpcup.nn.network.device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
 
     ### TRAINING
-    losses_train, losses_test = train(model, training_data, lossfunc, optimizer, testing_data=testing_data, n_epochs=args.number_epochs)
+    losses_train, losses_test = fpcup.nn.network.train(model, training_data, lossfunc, optimizer, testing_data=testing_data, n_epochs=args.number_epochs)
 
 
     ### PLOT LOSS CURVES
