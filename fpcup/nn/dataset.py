@@ -93,8 +93,8 @@ class PCSEEnsembleDatasetSmall(Dataset):
 
         # Load data
         self.summary = load_combined_ensemble_summary(data_dir, pattern=pattern, save_if_generated=False, **kwargs)
-        add_input_columns(self.summary)
-        add_output_columns(self.summary)
+        preprocess_X(self.summary)
+        preprocess_y(self.summary)
         self.summary = self.summary[INPUTS + OUTPUTS]
 
     def __len__(self) -> int:
