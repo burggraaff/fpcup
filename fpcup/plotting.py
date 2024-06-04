@@ -576,7 +576,7 @@ def nn_scatter(y: pd.DataFrame, pred: pd.DataFrame, *,
                metrics: Optional[pd.DataFrame]=None,
                title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
-    Generate scatter plots of NN outputs vs the true values.
+    Generate scatter plots of NN predictions vs the true values.
     Optionally include a textbox with pre-calculated performance metrics.
     """
     # Setup
@@ -617,6 +617,50 @@ def nn_scatter(y: pd.DataFrame, pred: pd.DataFrame, *,
 
     fig.supxlabel("WOFOST value", fontweight="bold")
     fig.supylabel("NN prediction", fontweight="bold")
+    fig.suptitle(title)
+
+    # Save and close
+    if saveto is not None:
+        plt.savefig(saveto)
+    plt.close()
+
+
+def symmetric_lims(lims: tuple) -> tuple:
+    """
+    Given lims, make them symmetric.
+    e.g. (-5, 3) -> (-5, 5)  ;  (-2, 6) -> (-6, 6)
+    """
+    val = max(lims)
+    newlims = (-val, val)
+    return newlims
+
+
+def nn_histogram(y: pd.DataFrame, pred: pd.DataFrame, *,
+                 title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
+    """
+    Generate histograms of the absolute and relative residuals between NN predictions vs true values.
+    """
+    # Calculate differences and relative differences
+    diff = pred - y
+    reldiff = diff / y * 100
+
+    # Setup
+    fig, axs = plt.subplots(nrows=2, ncols=len(y.columns), figsize=(10, 5), sharey=True, layout="constrained", gridspec_kw={"hspace": 0.2})
+
+    # Plot histograms
+    _hist_kwargs = {"bins": 51, "density": False, "color": "black"}
+    diff.hist(ax=axs[0], **_hist_kwargs)
+    reldiff.hist(ax=axs[1], **_hist_kwargs)
+
+    # Labels, lims
+    for ax in axs[0]:
+        ax.set_xlabel(r"Absolute residual ($\hat{y} - y$)")
+    for ax in axs[1]:
+        ax.set_xlabel(r"Relative residual ($\hat{y}/y - 1$) [%]")
+
+    for ax in axs.ravel():
+        ax.set_xlim(*symmetric_lims(ax.get_xlim()))
+
     fig.suptitle(title)
 
     # Save and close

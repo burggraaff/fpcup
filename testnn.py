@@ -54,7 +54,10 @@ if __name__ == "__main__":
 
 
     ### PLOT LOSS CURVES
-    fpcup.plotting.plot_loss_curve(losses_train, losses_test=losses_test, title=tag, saveto=f"nn_loss_{tag}.pdf")
+    saveto_loss = args.results_dir / f"{tag}-losscurve.pdf"
+    fpcup.plotting.plot_loss_curve(losses_train, losses_test=losses_test, title=tag, saveto=saveto_loss)
+    if args.verbose:
+        print(f"Saved loss plot to {saveto_loss}")
 
 
     ### PERFORMANCE ASSESSMENT
@@ -67,7 +70,13 @@ if __name__ == "__main__":
     metrics = fpcup.stats.compare_predictions(y, pred)
 
     # Scatter plot
-    scatter_saveto = f"nn_comparison_{tag}.pdf"
-    fpcup.plotting.nn_scatter(y, pred, metrics=metrics, title=tag, saveto=scatter_saveto)
+    saveto_scatter = args.results_dir / f"{tag}-performance_scatter.pdf"
+    fpcup.plotting.nn_scatter(y, pred, metrics=metrics, title=tag, saveto=saveto_scatter)
     if args.verbose:
-        print(f"Saved scatter plot to {scatter_saveto}")
+        print(f"Saved scatter plot to {saveto_scatter}")
+
+    # Histogram plot
+    saveto_hist = args.results_dir / f"{tag}-performance_hist.pdf"
+    fpcup.plotting.nn_histogram(y, pred, title=tag, saveto=saveto_hist)
+    if args.verbose:
+        print(f"Saved scatter plot to {saveto_hist}")
