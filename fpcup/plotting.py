@@ -573,9 +573,11 @@ def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarra
 
 
 def nn_scatter(y: pd.DataFrame, pred: pd.DataFrame, *,
+               metrics: Optional[pd.DataFrame]=None,
                title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
     """
     Generate scatter plots of NN outputs vs the true values.
+    Optionally include a textbox with pre-calculated performance metrics.
     """
     # Setup
     fig, axs = plt.subplots(nrows=1, ncols=len(y.columns), figsize=(15, 5), layout="constrained")
@@ -590,6 +592,19 @@ def nn_scatter(y: pd.DataFrame, pred: pd.DataFrame, *,
         ax.axline((0, 0), slope=1, color="0.5", zorder=2)
         ax.grid(True, color="0.5", linestyle="--", zorder=2)
         ax.axis("equal")
+
+    # Metrics
+    if metrics is not None:
+        for ax, col in zip(axs, y.columns):
+            metrics_col = metrics[col]
+            # Format text
+            metrics_text = "\n".join([rf"$R^2 = {metrics_col.loc['R²']:.2f}$",
+                                      rf"MD = ${metrics_col.loc['MD']:+.1f}$",
+                                      rf"MAD = ${metrics_col.loc['MAD']:.1f}$",
+                                      rf"rMAD = {metrics_col.loc['relativeMAD']:.1%}",
+                                      ])
+
+            ax.text(0.95, 0.03, metrics_text, transform=ax.transAxes, horizontalalignment="right", verticalalignment="bottom", color="black", size=9, bbox={"facecolor": "white", "edgecolor": "black"})
 
     # Labels, lims
     for ax, col in zip(axs, y.columns):

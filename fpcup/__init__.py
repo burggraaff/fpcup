@@ -1,4 +1,4 @@
-from . import aggregate, constants, geo, io, plotting, settings
+from . import aggregate, constants, geo, io, plotting, settings, stats
 from . import agro, crop, site, soil, weather
 from .model import run_pcse_single
 from .nn import dataset, network

@@ -58,11 +58,16 @@ if __name__ == "__main__":
 
 
     ### PERFORMANCE ASSESSMENT
+    # Convert outputs to DataFrames
     y = fpcup.nn.dataset.outputs_to_dataframe(testing_dataset.tensors[1], y_scaler=y_scaler)
     pred = fpcup.nn.network.predict(model, testing_data)
     pred = fpcup.nn.dataset.outputs_to_dataframe(pred, y_scaler=y_scaler)
 
+    # Calculate performance metrics
+    metrics = fpcup.stats.compare_predictions(y, pred)
+
+    # Scatter plot
     scatter_saveto = f"nn_comparison_{tag}.pdf"
-    fpcup.plotting.nn_scatter(y, pred, title=tag, saveto=scatter_saveto)
+    fpcup.plotting.nn_scatter(y, pred, metrics=metrics, title=tag, saveto=scatter_saveto)
     if args.verbose:
         print(f"Saved scatter plot to {scatter_saveto}")
