@@ -10,6 +10,7 @@ import torch
 from torch import Tensor, tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 
+from ..crop import CROP2ABBREVIATION
 from ..io import load_combined_ensemble_summary
 from ..model import InputSummary, Summary
 from ..typing import Optional, PathOrStr
@@ -18,10 +19,11 @@ from ..typing import Optional, PathOrStr
 ### CONSTANTS
 # Temporary: keep it simple
 CROP = "barley"
+CROP_ABBREVIATION = CROP2ABBREVIATION[CROP]
 VARIETY = "Spring_barley_301"
 SOILTYPE = "ec3"
-pattern = f"*_{SOILTYPE}_B*"
-# pattern = f"*_B*"
+pattern = f"*_{SOILTYPE}_{CROP_ABBREVIATION}*"
+# pattern = f"*_{CROP_ABBREVIATION}*"
 pattern_suffix = pattern + ".wsum"
 
 
