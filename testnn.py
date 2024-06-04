@@ -62,4 +62,7 @@ if __name__ == "__main__":
     pred = fpcup.nn.network.predict(model, testing_data)
     pred = fpcup.nn.dataset.outputs_to_dataframe(pred, y_scaler=y_scaler)
 
-    fpcup.plotting.nn_scatter(y, pred, title=tag, saveto=f"nn_comparison_{tag}.pdf")
+    scatter_saveto = f"nn_comparison_{tag}.pdf"
+    fpcup.plotting.nn_scatter(y, pred, title=tag, saveto=scatter_saveto)
+    if args.verbose:
+        print(f"Saved scatter plot to {scatter_saveto}")

@@ -582,13 +582,13 @@ def nn_scatter(y: pd.DataFrame, pred: pd.DataFrame, *,
 
     # Plot individual parameters
     for ax, col in zip(axs, y.columns):
-        ax.scatter(y[col], pred[col], s=4, color="0.5", alpha=0.5, rasterized=True)
+        ax.scatter(y[col], pred[col], s=4, color="black", alpha=0.5, rasterized=True, zorder=1)
         # ax.hexbin(y[col], pred[col], gridsize=25, mincnt=1, cmap="cividis")
 
     # Grid
     for ax in axs:
-        ax.axline((0, 0), slope=1, color="black")
-        ax.grid(True, color="0.5", linestyle="--")
+        ax.axline((0, 0), slope=1, color="0.5", zorder=2)
+        ax.grid(True, color="0.5", linestyle="--", zorder=2)
         ax.axis("equal")
 
     # Labels, lims
