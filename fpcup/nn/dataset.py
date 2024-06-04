@@ -21,12 +21,13 @@ CROP = "barley"
 VARIETY = "Spring_barley_301"
 SOILTYPE = "ec3"
 pattern = f"*_{SOILTYPE}_B*"
+# pattern = f"*_B*"
 pattern_suffix = pattern + ".wsum"
 
 
 ### TRANSFORM PCSE INPUTS/OUTPUTS TO NN SPECIFICATIONS
 INPUTS = ["latitude", "longitude", "WAV", "RDMSOL", "sowyear", "sowdoy"]
-OUTPUTS = ["LAIMAX", "TAGP", "TWSO", "matdoy"]
+OUTPUTS = ["LAIMAX", "TAGP", "TWSO", "tmat"]
 # Preprocess:
     # DOS -> year, doy
 
@@ -40,7 +41,7 @@ def get_year(date) -> int:
 def get_doy(date) -> int:
     return date.day_of_year
 
-def add_input_columns(summary: pd.DataFrame) -> None:
+def preprocess_X(summary: pd.DataFrame) -> None:
     """
     Convert PCSE inputs (from rundata) to neural network variables.
     """
@@ -50,12 +51,14 @@ def add_input_columns(summary: pd.DataFrame) -> None:
 # Postprocess:
     # DOM -> lifetime
 
-def add_output_columns(summary: pd.DataFrame) -> None:
+def preprocess_y(summary: pd.DataFrame) -> None:
     """
     Convert PCSE outputs (from summary) to neural network variables.
     """
-    summary["matyear"] = summary["DOM"].apply(get_year)
-    summary["matdoy"] = summary["DOM"].apply(get_doy)
+    # Maturing time
+    maturingtime = summary["DOM"] - summary["DOS"]
+    maturingtime = maturingtime.dt.days
+    summary["tmat"] = maturingtime
 
 
 ### SAMPLING FUNCTIONS
@@ -171,9 +174,10 @@ def load_pcse_dataset(data_dir: PathOrStr, *,
     # Load data
     summary = load_combined_ensemble_summary(data_dir, pattern=pattern, save_if_generated=False, **kwargs)
 
-    # Add columns
-    add_input_columns(summary)
-    add_output_columns(summary)
+    # Pre-process inputs, outputs
+    # (in-place)
+    preprocess_X(summary)
+    preprocess_y(summary)
 
     # Split into inputs / outputs
     X, y = summary[INPUTS], summary[OUTPUTS]
