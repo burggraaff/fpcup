@@ -630,7 +630,7 @@ def symmetric_lims(lims: tuple) -> tuple:
     Given lims, make them symmetric.
     e.g. (-5, 3) -> (-5, 5)  ;  (-2, 6) -> (-6, 6)
     """
-    val = max(lims)
+    val = np.abs(lims).max()
     newlims = (-val, val)
     return newlims
 
