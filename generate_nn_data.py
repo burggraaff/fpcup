@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jun  5 16:35:23 2024
-
-@author: olieb
-"""
-
 """
 Run a PCSE ensemble for different values of input parameters to generate training data for a neural network.
 One crop (out of barley/maize/wheat) must be specified.
@@ -13,9 +6,6 @@ A specified number of sites (-s), across the Netherlands, are tested.
 
 Example:
     python generate_nn_data.py barley -s 100 -d 15 -y 5 -v
-
-To simulate only multiple sowing dates, simply leave out the other parameters, e.g.:
-    python wofost_ensemble_parameters.py -v -c barley -s 16 -d
 """
 import fpcup
 
