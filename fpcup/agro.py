@@ -1,15 +1,10 @@
 """
-Agromanagement-related stuff: load data etc
+Agromanagement calendar templates.
 """
 import datetime as dt
-from functools import cache
-from itertools import product
 import yaml
 
-from tqdm import tqdm
-
 from .tools import indent2
-from .typing import Callable
 
 
 ### CONVENIENCE CLASSES FOR AGROMANAGEMENT CALENDARS

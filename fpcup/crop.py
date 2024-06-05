@@ -4,6 +4,7 @@ Crop-related stuff: load data etc
 from datetime import date, datetime
 from itertools import product
 
+import numpy as np
 from tqdm import tqdm
 
 from pcse.fileinput import CABOFileReader, YAMLCropDataProvider
@@ -98,10 +99,32 @@ class Crop:
 
         return calendars
 
+    def agromanagement_N_sowingdates(self, year: int | Iterable[int], N: int, *,
+                                     progressbar=True, leave_progressbar=False) -> list[AgromanagementDataSingleCrop]:
+        """
+        Generate agromanagement templates for a given number of sowing dates in the given years, for this crop.
+        The sowing dates are evenly sampled across the possible range (barring rounding).
+        If N > the total number of possible sowing dates, the whole range is returned.
+        """
+        # Check if N > Nmax
+        Nmax = len(self.sowdoys)
+        N = min(N, Nmax)
+
+        # Generate dates
+        doys = np.linspace(self.sowdoys[0], self.sowdoys[-1], N, dtype=int)
+        doys = np.unique(doys)  # Remove duplicates
+        dates = generate_sowingdates(year, doys)
+
+        dates = tqdm(dates, desc="Loading agromanagement", unit="calendar", disable=not progressbar, leave=leave_progressbar)
+
+        calendars = [self.agromanagement(d) for d in dates]
+        return calendars
+
+
     def agromanagement_all_sowingdates(self, year: int | Iterable[int], *,
                                        progressbar=True, leave_progressbar=False) -> list[AgromanagementDataSingleCrop]:
         """
-        Generate agromanagement semplates for all sowing dates in the given years, for this crop.
+        Generate agromanagement templates for all sowing dates in the given years, for this crop.
         """
         dates = self.all_sowingdates(year)
         dates = tqdm(dates, desc="Loading agromanagement", unit="calendar", disable=not progressbar, leave=leave_progressbar)

@@ -3,7 +3,6 @@ Classes and functions for dealing with PCSE input and output parameters in a sta
 Includes a non-comprehensive list of parameters, sorted by subject and input/output status.
 """
 from dataclasses import dataclass
-from itertools import product
 
 import numpy as np
 
