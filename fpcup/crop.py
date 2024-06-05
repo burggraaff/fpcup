@@ -111,15 +111,18 @@ class Crop:
 
 
 # Predefined crops
-SpringBarley = Crop("barley", "Spring_barley_301", firstdos=40, lastdos=86, max_duration=240)  # From the WOFOST crop parameter repository: barley.yaml
+# Sources: see Google Doc
+SpringBarley = Crop("barley", "Spring_barley_301", firstdos=18, lastdos=125, max_duration=240)
+WinterBarley = Crop("barley", "Spring_barley_301", firstdos=257, lastdos=304, max_duration=240)
 GreenMaize = Crop("maize", "Grain_maize_201", firstdos=115, lastdos=122, max_duration=210)  # From the WOFOST crop parameter repository: maize.yaml
-WinterWheat = Crop("wheat", "Winter_wheat_102", firstdos=244, lastdos=334, max_duration=365)  # From the WOFOST crop parameter repository: wheat.yaml
+SpringWheat = Crop("wheat", "Winter_wheat_102", firstdos=14, lastdos=104, max_duration=365)
+WinterWheat = Crop("wheat", "Winter_wheat_102", firstdos=244, lastdos=365, max_duration=365)
 Sorghum = Crop("sorghum", "Sorghum_VanHeemst_1988", firstdos=130, lastdos=140, max_duration=250)  # From https://edepot.wur.nl/427964
 Soybean = Crop("soybean", "Soybean_901", firstdos=118, lastdos=119, max_duration=190)  # From the WOFOST crop parameter repository: soybean.yaml
 
 crops = {"barley": SpringBarley,
          "barley (spring)": SpringBarley,
-         "barley (winter)": SpringBarley,
+         "barley (winter)": WinterBarley,
          "maize": GreenMaize,
          "maize (green)": GreenMaize,
          "maize (grain)": GreenMaize,
@@ -130,7 +133,7 @@ crops = {"barley": SpringBarley,
          "sorghum": Sorghum,
          "soybean": Soybean,
          "wheat": WinterWheat,
-         "wheat (spring)": WinterWheat,
+         "wheat (spring)": SpringWheat,
          "wheat (winter)": WinterWheat,}
 
 def select_crop(name: str) -> Crop:
