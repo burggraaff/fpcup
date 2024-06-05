@@ -6,6 +6,11 @@ A specified number of sites (-s), across the Netherlands, are tested.
 
 Example:
     python generate_nn_data.py barley -s 100 -d 15 -y 5 -v
+
+TO DO:
+    - Skip if already done
+    - Better distribution of sites across NL and neighbours
+    - Split parameter space in two? Core set with many parameter samples in a few sites; wider set with randomly samples parameters in many sites.
 """
 import fpcup
 
@@ -13,7 +18,6 @@ import fpcup
 import argparse
 parser = argparse.ArgumentParser(description="Run a PCSE ensemble for different values of input parameters to determine their effect.")
 parser.add_argument("crop", help="crop to run simulations on", default=None)
-# parser.add_argument("-n", "--number_parameters", help="number of values per parameter, across the range; note the exponential increase in runs when doing multiple parameters", type=int, default=25)
 parser.add_argument("-d", "--number_sowdates", help="number of sowing dates, across the range", type=int, default=10)
 parser.add_argument("-y", "--number_years", help="number of years, counting back from 2023", type=int, default=5, choices=range(1, 31))
 parser.add_argument("-s", "--number_sites", help="number of sites", type=int, default=100)
