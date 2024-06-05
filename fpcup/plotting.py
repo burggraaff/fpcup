@@ -643,6 +643,7 @@ def nn_histogram(y: pd.DataFrame, pred: pd.DataFrame, *,
     # Calculate differences and relative differences
     diff = pred - y
     reldiff = diff / y * 100
+    reldiff.replace([-np.inf, np.inf], np.nan, inplace=True)  # Mask infinities
 
     # Setup
     fig, axs = plt.subplots(nrows=2, ncols=len(y.columns), figsize=(10, 5), sharey=True, layout="constrained", gridspec_kw={"hspace": 0.2})
