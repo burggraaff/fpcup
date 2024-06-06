@@ -96,7 +96,3 @@ if __name__ == "__main__":
     ### RUN PCSE
     model_statuses = fpcup.model.run_pcse_site_ensemble(coords, variables, args.output_dir, leave_progressbar=args.verbose)
     failed_runs = fpcup.model.process_model_statuses(model_statuses, verbose=args.verbose)
-
-    # Save an ensemble summary
-    if args.save_ensemble:
-        fpcup.io.save_ensemble_summary(args.output_dir, verbose=args.verbose)
