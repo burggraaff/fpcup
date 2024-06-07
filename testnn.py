@@ -28,13 +28,22 @@ args = parser.parse_args()
 ### Constants
 tag = args.output_dir.stem
 
+# Crop information
+CROP_NAME = args.output_dir.stem.split("_")[-1]
+CROP = fpcup.crop.select_crop(CROP_NAME)
+SOILTYPE = "ec3"
+pattern = f"*_{SOILTYPE}_{CROP.abbreviation}*"
+
+
 ### This gets executed only when the script is run normally; not by multiprocessing.
 if __name__ == "__main__":
     fpcup.multiprocessing.freeze_support()
 
     ### SETUP
     # Load data
-    training_dataset, testing_dataset, X_scaler, y_scaler = fpcup.nn.dataset.load_pcse_dataset(args.output_dir, frac_test=args.test_fraction)
+    summary_train, summary_test = fpcup.nn.dataset.load_pcse_summaries(args.output_dir, pattern=pattern, frac_test=args.test_fraction, leave_progressbar=args.verbose)
+
+    training_dataset, testing_dataset, X_scaler, y_scaler = fpcup.nn.dataset.summaries_to_datasets(summary_train, summary_test)
     training_data = DataLoader(training_dataset, batch_size=args.batch_size, shuffle=True)
     testing_data = DataLoader(testing_dataset, batch_size=args.batch_size, shuffle=False)
 

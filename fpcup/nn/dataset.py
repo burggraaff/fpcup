@@ -13,18 +13,14 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset
 from ..crop import CROP2ABBREVIATION
 from ..io import load_combined_ensemble_summary
 from ..model import InputSummary, Summary
+from ..tools import roundrobin
 from ..typing import Optional, PathOrStr
 
 
 ### CONSTANTS
 # Temporary: keep it simple
-CROP = "barley"
-CROP_ABBREVIATION = CROP2ABBREVIATION[CROP]
-VARIETY = "Spring_barley_301"
-SOILTYPE = "ec3"
-pattern = f"*_{SOILTYPE}_{CROP_ABBREVIATION}*"
 # pattern = f"*_{CROP_ABBREVIATION}*"
-pattern_suffix = pattern + ".wsum"
+# pattern_suffix = pattern + ".wsum"
 
 
 ### TRANSFORM PCSE INPUTS/OUTPUTS TO NN SPECIFICATIONS
@@ -64,56 +60,25 @@ def preprocess_y(summary: pd.DataFrame) -> None:
 
 
 ### SAMPLING FUNCTIONS
-def mcar(X: pd.DataFrame, y: pd.DataFrame, *,
+def mcar(X: pd.DataFrame, *args: tuple[pd.DataFrame],
          frac_test: float=0.5) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Missing Completely At Random.
     Temporarily copied over from imputation project.
     """
+    # Sample X (main dataframe)
     X_train = X.sample(frac=1-frac_test)
     X_test = X.drop(index=X_train.index)
-    y_train = y.loc[X_train.index]
-    y_test = y.loc[X_test.index]
 
-    return X_train, X_test, y_train, y_test
+    # Sample additional dataframes, if provided
+    args_train = [y.loc[X_train.index] for y in args]
+    args_test = [y.loc[X_test.index] for y in args]
+    args_mixed = list(roundrobin(args_train, args_test))
+
+    return X_train, X_test, *args_mixed
 
 
 ### DATASET CLASSES
-class PCSEEnsembleDatasetSmall(Dataset):
-    """
-    Handles the loading of PCSE ensemble input/output files that fit into a single file each.
-    Useful for relatively small datasets.
-    """
-    ### Mandatory functions
-    def __init__(self, data_dir: PathOrStr, *, transform=None, target_transform=None, **kwargs):
-        # Basic setup
-        self.data_dir = data_dir
-        self.transform = transform
-        self.target_transform = target_transform
-
-        # Load data
-        self.summary = load_combined_ensemble_summary(data_dir, pattern=pattern, save_if_generated=False, **kwargs)
-        preprocess_X(self.summary)
-        preprocess_y(self.summary)
-        self.summary = self.summary[INPUTS + OUTPUTS]
-
-    def __len__(self) -> int:
-        return len(self.summary)
-
-    def __getitem__(self, i: int) -> tuple[Tensor, Tensor]:
-        row = self.summary.iloc[i]
-        input_data = row[INPUTS].to_list()
-        summary_data = row[OUTPUTS].to_list()
-
-        return tensor(input_data, dtype=torch.float32), tensor(summary_data, dtype=torch.float32)
-
-
-    ### Output
-    def __repr__(self) -> str:
-        example_input, example_output = self[0]
-        return f"{self.__class__.__name__}: length {len(self)}, input length {len(example_input)}, output length {len(example_output)}"
-
-
 class PCSEEnsembleDataset(Dataset):
     """
     Handles the loading of PCSE ensemble input/output files in bulk.
@@ -167,25 +132,35 @@ class PCSEEnsembleDataset(Dataset):
 
 
 ### DATA I/O
-def load_pcse_dataset(data_dir: PathOrStr, *,
-                      frac_test: float=0.2,
-                      **kwargs) -> tuple[DataLoader, DataLoader]:
+def load_pcse_summaries(data_dir: PathOrStr, *,
+                        frac_test: float=0.2,
+                        **kwargs) -> tuple[Summary, Summary]:
     """
-    From a given folder, load all PCSE input and output files, collate them, pre-process them, split them into training and testing, and re-scale them.
+    From a given folder, load all PCSE input and output files, collate them, pre-process them, and split them into training/testing data.
     """
     # Load data
-    summary = load_combined_ensemble_summary(data_dir, pattern=pattern, save_if_generated=False, **kwargs)
+    summary = load_combined_ensemble_summary(data_dir, save_if_generated=False, **kwargs)
 
     # Pre-process inputs, outputs
     # (in-place)
     preprocess_X(summary)
     preprocess_y(summary)
 
-    # Split into inputs / outputs
-    X, y = summary[INPUTS], summary[OUTPUTS]
+    # Split data
+    summary_train, summary_test = mcar(summary, frac_test=frac_test)
 
-    # Split into train/test
-    X_train, X_test, y_train, y_test = mcar(X, y, frac_test=frac_test)
+    return summary_train, summary_test
+
+
+
+def summaries_to_datasets(summary_train: Summary, summary_test: Summary, *,
+                          frac_test: float=0.2,
+                          **kwargs) -> tuple[DataLoader, DataLoader]:
+    """
+    From a given folder, load all PCSE input and output files, collate them, pre-process them, split them into training and testing, and re-scale them.
+    """
+    # Split into inputs / outputs
+    X_train, X_test, y_train, y_test = summary_train[INPUTS], summary_train[OUTPUTS], summary_test[INPUTS], summary_test[OUTPUTS]
 
     # Convert to numpy float32
     X_train, X_test, y_train, y_test = [df.to_numpy(dtype=np.float32) for df in (X_train, X_test, y_train, y_test)]
