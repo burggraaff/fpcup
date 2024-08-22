@@ -9,6 +9,8 @@ import geopandas as gpd
 gpd.options.io_engine = "pyogrio"
 import h3pandas
 import numpy as np
+import pandas as pd
+pd.options.mode.chained_assignment = None
 from pandas import DataFrame, Series
 from shapely import Geometry, Point, Polygon
 from tqdm import tqdm

@@ -26,7 +26,7 @@ if args.verbose:
 # Remove unnecessary columns and translate to English
 brp.drop(columns=["jaar", "status"], inplace=True)
 brp.rename({"gewas": "crop", "gewascode": "crop_code"}, axis=1, inplace=True)
-brp["category"].replace(fpcup.site.brp_categories_NL2EN, inplace=True)
+brp.replace({"category": fpcup.site.brp_categories_NL2EN}, inplace=True)
 
 # Add province information
 fpcup.geo.add_provinces(brp)
@@ -54,7 +54,7 @@ if args.plots:
 
 # Select fpcup crops
 brp_fpcup = brp_agro.loc[brp_agro["crop"].isin(fpcup.crop.brp_crops_NL2EN)]
-brp_fpcup["crop"].replace(fpcup.crop.brp_crops_NL2EN, inplace=True)
+brp_fpcup.replace({"crop": fpcup.crop.brp_crops_NL2EN}, inplace=True)
 if args.verbose:
     print(f"Reduced file to crops listed in the FPCUP/BRP dictionary -- {len(brp_fpcup)} entries")
 
