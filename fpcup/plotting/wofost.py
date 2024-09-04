@@ -1,209 +1,23 @@
 """
-Functions for plotting data and results
+Functions for plotting WOFOST input data and outputs.
 """
 import datetime as dt
 from functools import partial
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from tqdm import tqdm
 
-from matplotlib import pyplot as plt, dates as mdates, patches as mpatches, patheffects as mpe, ticker as mticker
-from matplotlib import colormaps, rcParams
+from matplotlib import pyplot as plt, dates as mdates
 
-rcParams.update({"axes.grid": True,
-                 "figure.dpi": 600, "savefig.dpi": 600,
-                 "grid.linestyle": "--",
-                 "hist.bins": 15,
-                 "image.cmap": "cividis",
-                 "legend.edgecolor": "black", "legend.framealpha": 1,
-                 })
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from ._brp_dictionary import brp_categories_colours, brp_crops_colours
-from .aggregate import KEYS_AGGREGATE, aggregate_h3
-from .constants import CRS_AMERSFOORT, WGS84
-from .geo import Province, NETHERLANDS, is_single_province, provinces
-from .model import InputSummary, Summary, TimeSeries
-from .parameters import all_parameters, pcse_inputs, pcse_outputs, pcse_summary_outputs
-from .tools import make_iterable
-from .typing import Aggregator, Callable, Iterable, Optional, PathOrStr, RealNumber, StringDict
-
-### CONSTANTS
-# Raster/Vector switches
-_RASTERIZE_LIMIT_LINES = 1000
-_RASTERIZE_LIMIT_GEO = 250  # Plot geo data in raster format if there are more than this number
-_RASTERIZE_GEO = lambda data: (len(data) > _RASTERIZE_LIMIT_GEO)
-
-KEYS_AGGREGATE_PLOT = ("n", "area", *KEYS_AGGREGATE)
-
-# Graphical defaults
-cividis_discrete = colormaps["cividis"].resampled(10)
-default_outline = {"color": "black", "linewidth": 0.5}
-
-
-### GEOSPATIAL PLOTS
-def _configure_map_panels(axs: plt.Axes | Iterable[plt.Axes],
-                          province: Province | Iterable[Province]=NETHERLANDS, **kwargs) -> None:
-    """
-    Apply default settings to map panels.
-    **kwargs are passed to `Province.plot_boundary` - e.g. coarse, crs, ...
-    """
-    axs = make_iterable(axs)
-    provinces = make_iterable(province)
-    outline_kw = {**default_outline, **kwargs}
-    for ax in axs:
-        # Country/Province outline(s)
-        for p in provinces:
-            p.plot_boundary(ax=ax, **outline_kw)
-
-        # Axis settings
-        ax.set_axis_off()
-        ax.axis("equal")
-
-
-def _column_to_title(column: str) -> str:
-    """
-    Clean up a column name (e.g. "crop_species") so it can be used as a title (e.g. "Crop species").
-    """
-    return column.capitalize().replace("_", " ")
-
-
-def brp_histogram(data: gpd.GeoDataFrame, column: str, *,
-                  figsize=(3, 5), usexticks=True, title: Optional[str]=None, top5=True, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
-    """
-    Make a bar plot showing the distribution of plots/crops in BRP data.
-    """
-    # Determine the number of plots and total area per group
-    counts = data[column].value_counts()  # Number of plots per group
-    areas = data.groupby(column)["area"].sum().reindex_like(counts)  # Area per group, unit [ha]
-
-    # Plot the data
-    fig, axs = plt.subplots(nrows=2, sharex=True, figsize=figsize, gridspec_kw={"hspace": 0.1})
-    for data, ax in zip([counts, areas], axs):
-        data.plot.bar(ax=ax, color='w', edgecolor='k', hatch="//", **kwargs)
-
-    # Adjust ticks on x axis
-    axs[0].tick_params(axis="x", bottom=False, labelbottom=False)
-    if usexticks:
-        # There is no cleaner way to do this because tick_params does not support horizontalalignment
-        xticklabels = [label.get_text().capitalize() for label in axs[1].get_xticklabels()]
-        axs[1].set_xticklabels(xticklabels, rotation=45, horizontalalignment="right")
-    else:
-        axs[1].tick_params(axis="x", bottom=False, labelbottom=False)
-
-    # Panel settings
-    for ax in axs:
-        ax.grid(False)
-
-        if not "log" in kwargs:
-            # Prevent scientific notation
-            ax.ticklabel_format(axis="y", style="plain")
-
-            # Set ymin explicitly
-            ax.set_ylim(ymin=0)
-
-    # Adjust labels
-    axs[0].set_title(title)
-    axs[0].set_ylabel("Number of plots")
-    axs[1].set_xlabel(_column_to_title(column))
-    axs[1].set_ylabel("Total area [ha]")
-    fig.align_ylabels()
-
-    # Add the top 5 list in the corner
-    if top5:
-        float2str = lambda x: f"{x:.0f}"
-        top5_text = [f"Top 5:\n{df.head().to_string(header=False, float_format=float2str)}" for df in (counts, areas)]
-        for ax, text in zip(axs, top5_text):
-            ax.text(0.99, 0.98, text, transform=ax.transAxes, horizontalalignment="right", verticalalignment="top")
-
-    if saveto:
-        plt.savefig(saveto, bbox_inches="tight")
-    else:
-        plt.show()
-    plt.close()
-
-
-def brp_map(data: gpd.GeoDataFrame, column: str, *,
-            province: Province=NETHERLANDS, colour_dict: Optional[StringDict]=None,
-            figsize=(10, 10), title: Optional[str]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
-    """
-    Create a map of BRP polygons in the given column.
-    If `province` is provided, only data within that province will be plotted, with the corresponding outline.
-    """
-    # Select province data if desired
-    SINGLE_PROVINCE = is_single_province(province)
-    if SINGLE_PROVINCE:
-        data = province.select_entries_in_province(data)
-
-    # Create figure
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
-    rasterized = _RASTERIZE_GEO(data)
-
-    # If colours are specified, plot those instead of the raw data, and add a legend
-    if colour_dict:
-        colours = data[column].map(colour_dict)
-        data.plot.geo(ax=ax, color=colours, rasterized=rasterized, **kwargs)
-
-        # Generate dummy patches with the same colour mapping and add those to the legend
-        colour_patches = [mpatches.Patch(color=colour, label=label.capitalize()) for label, colour in colour_dict.items() if label in data[column].unique()]
-        ax.legend(handles=colour_patches, loc="lower right", fontsize=12, title=_column_to_title(column))
-
-    # If colours are not specified, simply plot the data and let geopandas handle the colours
-    else:
-        data.plot.geo(ax=ax, column=column, rasterized=rasterized, **kwargs)
-
-    # Panel settings
-    _configure_map_panels(ax, province)
-    ax.set_title(title)
-
-    if saveto:
-        plt.savefig(saveto, bbox_inches="tight")
-    else:
-        plt.show()
-    plt.close()
-
-
-def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,
-                       province: Province=NETHERLANDS, crops: Iterable[str]=brp_crops_colours.keys(),
-                       figsize=(14, 3.5), shape=(1, 5), title: Optional[str]=None, saveto: Optional[PathOrStr]=None, **kwargs) -> None:
-    """
-    Create a map of BRP polygons, with one panel per crop species.
-    Shape is (nrows, ncols).
-    """
-    # Select province data if desired
-    SINGLE_PROVINCE = is_single_province(province)
-    if SINGLE_PROVINCE:
-        data = province.select_entries_in_province(data)
-
-    # Create figure
-    fig, axs = plt.subplots(*shape, figsize=figsize)
-
-    # Plot each crop into its own panel
-    for crop, ax in zip(crops, axs.ravel()):
-        # Plot the plots
-        data_here = data.loc[data[column] == crop]
-        number_here = len(data_here)
-        if number_here > 0:  # Only plot if there are actually plots for this crop
-            rasterized = _RASTERIZE_GEO(data_here)
-            data_here.plot(ax=ax, color="black", rasterized=rasterized, **kwargs)
-
-        # Panel parameters
-        colour = brp_crops_colours[crop]
-        ax.set_title(f"{crop.title()} ({number_here})", color=colour)
-
-    # Panel settings
-    _configure_map_panels(axs.ravel(), province, linewidth=0.2)
-    fig.suptitle(title)
-
-    if saveto:
-        plt.savefig(saveto, bbox_inches="tight")
-    else:
-        plt.show()
-    plt.close()
+from .common import _RASTERIZE_LIMIT_LINES, _RASTERIZE_GEO, KEYS_AGGREGATE_PLOT, cividis_discrete, make_axes_locatable
+from .brp import _configure_map_panels
+from ..aggregate import KEYS_AGGREGATE, aggregate_h3
+from ..geo import Province, NETHERLANDS, provinces
+from ..model import InputSummary, Summary
+from ..parameters import pcse_outputs
+from ..typing import Iterable, Optional, PathOrStr, RealNumber
 
 
 def plot_wofost_input_summary(summary: InputSummary | Summary, *,
@@ -292,7 +106,7 @@ def _numerical_or_date_bins(column: pd.Series) -> int | pd.DatetimeIndex:
     if is_datetime(column):
         return pd.date_range(column.min() - pd.Timedelta(hours=12), column.max() + pd.Timedelta(hours=12))
     else:
-        return rcParams["hist.bins"]
+        return plt.rcParams["hist.bins"]
 
 
 def _configure_histogram_datetime(ax: plt.Axes) -> None:
@@ -452,7 +266,7 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLO
     if aggregate:
         data_geo = aggregate_h3(summary, province=province, weightby=weights, **aggregate_kwds)
         rasterized = True
-        dpi = rcParams["savefig.dpi"]
+        dpi = plt.rcParams["savefig.dpi"]
     else:
         data_geo = summary
         rasterized = _RASTERIZE_GEO(summary)
@@ -475,196 +289,3 @@ def plot_wofost_summary(summary: Summary, keys: Iterable[str]=KEYS_AGGREGATE_PLO
 
 
 plot_wofost_summary_byprovince = partial(wofost_summary_geo, rasterized=True, province=provinces.values(), use_coarse=True)
-
-
-### NEURAL NETWORKS
-def weighted_mean_loss(loss_per_batch: np.ndarray) -> np.ndarray:
-    """
-    Return the weighted mean loss per epoch, weighted with a sawtooth.
-    """
-    # Check dimensionality
-    INPUT_IS_1D = (loss_per_batch.ndim == 1)
-    if INPUT_IS_1D:
-        loss_per_batch = loss_per_batch[np.newaxis, :]
-
-    # Generate sawtooth
-    n_batches = loss_per_batch.shape[1]
-    sawtooth = np.arange(n_batches) + 1
-
-    # Weighted mean
-    loss_per_epoch = np.average(loss_per_batch, weights=sawtooth, axis=1)
-
-    # Return 1D if the input was 1D
-    if INPUT_IS_1D:
-        loss_per_epoch = loss_per_epoch[0]
-
-    return loss_per_epoch
-
-
-c_train = "#4477AA"
-c_test = "#CCBB44"
-pe_epoch = [mpe.Stroke(linewidth=4, foreground="black"),
-            mpe.Normal()]
-def plot_loss_curve(losses_train: np.ndarray, *, losses_test: Optional[np.ndarray]=None,
-                    title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
-    """
-    Plot the loss curve per batch and per epoch.
-    """
-    # Constants
-    n_epochs, n_batches = losses_train.shape
-    epochs = np.arange(n_epochs + 1)
-    batches = np.arange(losses_train.size) + 1
-
-    # Training data: get loss per batch and per epoch
-    loss_initial = [losses_train[0, 0]]
-    losses_train_epoch = weighted_mean_loss(losses_train)
-    losses_train_epoch = np.concatenate([loss_initial, losses_train_epoch])
-
-    losses_train_batch = losses_train.ravel()
-
-    # Testing data: dummy loss at epoch 0
-    losses_test = np.insert(losses_test, 0, np.nan)
-
-    # Variables for limits etc.
-    if losses_test is not None:
-        maxloss = np.nanmax([np.nanmax(losses_train), np.nanmax(losses_test)])
-        minloss = np.nanmin([np.nanmin(losses_train), np.nanmin(losses_test)])
-    else:
-        maxloss = np.nanmax(losses_train)
-        minloss = np.nanmin(losses_train)
-
-    # Figure setup
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 5), layout="constrained")
-
-    # Plot training loss per batch
-    ax.plot(batches, losses_train_batch, color=c_train, zorder=0)
-
-    ax.set_xlim(0, len(batches))
-    ax.set_xlabel("Batch", color=c_train)
-    ax.set_ylabel("Loss")
-    ax.set_yscale("log")
-    ax.set_ylim(minloss/1.05, maxloss*1.05)
-    ax.grid(True, axis="y", ls="--")
-    ax.grid(False, axis="x")
-
-    # Plot training/testing loss per epoch
-    ax2 = ax.twiny()
-    ax2.plot(epochs, losses_train_epoch, color=c_train, path_effects=pe_epoch, label="Train", zorder=1)
-    ax2.plot(epochs, losses_test, color=c_test, path_effects=pe_epoch, label="Test", zorder=1)
-
-    ax2.set_xlim(0, n_epochs)
-    ax2.set_xlabel("Epoch")
-    ax2.grid(True, ls="--")
-    ax2.legend(loc="best")
-
-    # Switch x axes
-    ax.xaxis.set_ticks_position("top")
-    ax.xaxis.set_label_position("top")
-    ax2.xaxis.set_ticks_position("bottom")
-    ax2.xaxis.set_label_position("bottom")
-
-    # Final settings
-    fig.suptitle(title)
-
-    # Save and close
-    if saveto is not None:
-        plt.savefig(saveto, bbox_inches="tight")
-    plt.close()
-
-
-def nn_scatter(y: pd.DataFrame, pred: pd.DataFrame, *,
-               metrics: Optional[pd.DataFrame]=None,
-               title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
-    """
-    Generate scatter plots of NN predictions vs the true values.
-    Optionally include a textbox with pre-calculated performance metrics.
-    """
-    # Setup
-    fig, axs = plt.subplots(nrows=1, ncols=len(y.columns), figsize=(15, 5), layout="constrained")
-
-    # Plot individual parameters
-    for ax, col in zip(axs, y.columns):
-        ax.scatter(y[col], pred[col], s=4, color="black", alpha=0.5, rasterized=True, zorder=1)
-        # ax.hexbin(y[col], pred[col], gridsize=25, mincnt=1, cmap="cividis")
-
-    # Grid
-    for ax in axs:
-        ax.axline((0, 0), slope=1, color="0.5", zorder=2)
-        ax.grid(True, color="0.5", linestyle="--", zorder=2)
-        ax.axis("equal")
-
-    # Metrics
-    if metrics is not None:
-        for ax, col in zip(axs, y.columns):
-            metrics_col = metrics[col]
-            # Format text
-            metrics_text = "\n".join([rf"$R^2 = {metrics_col.loc['R²']:.2f}$",
-                                      rf"MD = ${metrics_col.loc['MD']:+.1f}$",
-                                      rf"MAD = ${metrics_col.loc['MAD']:.1f}$",
-                                      rf"rMAD = {metrics_col.loc['relativeMAD']:.1%}",
-                                      ])
-
-            ax.text(0.95, 0.03, metrics_text, transform=ax.transAxes, horizontalalignment="right", verticalalignment="bottom", color="black", size=9, bbox={"facecolor": "white", "edgecolor": "black"})
-
-    # Labels, lims
-    for ax, col in zip(axs, y.columns):
-        ax.set_title(col)
-
-        vmin = np.nanmin([y[col].min(), pred[col].min()])
-        vmax = np.nanmax([y[col].max(), pred[col].max()])
-        ax.set_xlim(vmin, vmax)
-        ax.set_ylim(vmin, vmax)
-
-    fig.supxlabel("WOFOST value", fontweight="bold")
-    fig.supylabel("NN prediction", fontweight="bold")
-    fig.suptitle(title)
-
-    # Save and close
-    if saveto is not None:
-        plt.savefig(saveto)
-    plt.close()
-
-
-def symmetric_lims(lims: tuple) -> tuple:
-    """
-    Given lims, make them symmetric.
-    e.g. (-5, 3) -> (-5, 5)  ;  (-2, 6) -> (-6, 6)
-    """
-    val = np.abs(lims).max()
-    newlims = (-val, val)
-    return newlims
-
-
-def nn_histogram(y: pd.DataFrame, pred: pd.DataFrame, *,
-                 title: Optional[str]=None, saveto: Optional[PathOrStr]=None) -> None:
-    """
-    Generate histograms of the absolute and relative residuals between NN predictions vs true values.
-    """
-    # Calculate differences and relative differences
-    diff = pred - y
-    reldiff = diff / y * 100
-    reldiff.replace([-np.inf, np.inf], np.nan, inplace=True)  # Mask infinities
-
-    # Setup
-    fig, axs = plt.subplots(nrows=2, ncols=len(y.columns), figsize=(10, 5), sharey=True, layout="constrained", gridspec_kw={"hspace": 0.2})
-
-    # Plot histograms
-    _hist_kwargs = {"bins": 51, "density": False, "color": "black"}
-    diff.hist(ax=axs[0], **_hist_kwargs)
-    reldiff.hist(ax=axs[1], **_hist_kwargs)
-
-    # Labels, lims
-    for ax in axs[0]:
-        ax.set_xlabel(r"Absolute residual ($\hat{y} - y$)")
-    for ax in axs[1]:
-        ax.set_xlabel(r"Relative residual ($\hat{y}/y - 1$) [%]")
-
-    for ax in axs.ravel():
-        ax.set_xlim(*symmetric_lims(ax.get_xlim()))
-
-    fig.suptitle(title)
-
-    # Save and close
-    if saveto is not None:
-        plt.savefig(saveto)
-    plt.close()
