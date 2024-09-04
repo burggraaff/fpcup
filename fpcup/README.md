@@ -1,0 +1,1 @@
+This folder contains the `fpcup` module with its various submodules for data processing, analysis, and visualisation.

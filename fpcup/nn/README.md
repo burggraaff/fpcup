@@ -1,0 +1,2 @@
+This folder contains an experimental sub-module implementing a PyTorch neural network (NN) emulator for WOFOST.
+This work has not been finished but is provided here as a jumping-off point for anyone interested in doing the same.
