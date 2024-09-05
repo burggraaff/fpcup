@@ -20,8 +20,18 @@ from .multiprocessing import multiprocess_file_io
 from .typing import Iterable, Optional, PathOrStr
 
 # Constants
+p_data = Path("data/brp/")
 _SAMPLE_LENGTH = 10
 _SUMMARY_TYPES = (InputSummary, Summary)
+
+def load_brp(year: int) -> gpd.GeoDataFrame:
+    """
+    Load the BRP for a given year.
+    """
+    filename = p_data / f"brp{year}.gpkg"
+    brp = read_geodataframe(filename)
+    return brp
+
 
 def save_ensemble_summary(output_dir: PathOrStr, *,
                           use_existing=True, verbose=False) -> None:
