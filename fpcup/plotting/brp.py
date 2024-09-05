@@ -1,6 +1,8 @@
 """
 Functions for plotting BRP data.
 """
+from functools import partial
+
 import geopandas as gpd
 
 from matplotlib import pyplot as plt, patches as mpatches
@@ -132,6 +134,10 @@ def brp_map(data: gpd.GeoDataFrame, column: str, *,
     else:
         plt.show()
     plt.close()
+
+
+brp_map_category = partial(brp_map, column="category", title="Land usage", colour_dict=brp_categories_colours)
+brp_map_crop = partial(brp_map, column="crop_species", title="Selected crop types", colour_dict=brp_crops_colours)
 
 
 def brp_crop_map_split(data: gpd.GeoDataFrame, column: str="crop_species", *,

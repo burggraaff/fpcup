@@ -41,7 +41,7 @@ if args.plots:
     fpcup.plotting.brp_histogram(brp, column="category", title=filestem, top5=False, saveto=args.results_dir/f"brp{year}-hist_categories.pdf")
 
     for province in fpcup.geo.iterate_over_locations():
-        fpcup.plotting.brp_map(brp, column="category", province=province, title=f"Land usage in {province}\n{filestem}", colour_dict=fpcup.plotting.brp_categories_colours, saveto=args.results_dir/f"brp{year}-map_categories-{province.abbreviation}.pdf")
+        fpcup.plotting.brp_map_category(brp, province=province, saveto=args.results_dir/f"brp{year}-map_categories-{province.abbreviation}.pdf")
 
 # Select cropland
 brp_agro = brp.loc[brp["category"] == "cropland"].drop(columns=["category"])
@@ -71,9 +71,9 @@ if args.plots:
 # Show the distribution across the country
 if args.plots:
     for province in fpcup.geo.iterate_over_locations():
-        fpcup.plotting.brp_map(brp_fpcup, column="crop_species", province=province, title=f"Selected crop types in {province}\n{filestem}", colour_dict=fpcup.plotting.brp_crops_colours, saveto=args.results_dir/f"brp{year}-map_crops-filtered-{province.abbreviation}.pdf")
+        fpcup.plotting.brp_map_crop(brp_fpcup, province=province, saveto=args.results_dir/f"brp{year}-map_crops-filtered-{province.abbreviation}.pdf")
 
-        fpcup.plotting.brp_crop_map_split(brp_fpcup, column="crop_species", province=province, title=f"Selected crop types in {province} from {filestem}", saveto=args.results_dir/f"brp{year}-map_crops-individual-{province.abbreviation}.pdf")
+        fpcup.plotting.brp_crop_map_split(brp_fpcup, province=province, title=f"Selected crop types in {province} from {filestem}", saveto=args.results_dir/f"brp{year}-map_crops-individual-{province.abbreviation}.pdf")
 
 # Add centroid coordinates in WGS84 for WOFOST
 coordinates = brp_fpcup.centroid.to_crs("WGS84")
