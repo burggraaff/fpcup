@@ -54,7 +54,7 @@ class Crop:
 
     ### STRING REPRESENTATIONS
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.name} ({self.abbreviation}), {self.variety}, sowing doy {self.sowdoys.start}-{self.sowdoys.stop}, max. duration {self.max_duration} days)"
+        return f"{self.__class__.__name__}({self.name} ({self.abbreviation}), {self.variety}, sowing doy {self.sowdoys.start}–{self.sowdoys.stop}, max. duration {self.max_duration} days)"
 
 
     ### AGROMANAGEMENT
