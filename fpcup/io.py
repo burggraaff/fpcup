@@ -7,14 +7,11 @@ from pathlib import Path
 
 import geopandas as gpd
 gpd.options.io_engine = "pyogrio"
-from geopandas import GeoDataFrame
 
 from pyogrio import read_dataframe as read_geodataframe, write_dataframe as write_geodataframe
 from pyogrio.errors import DataSourceError
 
-from tqdm import tqdm
-
-from .constants import CRS_AMERSFOORT
+from .geo import process_input_province
 from .model import InputSummary, Summary, TimeSeries
 from .multiprocessing import multiprocess_file_io
 from .typing import Iterable, Optional, PathOrStr
@@ -31,6 +28,24 @@ def load_brp(year: int) -> gpd.GeoDataFrame:
     filename = p_data / f"brp{year}.gpkg"
     brp = read_geodataframe(filename)
     return brp
+
+
+def query_brp(brp: gpd.GeoDataFrame, **kwargs) -> gpd.GeoDataFrame:
+    """
+    Query the BRP (or another dataframe) on multiple columns.
+    Example:
+        query_brp(brp, province="Groningen", crop_species="barley")
+    """
+    # Pre-process common keys
+    if "province" in kwargs:
+        province = kwargs["province"]
+        if isinstance(province, str):
+            province = process_input_province(province)
+        kwargs["province"] = province.abbreviation
+
+    query = [f"{key} == '{value}'" for key, value in kwargs.items()]
+    query = " & ".join(query)
+    return brp.query(query)
 
 
 def save_ensemble_summary(output_dir: PathOrStr, *,
