@@ -3,7 +3,9 @@ Classes, functions, constants relating to running the WOFOST model.
 """
 from functools import partial
 
+import pandas as pd
 from tqdm import tqdm
+
 
 from pcse.exceptions import WeatherDataProviderError
 from pcse.models import Engine, Wofost72_WLP_FD
@@ -67,6 +69,16 @@ def run_pcse_from_raw_data(run_data_variables: dict, output_dir: PathOrStr, *,
     return status
 
 
+def run_pcse_from_raw_data_with_weather(coordinates, run_data_variables: dict, *args,
+                                        weather_data_provider: Callable=load_weather_data_NASAPower, **kwargs) -> bool | RunData:
+    """
+    Get weather data, then fully run PCSE.
+    """
+    weatherdata = weather_data_provider(coordinates)
+    run_data_variables_updated = {**run_data_variables, "weatherdata": weatherdata, "latitude": coordinates[0], "longitude": coordinates[1]}
+    return run_pcse_from_raw_data(run_data_variables_updated, *args, **kwargs)
+
+
 def run_pcse_ensemble(run_data_variables: Iterable[dict], output_dir: PathOrStr, *,
                       run_data_constants: Optional[dict]={},
                       progressbar=True, leave_progressbar=False,
@@ -111,6 +123,35 @@ def run_pcse_site_ensemble(coordinates: Iterable[Coordinates], run_data_variable
         statuses_combined.extend(model_statuses)
 
     return statuses_combined
+
+
+def run_pcse_multiple_sites(coordinates: Iterable[Coordinates], run_data_constants: dict, output_dir: PathOrStr, *,
+                            progressbar=True, leave_progressbar=False,
+                            **kwargs) -> Iterable[bool | RunData]:
+    """
+    Run a PCSE ensemble with constant parameters for different sites.
+    Creates a partial instance of `run_pcse_from_raw_data_with_weather` and runs that for every entry in run_data_variables.
+    **kwargs are passed to run_pcse_from_raw_data_with_weather.
+    """
+    # Initialise partial function
+    func = partial(run_pcse_from_raw_data_with_weather, run_data_variables={}, output_dir=output_dir, run_data_constants=run_data_constants, **kwargs)
+
+    # Run model
+    statuses = multiprocess_pcse(func, coordinates, progressbar=progressbar, leave_progressbar=leave_progressbar)
+
+    return statuses
+
+
+def run_pcse_brp_ensemble(brp: pd.DataFrame, run_data_constants: dict, output_dir: PathOrStr, *,
+                          weather_data_provider: Callable=load_weather_data_NASAPower,
+                          progressbar=True, leave_progressbar=False,
+                          **kwargs) -> Iterable[bool | RunData]:
+    """
+    Run a PCSE ensemble with constant parameters, for multiple sites using the BRP (or another dataframe).
+    Loops over sites, gathering site-specific data (e.g. weather), and running a PCSE ensemble.
+    **kwargs are passed to run_pcse_ensemble.
+    """
+    coordinates = 1
 
 
 ### Processing PCSE outputs
