@@ -126,7 +126,7 @@ def run_pcse_site_ensemble(coordinates: Iterable[Coordinates], run_data_variable
 
 
 def run_pcse_multiple_sites(coordinates: Iterable[Coordinates], run_data_constants: dict, output_dir: PathOrStr, *,
-                            progressbar=True, leave_progressbar=False,
+                            progressbar=True, leave_progressbar=True,
                             **kwargs) -> Iterable[bool | RunData]:
     """
     Run a PCSE ensemble with constant parameters for different sites.
