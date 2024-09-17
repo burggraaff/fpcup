@@ -110,11 +110,13 @@ def load_combined_ensemble_summary(folder: PathOrStr, *, sample=False, **kwargs)
     return summary
 
 
-def load_combined_ensemble_summary_geo(folder: PathOrStr, *, sample=False, crs=CRS_AMERSFOORT, **kwargs) -> GeoSummary:
+def load_combined_ensemble_summary_geo(folder: PathOrStr, *,
+                                       sample=False, crs=CRS_AMERSFOORT,
+                                       leave_progressbar=False, **kwargs) -> GeoSummary:
     """
     For a given folder, load the ensemble input/output summary files and join them, then add geospatial information.
     """
-    summary = load_combined_ensemble_summary(folder, sample=sample, **kwargs)
+    summary = load_combined_ensemble_summary(folder, sample=sample, leave_progressbar=leave_progressbar, **kwargs)
     summary = GeoSummary(summary)
     summary.to_crs(crs, inplace=True)
     return summary
