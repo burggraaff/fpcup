@@ -11,8 +11,8 @@ gpd.options.io_engine = "pyogrio"
 from pyogrio import read_dataframe as read_geodataframe, write_dataframe as write_geodataframe
 from pyogrio.errors import DataSourceError
 
-from .geo import process_input_province
-from .model import InputSummary, Summary, TimeSeries
+from .geo import CRS_AMERSFOORT, process_input_province
+from .model import GeoSummary, InputSummary, Summary, TimeSeries
 from .multiprocessing import multiprocess_file_io
 from .typing import Iterable, Optional, PathOrStr
 
@@ -107,6 +107,16 @@ def load_combined_ensemble_summary(folder: PathOrStr, *, sample=False, **kwargs)
     inputsummary, summary = inputsummary.loc[combined_index], summary.loc[combined_index]
     summary = inputsummary.join(summary)
 
+    return summary
+
+
+def load_combined_ensemble_summary_geo(folder: PathOrStr, *, sample=False, crs=CRS_AMERSFOORT, **kwargs) -> GeoSummary:
+    """
+    For a given folder, load the ensemble input/output summary files and join them, then add geospatial information.
+    """
+    summary = load_combined_ensemble_summary(folder, sample=sample, **kwargs)
+    summary = GeoSummary(summary)
+    summary.to_crs(crs, inplace=True)
     return summary
 
 

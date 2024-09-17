@@ -38,14 +38,10 @@ if __name__ == "__main__":
 
 
     ### LOADING DATA
-    # Load the combined input/output summary
-    summary = fpcup.io.load_combined_ensemble_summary(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
+    # Load the combined input/output summary with geospatial data
+    summary = fpcup.io.load_combined_ensemble_summary_geo(args.output_dir, sample=args.sample, leave_progressbar=args.verbose)
     if args.verbose:
         print(f"Loaded summary file -- {len(summary)} rows")
-
-    # Convert to GeoSummary
-    summary = fpcup.model.GeoSummary(summary)
-    summary.to_crs(fpcup.geo.CRS_AMERSFOORT, inplace=True)
 
     # If we are only doing one province, select only the relevant lines from the summary file
     if args.SINGLE_PROVINCE:
