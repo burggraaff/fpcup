@@ -12,4 +12,4 @@ def test() -> None:
     """
     from importlib.metadata import version
     module_version = version(__package__)
-    print(f"Succesfully imported {__package__} version {module_version}.")
+    print(f"Succesfully imported {__package__} version {module_version} from {__file__}.")
