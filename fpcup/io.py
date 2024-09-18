@@ -104,7 +104,8 @@ def load_combined_ensemble_summary(folder: PathOrStr, *, sample=False, **kwargs)
 
     # Join matching rows
     combined_index = inputsummary.index.intersection(summary.index)
-    inputsummary, summary = inputsummary.loc[combined_index], summary.loc[combined_index]
+    output_columns = summary.columns.difference(inputsummary.columns)
+    inputsummary, summary = inputsummary.loc[combined_index], summary.loc[combined_index][output_columns]
     summary = inputsummary.join(summary)
 
     return summary
