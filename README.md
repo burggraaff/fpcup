@@ -10,7 +10,7 @@ The module is most easily installed using `pip`.
 This requires first cloning the repository, then going into it and running `pip install .`.
 
 Some data will need to be downloaded separately.
-From the [PCSE tutorial notebooks](https://github.com/ajwdewit/pcse_notebooks), download the soil data (`data/soil/ec*.soil`) and move these into [data/soil](data/soil).
+From the [PCSE tutorial notebooks](https://github.com/ajwdewit/pcse_notebooks), download the soil data ([`data/soil/ec*.soil`](https://github.com/ajwdewit/pcse_notebooks/tree/master/data/soil)) and move these into [data/soil](data/soil).
 From [PDOK](https://service.pdok.nl/rvo/brpgewaspercelen/atom/v1_0/basisregistratie_gewaspercelen_brp.xml), download the original BRP files and move these into [data/brp](data/brp); these are then processed using the [process_brp.py script](process_brp.py).
 
 The provincial basemaps are included in the repository but may not load properly when importing into a different working directory.
