@@ -10,13 +10,13 @@ The module is most easily installed using `pip`.
 This requires first cloning the repository, then going into it and running `pip install .`.
 
 Some data will need to be downloaded separately.
-From the [PCSE tutorial notebooks](https://github.com/ajwdewit/pcse_notebooks), download the soil data (`data/soil/ec*.soil`) and move these into [data/soil](data/soil).
+From the [PCSE tutorial notebooks](https://github.com/ajwdewit/pcse_notebooks), download the soil data ([`data/soil/ec*.soil`](https://github.com/ajwdewit/pcse_notebooks/tree/master/data/soil)) and move these into [data/soil](data/soil).
 From [PDOK](https://service.pdok.nl/rvo/brpgewaspercelen/atom/v1_0/basisregistratie_gewaspercelen_brp.xml), download the original BRP files and move these into [data/brp](data/brp); these are then processed using the [process_brp.py script](process_brp.py).
 
 The provincial basemaps are included in the repository but may not load properly when importing into a different working directory.
 This can be solved temporarily by working in the `fpcup` directory or copying the files over to your working directory.
 A permanent fix would be to package the data into the module.
-To generate the basemaps, download data from [PDOK](https://service.pdok.nl/brt/topnl/atom/top10nl.xml) and process them using the [generate_basemaps.py script](generate_basemaps.py).
+If you would like to generate or modify the basemaps yourself, download data from [PDOK](https://service.pdok.nl/brt/topnl/atom/top10nl.xml) and process them using the [generate_basemaps.py script](generate_basemaps.py).
 
 ### Use
 The `fpcup` module can be used through the scripts provided in this repository, which can run WOFOST ensembles and analyse the outputs.
