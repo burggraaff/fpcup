@@ -17,3 +17,7 @@ The provincial basemaps are included in the repository but may not load properly
 This can be solved temporarily by working in the `fpcup` directory or copying the files over to your working directory.
 A permanent fix would be to package the data into the module.
 To generate the basemaps, download data from [PDOK](https://service.pdok.nl/brt/topnl/atom/top10nl.xml) and process them using the [generate_basemaps.py script](generate_basemaps.py).
+
+### Use
+The `fpcup` module can be used through the scripts provided in this repository, which can run WOFOST ensembles and analyse the outputs.
+For a demonstration of different functionalities, please refer to the [demo notebook](demo.ipynb).
