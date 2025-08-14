@@ -4,3 +4,4 @@ pcse>=5.5.5
 tqdm>=4.66.1
 geopandas>=0.14.2
 h3pandas>=0.2.6
+h3 = 3.7.7
